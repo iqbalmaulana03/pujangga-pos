@@ -10,6 +10,7 @@ import '../../features/riwayat/presentation/pages/riwayat_page.dart';
 import '../../features/setup_usaha/presentation/pages/setup_usaha_page.dart';
 import '../../features/stok/presentation/pages/detail_stok_page.dart';
 import '../../features/stok/presentation/pages/stok_page.dart';
+import '../../features/transaksi/presentation/pages/transaksi_berhasil_page.dart';
 import '../../features/transaksi/presentation/pages/transaksi_page.dart';
 import '../../shared/widgets/main_navigation_shell.dart';
 
@@ -19,6 +20,7 @@ class AppRoutes {
   static const catalog = '/catalog';
   static const catalogCreate = '/catalog/create';
   static const transaction = '/transaction';
+  static const transactionSuccess = '/transaction/success';
   static const history = '/history';
   static const stock = '/stock';
   static const reports = '/reports';
@@ -114,6 +116,13 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
             },
           ),
         ],
+      ),
+      GoRoute(
+        path: '${AppRoutes.transactionSuccess}/:invoiceNumber',
+        builder: (context, state) {
+          final invoiceNumber = state.pathParameters['invoiceNumber'] ?? '-';
+          return TransaksiBerhasilPage(invoiceNumber: invoiceNumber);
+        },
       ),
       GoRoute(
         path: AppRoutes.settings,

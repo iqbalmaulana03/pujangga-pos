@@ -47,6 +47,10 @@ class AppDatabase {
         updated_at TEXT NOT NULL
       )
     ''');
+
+    await _createCatalogItemsTable(db);
+    await _createSalesTransactionsTable(db);
+    await _createSalesTransactionItemsTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -59,5 +63,65 @@ class AppDatabase {
         'ALTER TABLE business_profile ADD COLUMN owner_name TEXT',
       );
     }
+
+    if (oldVersion < 3) {
+      await _createCatalogItemsTable(db);
+      await _createSalesTransactionsTable(db);
+      await _createSalesTransactionItemsTable(db);
+    }
+  }
+
+  Future<void> _createCatalogItemsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS catalog_items (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        item_type TEXT NOT NULL,
+        selling_price REAL NOT NULL,
+        stock_quantity INTEGER,
+        unit_label TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _createSalesTransactionsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sales_transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invoice_number TEXT NOT NULL UNIQUE,
+        subtotal_amount REAL NOT NULL,
+        item_discount_amount REAL NOT NULL,
+        order_discount_amount REAL NOT NULL,
+        tax_amount REAL NOT NULL,
+        total_amount REAL NOT NULL,
+        payment_method TEXT NOT NULL,
+        cash_paid_amount REAL,
+        change_amount REAL NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _createSalesTransactionItemsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS sales_transaction_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id INTEGER NOT NULL,
+        item_id TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        item_category TEXT NOT NULL,
+        item_type TEXT NOT NULL,
+        unit_price REAL NOT NULL,
+        quantity INTEGER NOT NULL,
+        item_discount_amount REAL NOT NULL,
+        line_subtotal_amount REAL NOT NULL,
+        line_total_amount REAL NOT NULL,
+        FOREIGN KEY(transaction_id) REFERENCES sales_transactions(id) ON DELETE CASCADE
+      )
+    ''');
   }
 }
