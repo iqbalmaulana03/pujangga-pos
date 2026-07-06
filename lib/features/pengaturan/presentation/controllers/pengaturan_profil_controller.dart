@@ -2,16 +2,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
-import '../../domain/entities/business_profile.dart';
+import '../../../setup_usaha/domain/entities/business_profile.dart';
 
-final setupUsahaControllerProvider =
-    AsyncNotifierProvider<SetupUsahaController, void>(SetupUsahaController.new);
+final pengaturanProfilControllerProvider =
+    AsyncNotifierProvider<PengaturanProfilController, void>(
+      PengaturanProfilController.new,
+    );
 
-class SetupUsahaController extends AsyncNotifier<void> {
+class PengaturanProfilController extends AsyncNotifier<void> {
   @override
   Future<void> build() async {}
 
-  Future<void> submit({required BusinessProfile businessProfile}) async {
+  Future<void> save(BusinessProfile businessProfile) async {
     if (businessProfile.businessName.trim().isEmpty ||
         businessProfile.businessType.trim().isEmpty) {
       throw const AppException(

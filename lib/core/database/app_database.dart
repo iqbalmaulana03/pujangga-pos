@@ -27,6 +27,7 @@ class AppDatabase {
       fullPath,
       version: AppConstants.databaseVersion,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
     );
 
@@ -39,9 +40,24 @@ class AppDatabase {
         id INTEGER PRIMARY KEY,
         business_name TEXT NOT NULL,
         business_type TEXT NOT NULL,
+        address TEXT,
+        contact_number TEXT,
+        owner_name TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('ALTER TABLE business_profile ADD COLUMN address TEXT');
+      await db.execute(
+        'ALTER TABLE business_profile ADD COLUMN contact_number TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE business_profile ADD COLUMN owner_name TEXT',
+      );
+    }
   }
 }
