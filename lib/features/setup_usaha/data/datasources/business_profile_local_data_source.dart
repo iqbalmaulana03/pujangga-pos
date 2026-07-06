@@ -23,4 +23,15 @@ class BusinessProfileLocalDataSource {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
+  Future<BusinessProfileDbModel?> getProfile() async {
+    final db = await database.database();
+    final rows = await db.query('business_profile', limit: 1);
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return BusinessProfileDbModel.fromMap(rows.first);
+  }
 }

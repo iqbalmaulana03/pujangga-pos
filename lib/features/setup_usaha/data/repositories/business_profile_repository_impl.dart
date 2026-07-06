@@ -20,6 +20,12 @@ class BusinessProfileRepositoryImpl implements BusinessProfileRepository {
   }
 
   @override
+  Future<BusinessProfile?> getProfile() async {
+    final profile = await localDataSource.getProfile();
+    return profile?.toEntity();
+  }
+
+  @override
   Future<void> saveProfile(BusinessProfile profile) async {
     logger.info('Saving business profile for ${profile.businessName}');
     await localDataSource.saveProfile(

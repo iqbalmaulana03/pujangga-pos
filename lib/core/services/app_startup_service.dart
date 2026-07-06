@@ -3,6 +3,7 @@ import 'package:logging/logging.dart';
 
 import '../../features/setup_usaha/data/datasources/business_profile_local_data_source.dart';
 import '../../features/setup_usaha/data/repositories/business_profile_repository_impl.dart';
+import '../../features/setup_usaha/domain/entities/business_profile.dart';
 import '../../features/setup_usaha/domain/repositories/business_profile_repository.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
@@ -41,6 +42,10 @@ final appStartupServiceProvider = Provider<AppStartupService>((ref) {
 
 final appStartupProvider = FutureProvider<AppStartupState>((ref) async {
   return ref.watch(appStartupServiceProvider).load();
+});
+
+final businessProfileProvider = FutureProvider<BusinessProfile?>((ref) async {
+  return ref.watch(businessProfileRepositoryProvider).getProfile();
 });
 
 class AppStartupState {
