@@ -53,19 +53,6 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
               GoRoute(
                 path: AppRoutes.catalog,
                 builder: (context, state) => const KatalogPage(),
-                routes: [
-                  GoRoute(
-                    path: 'create',
-                    builder: (context, state) => const ItemFormPage(),
-                  ),
-                  GoRoute(
-                    path: 'edit/:id',
-                    builder: (context, state) {
-                      final itemId = state.pathParameters['id'] ?? '-';
-                      return ItemFormPage(itemId: itemId);
-                    },
-                  ),
-                ],
               ),
             ],
           ),
@@ -103,6 +90,17 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
             ],
           ),
         ],
+      ),
+      GoRoute(
+        path: AppRoutes.catalogCreate,
+        builder: (context, state) => const ItemFormPage(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.catalog}/edit/:id',
+        builder: (context, state) {
+          final itemId = state.pathParameters['id'] ?? '-';
+          return ItemFormPage(itemId: itemId);
+        },
       ),
       GoRoute(
         path: AppRoutes.history,
