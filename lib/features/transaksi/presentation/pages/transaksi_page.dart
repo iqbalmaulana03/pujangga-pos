@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
 import '../controllers/transaksi_controller.dart';
@@ -44,6 +45,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
       _taxController.text = '0';
       _cashController.clear();
       _searchController.clear();
+      ref.invalidate(dashboardSummaryProvider);
+      ref.invalidate(salesReportSnapshotProvider);
 
       context.push('${AppRoutes.transactionSuccess}/${receipt.invoiceNumber}');
     } catch (error) {

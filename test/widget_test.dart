@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pujangga_pos/app/app.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
+import 'package:pujangga_pos/features/laporan/domain/entities/dashboard_summary.dart';
+import 'package:pujangga_pos/features/laporan/presentation/controllers/laporan_controller.dart';
 import 'package:pujangga_pos/features/setup_usaha/domain/entities/business_profile.dart';
 
 void main() {
@@ -50,6 +52,21 @@ void main() {
           appStartupProvider.overrideWith((ref) async {
             return const AppStartupState(hasBusinessProfile: true);
           }),
+          businessProfileProvider.overrideWith((ref) async {
+            return const BusinessProfile(
+              businessName: 'Kedai Pujangga',
+              businessType: 'Kedai Kopi',
+            );
+          }),
+          dashboardSummaryProvider.overrideWith((ref) async {
+            return const DashboardSummary(
+              revenueToday: 275000,
+              transactionCountToday: 12,
+              topItemName: 'Es Kopi Susu',
+              topItemQuantity: 6,
+              topPaymentMethod: 'QRIS',
+            );
+          }),
         ],
         child: const PujanggaPosApp(),
       ),
@@ -57,7 +74,8 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Beranda Pujangga POS'), findsOneWidget);
+    expect(find.text('RINGKASAN HARI INI'), findsOneWidget);
+    expect(find.text('Buat Transaksi'), findsWidgets);
   });
 
   testWidgets('menampilkan pengaturan dengan data profil yang bisa diedit', (
@@ -78,13 +96,22 @@ void main() {
               address: 'Jl. Melati No. 8',
             );
           }),
+          dashboardSummaryProvider.overrideWith((ref) async {
+            return const DashboardSummary(
+              revenueToday: 275000,
+              transactionCountToday: 12,
+              topItemName: 'Es Kopi Susu',
+              topItemQuantity: 6,
+              topPaymentMethod: 'QRIS',
+            );
+          }),
         ],
         child: const PujanggaPosApp(),
       ),
     );
 
     await tester.pumpAndSettle();
-    expect(find.text('Beranda Pujangga POS'), findsOneWidget);
+    expect(find.text('RINGKASAN HARI INI'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Pengaturan'));
     await tester.pumpAndSettle();
