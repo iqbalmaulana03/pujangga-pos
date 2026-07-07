@@ -1,5 +1,4 @@
 import 'package:intl/intl.dart';
-import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
@@ -13,62 +12,8 @@ class TransactionLocalDataSource {
 
   final AppDatabase database;
 
-  static final List<Map<String, Object?>> _seedCatalogItems = [
-    {
-      'id': 'barang-kopi-susu',
-      'name': 'Kopi Susu Literan',
-      'category': 'Minuman',
-      'item_type': 'barang',
-      'selling_price': 78000.0,
-      'stock_quantity': 18,
-      'unit_label': 'Botol',
-      'is_active': 1,
-    },
-    {
-      'id': 'barang-roti-bakar',
-      'name': 'Roti Bakar Cokelat',
-      'category': 'Makanan',
-      'item_type': 'barang',
-      'selling_price': 28000.0,
-      'stock_quantity': 24,
-      'unit_label': 'Porsi',
-      'is_active': 1,
-    },
-    {
-      'id': 'barang-pomade',
-      'name': 'Pomade Medium Hold',
-      'category': 'Produk Tambahan',
-      'item_type': 'barang',
-      'selling_price': 65000.0,
-      'stock_quantity': 10,
-      'unit_label': 'Pcs',
-      'is_active': 1,
-    },
-    {
-      'id': 'jasa-haircut',
-      'name': 'Haircut Reguler',
-      'category': 'Layanan',
-      'item_type': 'jasa',
-      'selling_price': 35000.0,
-      'stock_quantity': null,
-      'unit_label': 'Layanan',
-      'is_active': 1,
-    },
-    {
-      'id': 'jasa-coloring',
-      'name': 'Coloring Dasar',
-      'category': 'Layanan',
-      'item_type': 'jasa',
-      'selling_price': 120000.0,
-      'stock_quantity': null,
-      'unit_label': 'Layanan',
-      'is_active': 1,
-    },
-  ];
-
   Future<List<TransaksiItemDbModel>> getCatalogItems() async {
     final db = await database.database();
-    await _ensureSeedCatalogItems(db);
 
     final rows = await db.query(
       'catalog_items',
@@ -83,7 +28,6 @@ class TransactionLocalDataSource {
     TransaksiSubmitRequest request,
   ) async {
     final db = await database.database();
-    await _ensureSeedCatalogItems(db);
 
     return db.transaction((txn) async {
       final createdAt = DateTime.now();
@@ -252,26 +196,6 @@ class TransactionLocalDataSource {
       cashPaidAmount: (transaction['cash_paid_amount'] as num?)?.toDouble(),
       items: items,
     );
-  }
-
-  Future<void> _ensureSeedCatalogItems(DatabaseExecutor executor) async {
-    final rows = await executor.query(
-      'catalog_items',
-      columns: ['id'],
-      limit: 1,
-    );
-    if (rows.isNotEmpty) {
-      return;
-    }
-
-    final timestamp = DateTime.now().toIso8601String();
-    for (final item in _seedCatalogItems) {
-      await executor.insert('catalog_items', {
-        ...item,
-        'created_at': timestamp,
-        'updated_at': timestamp,
-      });
-    }
   }
 
   String _generateInvoiceNumber(DateTime createdAt) {

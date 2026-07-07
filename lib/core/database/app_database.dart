@@ -69,6 +69,10 @@ class AppDatabase {
       await _createSalesTransactionsTable(db);
       await _createSalesTransactionItemsTable(db);
     }
+
+    if (oldVersion < 4) {
+      await db.execute('ALTER TABLE catalog_items ADD COLUMN sku TEXT');
+    }
   }
 
   Future<void> _createCatalogItemsTable(Database db) async {
@@ -79,6 +83,7 @@ class AppDatabase {
         category TEXT NOT NULL,
         item_type TEXT NOT NULL,
         selling_price REAL NOT NULL,
+        sku TEXT,
         stock_quantity INTEGER,
         unit_label TEXT,
         is_active INTEGER NOT NULL DEFAULT 1,
