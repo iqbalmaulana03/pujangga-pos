@@ -17,10 +17,26 @@ class BusinessProfileLocalDataSource {
 
   Future<void> saveProfile(BusinessProfileDbModel profile) async {
     final db = await database.database();
-    await db.insert(
+    final rows = await db.query('business_profile', columns: ['id'], limit: 1);
+
+    if (rows.isEmpty) {
+      await db.insert(
+        'business_profile',
+        profile.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      return;
+    }
+
+    final existingId = (rows.first['id'] as num).toInt();
+    await db.update(
       'business_profile',
-      profile.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+      {
+        ...profile.toMap(),
+        'id': existingId,
+      },
+      where: 'id = ?',
+      whereArgs: [existingId],
     );
   }
 

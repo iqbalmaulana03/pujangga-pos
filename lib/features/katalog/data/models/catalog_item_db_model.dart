@@ -13,7 +13,7 @@ class CatalogItemDbModel {
     this.unitLabel,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String category;
   final String itemType;
@@ -25,29 +25,39 @@ class CatalogItemDbModel {
 
   factory CatalogItemDbModel.fromMap(Map<String, Object?> map) {
     return CatalogItemDbModel(
-      id: map['id'] as String,
+      id: (map['id'] as num).toInt(),
       name: map['name'] as String,
-      category: map['category'] as String,
+      category:
+          (map['category_name'] as String?) ??
+          (map['category'] as String? ?? 'Umum'),
       itemType: map['item_type'] as String,
-      sellingPrice: (map['selling_price'] as num).toDouble(),
+      sellingPrice:
+          (map['sale_price'] as num?)?.toDouble() ??
+          (map['selling_price'] as num).toDouble(),
       isActive: (map['is_active'] as num).toInt() == 1,
       sku: map['sku'] as String?,
-      stockQuantity: (map['stock_quantity'] as num?)?.toInt(),
-      unitLabel: map['unit_label'] as String?,
+      stockQuantity:
+          ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
+              ?.toInt(),
+      unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
     );
   }
 
   CatalogItem toEntity() {
     return CatalogItem(
-      id: id,
+      id: '$id',
       name: name,
       category: category,
-      itemType: itemType,
+      itemType: _mapDbItemTypeToUi(itemType),
       sellingPrice: sellingPrice,
       isActive: isActive,
       sku: sku,
       stockQuantity: stockQuantity,
       unitLabel: unitLabel,
     );
+  }
+
+  String _mapDbItemTypeToUi(String value) {
+    return value == 'service' ? 'jasa' : 'barang';
   }
 }

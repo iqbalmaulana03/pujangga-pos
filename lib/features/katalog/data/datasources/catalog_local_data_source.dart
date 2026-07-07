@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/catalog_item_draft.dart';
@@ -12,17 +10,30 @@ class CatalogLocalDataSource {
 
   Future<List<CatalogItemDbModel>> getItems() async {
     final db = await database.database();
-    final rows = await db.query('catalog_items', orderBy: 'updated_at DESC');
+    final rows = await db.rawQuery('''
+      SELECT
+        items.*,
+        categories.name AS category_name
+      FROM items
+      LEFT JOIN categories ON categories.id = items.category_id
+      ORDER BY items.updated_at DESC
+    ''');
     return rows.map(CatalogItemDbModel.fromMap).toList();
   }
 
   Future<CatalogItemDbModel?> getItemById(String itemId) async {
     final db = await database.database();
-    final rows = await db.query(
-      'catalog_items',
-      where: 'id = ?',
-      whereArgs: [itemId],
-      limit: 1,
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        items.*,
+        categories.name AS category_name
+      FROM items
+      LEFT JOIN categories ON categories.id = items.category_id
+      WHERE items.id = ?
+      LIMIT 1
+      ''',
+      [int.parse(itemId)],
     );
 
     if (rows.isEmpty) {
@@ -35,17 +46,24 @@ class CatalogLocalDataSource {
   Future<void> createItem(CatalogItemDraft draft) async {
     final db = await database.database();
     final timestamp = DateTime.now().toIso8601String();
+    final dbItemType = _mapUiItemTypeToDb(draft.itemType);
+    final categoryId = await _ensureCategory(
+      db,
+      categoryName: draft.category.trim(),
+      itemType: dbItemType,
+      timestamp: timestamp,
+    );
 
-    await db.insert('catalog_items', {
-      'id': _generateItemId(draft.name),
+    await db.insert('items', {
+      'category_id': categoryId,
       'name': draft.name.trim(),
-      'category': draft.category.trim(),
-      'item_type': draft.itemType,
-      'selling_price': draft.sellingPrice,
+      'item_type': dbItemType,
+      'sale_price': draft.sellingPrice,
       'sku': _normalizedText(draft.sku),
-      'stock_quantity': draft.isBarang ? (draft.stockQuantity ?? 0) : null,
-      'unit_label': _normalizedText(draft.unitLabel),
+      'stock_qty': draft.isBarang ? (draft.stockQuantity ?? 0) : 0,
+      'unit': _normalizedText(draft.unitLabel),
       'is_active': draft.isActive ? 1 : 0,
+      'notes': null,
       'created_at': timestamp,
       'updated_at': timestamp,
     });
@@ -53,21 +71,29 @@ class CatalogLocalDataSource {
 
   Future<void> updateItem(String itemId, CatalogItemDraft draft) async {
     final db = await database.database();
+    final timestamp = DateTime.now().toIso8601String();
+    final dbItemType = _mapUiItemTypeToDb(draft.itemType);
+    final categoryId = await _ensureCategory(
+      db,
+      categoryName: draft.category.trim(),
+      itemType: dbItemType,
+      timestamp: timestamp,
+    );
     final updatedRows = await db.update(
-      'catalog_items',
+      'items',
       {
+        'category_id': categoryId,
         'name': draft.name.trim(),
-        'category': draft.category.trim(),
-        'item_type': draft.itemType,
-        'selling_price': draft.sellingPrice,
+        'item_type': dbItemType,
+        'sale_price': draft.sellingPrice,
         'sku': _normalizedText(draft.sku),
-        'stock_quantity': draft.isBarang ? (draft.stockQuantity ?? 0) : null,
-        'unit_label': _normalizedText(draft.unitLabel),
+        'stock_qty': draft.isBarang ? (draft.stockQuantity ?? 0) : 0,
+        'unit': _normalizedText(draft.unitLabel),
         'is_active': draft.isActive ? 1 : 0,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': timestamp,
       },
       where: 'id = ?',
-      whereArgs: [itemId],
+      whereArgs: [int.parse(itemId)],
     );
 
     if (updatedRows == 0) {
@@ -81,13 +107,13 @@ class CatalogLocalDataSource {
   }) async {
     final db = await database.database();
     final updatedRows = await db.update(
-      'catalog_items',
+      'items',
       {
         'is_active': isActive ? 1 : 0,
         'updated_at': DateTime.now().toIso8601String(),
       },
       where: 'id = ?',
-      whereArgs: [itemId],
+      whereArgs: [int.parse(itemId)],
     );
 
     if (updatedRows == 0) {
@@ -95,16 +121,36 @@ class CatalogLocalDataSource {
     }
   }
 
-  String _generateItemId(String name) {
-    final normalized = name
-        .trim()
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-        .replaceAll(RegExp(r'^-|-$'), '');
-    final fallback = normalized.isEmpty ? 'item' : normalized;
-    final millis = DateTime.now().millisecondsSinceEpoch;
-    final suffix = Random().nextInt(9999).toString().padLeft(4, '0');
-    return '$fallback-$millis-$suffix';
+  Future<int> _ensureCategory(
+    dynamic db, {
+    required String categoryName,
+    required String itemType,
+    required String timestamp,
+  }) async {
+    final normalizedCategory = categoryName.isEmpty ? 'Umum' : categoryName;
+    final rows = await db.query(
+      'categories',
+      columns: ['id'],
+      where: 'name = ? AND item_type = ?',
+      whereArgs: [normalizedCategory, itemType],
+      limit: 1,
+    );
+
+    if (rows.isNotEmpty) {
+      return (rows.first['id'] as num).toInt();
+    }
+
+    return db.insert('categories', {
+      'name': normalizedCategory,
+      'item_type': itemType,
+      'is_active': 1,
+      'created_at': timestamp,
+      'updated_at': timestamp,
+    });
+  }
+
+  String _mapUiItemTypeToDb(String value) {
+    return value == 'jasa' ? 'service' : 'product';
   }
 
   String? _normalizedText(String? value) {

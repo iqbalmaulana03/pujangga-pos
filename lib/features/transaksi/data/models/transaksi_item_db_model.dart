@@ -12,7 +12,7 @@ class TransaksiItemDbModel {
     this.unitLabel,
   });
 
-  final String id;
+  final int id;
   final String name;
   final String category;
   final String itemType;
@@ -23,23 +23,28 @@ class TransaksiItemDbModel {
 
   factory TransaksiItemDbModel.fromMap(Map<String, Object?> map) {
     return TransaksiItemDbModel(
-      id: map['id'] as String,
+      id: (map['id'] as num).toInt(),
       name: map['name'] as String,
-      category: map['category'] as String,
+      category: (map['category_name'] as String?) ?? 'Umum',
       itemType: map['item_type'] as String,
-      sellingPrice: (map['selling_price'] as num).toDouble(),
-      stockQuantity: (map['stock_quantity'] as num?)?.toInt(),
-      unitLabel: map['unit_label'] as String?,
+      sellingPrice:
+          (map['sale_price'] as num?)?.toDouble() ??
+          (map['selling_price'] as num?)?.toDouble() ??
+          0,
+      stockQuantity:
+          ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
+              ?.toInt(),
+      unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
       isActive: (map['is_active'] as num).toInt() == 1,
     );
   }
 
   TransaksiItem toEntity() {
     return TransaksiItem(
-      id: id,
+      id: '$id',
       name: name,
       category: category,
-      itemType: itemType,
+      itemType: itemType == 'service' ? 'jasa' : 'barang',
       sellingPrice: sellingPrice,
       stockQuantity: stockQuantity,
       unitLabel: unitLabel,
