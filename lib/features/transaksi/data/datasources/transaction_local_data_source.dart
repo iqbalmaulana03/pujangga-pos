@@ -15,11 +15,15 @@ class TransactionLocalDataSource {
   Future<List<TransaksiItemDbModel>> getCatalogItems() async {
     final db = await database.database();
 
-    final rows = await db.query(
-      'catalog_items',
-      where: 'is_active = 1',
-      orderBy: 'item_type ASC, name ASC',
-    );
+    final rows = await db.rawQuery('''
+      SELECT
+        items.*,
+        categories.name AS category_name
+      FROM items
+      LEFT JOIN categories ON categories.id = items.category_id
+      WHERE items.is_active = 1
+      ORDER BY items.item_type ASC, items.name ASC
+    ''');
 
     return rows.map(TransaksiItemDbModel.fromMap).toList();
   }
@@ -31,6 +35,7 @@ class TransactionLocalDataSource {
 
     return db.transaction((txn) async {
       final createdAt = DateTime.now();
+      final createdAtIso = createdAt.toIso8601String();
       final invoiceNumber = _generateInvoiceNumber(createdAt);
       final subtotalAmount = request.items.fold<double>(
         0,
@@ -65,63 +70,95 @@ class TransactionLocalDataSource {
         changeAmount = paid - totalAmount;
       }
 
+      final pendingStockMovementIds = <int>[];
+
       for (final cartItem in request.items) {
-        if (cartItem.item.isBarang) {
-          final row = await txn.query(
-            'catalog_items',
-            columns: ['stock_quantity'],
-            where: 'id = ?',
-            whereArgs: [cartItem.item.id],
-            limit: 1,
-          );
+        if (!cartItem.item.isBarang) {
+          continue;
+        }
 
-          final currentStock =
-              (row.first['stock_quantity'] as num?)?.toInt() ?? 0;
-          if (currentStock < cartItem.quantity) {
-            throw AppException(
-              'insufficient_stock',
-              'Stok ${cartItem.item.name} tidak cukup untuk transaksi ini.',
-            );
-          }
+        final itemId = int.parse(cartItem.item.id);
+        final row = await txn.query(
+          'items',
+          columns: ['stock_qty'],
+          where: 'id = ?',
+          whereArgs: [itemId],
+          limit: 1,
+        );
 
-          await txn.update(
-            'catalog_items',
-            {
-              'stock_quantity': currentStock - cartItem.quantity,
-              'updated_at': createdAt.toIso8601String(),
-            },
-            where: 'id = ?',
-            whereArgs: [cartItem.item.id],
+        final currentStock = (row.first['stock_qty'] as num?)?.toDouble() ?? 0;
+        final quantity = cartItem.quantity.toDouble();
+        if (currentStock < quantity) {
+          throw AppException(
+            'insufficient_stock',
+            'Stok ${cartItem.item.name} tidak cukup untuk transaksi ini.',
           );
         }
+
+        final updatedStock = currentStock - quantity;
+        await txn.update(
+          'items',
+          {
+            'stock_qty': updatedStock,
+            'updated_at': createdAtIso,
+          },
+          where: 'id = ?',
+          whereArgs: [itemId],
+        );
+
+        final movementId = await txn.insert('stock_movements', {
+          'item_id': itemId,
+          'movement_type': 'sale',
+          'qty_change': -quantity,
+          'qty_before': currentStock,
+          'qty_after': updatedStock,
+          'reference_type': 'transaction',
+          'reference_id': null,
+          'notes': 'Penjualan ${cartItem.item.name}',
+          'created_at': createdAtIso,
+        });
+        pendingStockMovementIds.add(movementId);
       }
 
       final transactionId = await txn.insert('sales_transactions', {
-        'invoice_number': invoiceNumber,
+        'invoice_no': invoiceNumber,
+        'transaction_date': createdAtIso,
         'subtotal_amount': subtotalAmount,
-        'item_discount_amount': itemDiscountAmount,
-        'order_discount_amount': request.orderDiscountAmount,
+        'discount_amount': itemDiscountAmount + request.orderDiscountAmount,
         'tax_amount': request.taxAmount,
         'total_amount': totalAmount,
-        'payment_method': request.paymentMethod,
-        'cash_paid_amount': request.cashPaidAmount,
+        'payment_method': _mapUiPaymentMethodToDb(request.paymentMethod),
+        'paid_amount': request.cashPaidAmount ?? 0,
         'change_amount': changeAmount,
-        'created_at': createdAt.toIso8601String(),
+        'customer_name': null,
+        'notes': null,
+        'created_at': createdAtIso,
+        'updated_at': createdAtIso,
       });
 
       for (final cartItem in request.items) {
         await txn.insert('sales_transaction_items', {
           'transaction_id': transactionId,
-          'item_id': cartItem.item.id,
-          'item_name': cartItem.item.name,
-          'item_category': cartItem.item.category,
-          'item_type': cartItem.item.itemType,
-          'unit_price': cartItem.item.sellingPrice,
-          'quantity': cartItem.quantity,
-          'item_discount_amount': cartItem.itemDiscountAmount,
-          'line_subtotal_amount': cartItem.lineSubtotal,
-          'line_total_amount': cartItem.lineTotal,
+          'item_id': int.parse(cartItem.item.id),
+          'item_name_snapshot': cartItem.item.name,
+          'item_type_snapshot': cartItem.item.isJasa ? 'service' : 'product',
+          'unit_snapshot': cartItem.item.unitLabel,
+          'price_snapshot': cartItem.item.sellingPrice,
+          'qty': cartItem.quantity.toDouble(),
+          'line_subtotal': cartItem.lineSubtotal,
+          'line_discount_amount': cartItem.itemDiscountAmount,
+          'line_total': cartItem.lineTotal,
+          'created_at': createdAtIso,
         });
+      }
+
+      for (final movementId in pendingStockMovementIds) {
+        await txn.update(
+          'stock_movements',
+          {'reference_id': transactionId},
+          where: 'id = ?',
+          whereArgs: [movementId],
+        );
       }
 
       return TransaksiReceipt(
@@ -144,7 +181,7 @@ class TransactionLocalDataSource {
     final db = await database.database();
     final transactions = await db.query(
       'sales_transactions',
-      where: 'invoice_number = ?',
+      where: 'invoice_no = ?',
       whereArgs: [invoiceNumber],
       limit: 1,
     );
@@ -166,39 +203,73 @@ class TransactionLocalDataSource {
         .map(
           (row) => TransaksiCartItem(
             item: TransaksiItemDbModel(
-              id: row['item_id'] as String,
-              name: row['item_name'] as String,
-              category: row['item_category'] as String,
-              itemType: row['item_type'] as String,
-              sellingPrice: (row['unit_price'] as num).toDouble(),
+              id: (row['item_id'] as num).toInt(),
+              name: row['item_name_snapshot'] as String,
+              category: 'Riwayat',
+              itemType: row['item_type_snapshot'] as String,
+              sellingPrice: (row['price_snapshot'] as num).toDouble(),
               stockQuantity: null,
-              unitLabel: null,
+              unitLabel: row['unit_snapshot'] as String?,
               isActive: true,
             ).toEntity(),
-            quantity: (row['quantity'] as num).toInt(),
-            itemDiscountAmount: (row['item_discount_amount'] as num).toDouble(),
+            quantity: ((row['qty'] as num).toDouble()).toInt(),
+            itemDiscountAmount: (row['line_discount_amount'] as num).toDouble(),
           ),
         )
         .toList();
 
     return TransaksiReceipt(
-      invoiceNumber: transaction['invoice_number'] as String,
-      createdAt: DateTime.parse(transaction['created_at'] as String),
-      paymentMethod: transaction['payment_method'] as String,
+      invoiceNumber: transaction['invoice_no'] as String,
+      createdAt: DateTime.parse(transaction['transaction_date'] as String),
+      paymentMethod: _mapDbPaymentMethodToUi(
+        transaction['payment_method'] as String,
+      ),
       subtotalAmount: (transaction['subtotal_amount'] as num).toDouble(),
-      itemDiscountAmount: (transaction['item_discount_amount'] as num)
-          .toDouble(),
-      orderDiscountAmount: (transaction['order_discount_amount'] as num)
-          .toDouble(),
+      itemDiscountAmount: (transaction['discount_amount'] as num).toDouble(),
+      orderDiscountAmount: 0,
       taxAmount: (transaction['tax_amount'] as num).toDouble(),
       totalAmount: (transaction['total_amount'] as num).toDouble(),
       changeAmount: (transaction['change_amount'] as num).toDouble(),
-      cashPaidAmount: (transaction['cash_paid_amount'] as num?)?.toDouble(),
+      cashPaidAmount: (transaction['paid_amount'] as num?)?.toDouble(),
       items: items,
     );
   }
 
   String _generateInvoiceNumber(DateTime createdAt) {
     return 'INV-${DateFormat('yyyyMMdd-HHmmss').format(createdAt)}';
+  }
+
+  String _mapUiPaymentMethodToDb(String value) {
+    switch (value) {
+      case 'tunai':
+        return 'cash';
+      case 'transfer':
+        return 'transfer';
+      case 'qris':
+        return 'qris';
+      case 'ewallet':
+        return 'ewallet';
+      case 'kartu':
+        return 'card';
+      default:
+        return 'cash';
+    }
+  }
+
+  String _mapDbPaymentMethodToUi(String value) {
+    switch (value) {
+      case 'cash':
+        return 'tunai';
+      case 'transfer':
+        return 'transfer';
+      case 'qris':
+        return 'qris';
+      case 'ewallet':
+        return 'ewallet';
+      case 'card':
+        return 'kartu';
+      default:
+        return 'tunai';
+    }
   }
 }

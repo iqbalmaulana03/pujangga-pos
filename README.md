@@ -92,3 +92,30 @@ rtk flutter test
 - Jika profil usaha belum ada, aplikasi masuk ke `/setup`.
 - Form setup placeholder menyimpan profil usaha ke SQLite melalui repository.
 - Placeholder screen untuk semua modul MVP sudah tersambung sehingga flow navigasi bisa diuji lebih awal.
+
+## Skema SQLite MVP
+
+Database lokal SQLite sekarang memakai tabel inti berikut:
+
+- `business_profile`
+- `app_settings`
+- `categories`
+- `items`
+- `sales_transactions`
+- `sales_transaction_items`
+- `stock_movements`
+
+Relasi utama:
+
+- `categories` 1..n `items`
+- `sales_transactions` 1..n `sales_transaction_items`
+- `items` 1..n `sales_transaction_items`
+- `items` 1..n `stock_movements`
+
+Catatan implementasi:
+
+- `business_profile` dan `app_settings` diasumsikan satu row aktif per perangkat.
+- `items.item_type` disimpan sebagai `product` atau `service`.
+- Snapshot histori transaksi disimpan di `sales_transaction_items` agar perubahan master item tidak mengubah histori lama.
+- Pengurangan stok barang saat transaksi sukses otomatis membuat record di `stock_movements`.
+- Schema lama seperti `catalog_items` dimigrasikan ke schema final issue `#5` saat upgrade database ke versi `5`.
