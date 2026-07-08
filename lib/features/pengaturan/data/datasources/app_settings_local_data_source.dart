@@ -27,10 +27,7 @@ class AppSettingsLocalDataSource {
     final existingId = (rows.first['id'] as num).toInt();
     await db.update(
       'app_settings',
-      {
-        ...settings.toMap(),
-        'id': existingId,
-      },
+      {...settings.toMap(), 'id': existingId},
       where: 'id = ?',
       whereArgs: [existingId],
     );

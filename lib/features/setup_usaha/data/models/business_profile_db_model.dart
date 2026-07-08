@@ -46,7 +46,7 @@ class BusinessProfileDbModel {
       address: profile.address,
       contactNumber: profile.contactNumber,
       ownerName: profile.ownerName,
-      logoPath: null,
+      logoPath: profile.logoPath,
       createdAt: timestamp,
       updatedAt: timestamp,
     );
@@ -73,6 +73,7 @@ class BusinessProfileDbModel {
       address: address,
       contactNumber: contactNumber,
       ownerName: ownerName,
+      logoPath: logoPath,
     );
   }
 }
