@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pujangga_pos/app/app.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
+import 'package:pujangga_pos/features/pengaturan/domain/entities/app_settings.dart';
+import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import 'package:pujangga_pos/features/laporan/domain/entities/dashboard_summary.dart';
 import 'package:pujangga_pos/features/laporan/presentation/controllers/laporan_controller.dart';
 import 'package:pujangga_pos/features/setup_usaha/domain/entities/business_profile.dart';
@@ -67,6 +69,16 @@ void main() {
               topPaymentMethod: 'QRIS',
             );
           }),
+          appSettingsProvider.overrideWith((ref) async {
+            return const AppSettings(
+              currencyCode: 'IDR',
+              currencySymbol: 'Rp',
+              defaultTaxPercent: 11,
+              stockAllowNegative: false,
+              receiptHeader: 'Terima kasih',
+              receiptFooter: 'Simpan struk ini',
+            );
+          }),
         ],
         child: const PujanggaPosApp(),
       ),
@@ -105,6 +117,16 @@ void main() {
               topPaymentMethod: 'QRIS',
             );
           }),
+          appSettingsProvider.overrideWith((ref) async {
+            return const AppSettings(
+              currencyCode: 'IDR',
+              currencySymbol: 'Rp',
+              defaultTaxPercent: 11,
+              stockAllowNegative: false,
+              receiptHeader: 'Terima kasih',
+              receiptFooter: 'Simpan struk ini',
+            );
+          }),
         ],
         child: const PujanggaPosApp(),
       ),
@@ -120,5 +142,13 @@ void main() {
     expect(find.text('Kedai Pujangga'), findsOneWidget);
     expect(find.text('Kedai Kopi'), findsOneWidget);
     expect(find.text('Iqbal'), findsOneWidget);
+    final scrollable = find.byType(Scrollable).first;
+    await tester.dragUntilVisible(
+      find.text('Preferensi Operasional'),
+      scrollable,
+      const Offset(0, -300),
+    );
+    expect(find.text('Preferensi Operasional'), findsOneWidget);
+    expect(find.text('Rupiah (IDR)'), findsOneWidget);
   });
 }

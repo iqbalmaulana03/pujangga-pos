@@ -5,6 +5,7 @@ class BusinessProfile {
     this.address,
     this.contactNumber,
     this.ownerName,
+    this.logoPath,
   });
 
   final String businessName;
@@ -12,6 +13,7 @@ class BusinessProfile {
   final String? address;
   final String? contactNumber;
   final String? ownerName;
+  final String? logoPath;
 
   BusinessProfile copyWith({
     String? businessName,
@@ -19,6 +21,7 @@ class BusinessProfile {
     String? address,
     String? contactNumber,
     String? ownerName,
+    String? logoPath,
   }) {
     return BusinessProfile(
       businessName: businessName ?? this.businessName,
@@ -26,6 +29,7 @@ class BusinessProfile {
       address: address ?? this.address,
       contactNumber: contactNumber ?? this.contactNumber,
       ownerName: ownerName ?? this.ownerName,
+      logoPath: logoPath ?? this.logoPath,
     );
   }
 }

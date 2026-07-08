@@ -42,6 +42,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
   late final TextEditingController _addressController;
   late final TextEditingController _contactNumberController;
   late final TextEditingController _ownerNameController;
+  late final TextEditingController _logoPathController;
 
   @override
   void initState() {
@@ -61,6 +62,9 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
     _ownerNameController = TextEditingController(
       text: widget.initialProfile?.ownerName ?? '',
     );
+    _logoPathController = TextEditingController(
+      text: widget.initialProfile?.logoPath ?? '',
+    );
   }
 
   @override
@@ -75,6 +79,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
       _contactNumberController.text =
           widget.initialProfile?.contactNumber ?? '';
       _ownerNameController.text = widget.initialProfile?.ownerName ?? '';
+      _logoPathController.text = widget.initialProfile?.logoPath ?? '';
     }
   }
 
@@ -85,6 +90,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
     _addressController.dispose();
     _contactNumberController.dispose();
     _ownerNameController.dispose();
+    _logoPathController.dispose();
     super.dispose();
   }
 
@@ -100,6 +106,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
         address: _normalizeOptional(_addressController.text),
         contactNumber: _normalizeOptional(_contactNumberController.text),
         ownerName: _normalizeOptional(_ownerNameController.text),
+        logoPath: _normalizeOptional(_logoPathController.text),
       ),
     );
   }
@@ -254,6 +261,14 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
                     ),
                     minLines: 2,
                     maxLines: 3,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _logoPathController,
+                    decoration: const InputDecoration(
+                      labelText: 'Referensi logo lokal',
+                      hintText: 'Contoh: /storage/emulated/0/Pictures/logo.png',
+                    ),
                   ),
                 ],
               ),
