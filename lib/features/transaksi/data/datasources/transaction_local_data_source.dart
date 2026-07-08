@@ -98,10 +98,7 @@ class TransactionLocalDataSource {
         final updatedStock = currentStock - quantity;
         await txn.update(
           'items',
-          {
-            'stock_qty': updatedStock,
-            'updated_at': createdAtIso,
-          },
+          {'stock_qty': updatedStock, 'updated_at': createdAtIso},
           where: 'id = ?',
           whereArgs: [itemId],
         );
@@ -199,6 +196,16 @@ class TransactionLocalDataSource {
       orderBy: 'id ASC',
     );
 
+    final itemDiscountAmount = itemRows.fold<double>(
+      0,
+      (total, row) => total + (row['line_discount_amount'] as num).toDouble(),
+    );
+    final totalDiscountAmount = (transaction['discount_amount'] as num)
+        .toDouble();
+    final orderDiscountAmount = (totalDiscountAmount - itemDiscountAmount)
+        .clamp(0, double.infinity)
+        .toDouble();
+
     final items = itemRows
         .map(
           (row) => TransaksiCartItem(
@@ -225,8 +232,8 @@ class TransactionLocalDataSource {
         transaction['payment_method'] as String,
       ),
       subtotalAmount: (transaction['subtotal_amount'] as num).toDouble(),
-      itemDiscountAmount: (transaction['discount_amount'] as num).toDouble(),
-      orderDiscountAmount: 0,
+      itemDiscountAmount: itemDiscountAmount,
+      orderDiscountAmount: orderDiscountAmount,
       taxAmount: (transaction['tax_amount'] as num).toDouble(),
       totalAmount: (transaction['total_amount'] as num).toDouble(),
       changeAmount: (transaction['change_amount'] as num).toDouble(),
