@@ -1,4 +1,5 @@
 import '../../domain/entities/stock_adjustment_request.dart';
+import '../../domain/entities/stock_item.dart';
 import '../../domain/entities/stock_movement.dart';
 import '../../domain/repositories/stock_repository.dart';
 import '../datasources/stock_local_data_source.dart';
@@ -11,6 +12,18 @@ class StockRepositoryImpl implements StockRepository {
   @override
   Future<void> adjustStock(StockAdjustmentRequest request) {
     return localDataSource.adjustStock(request);
+  }
+
+  @override
+  Future<StockItem?> getStockItemById(String itemId) async {
+    final row = await localDataSource.getStockItemById(itemId);
+    return row?.toEntity();
+  }
+
+  @override
+  Future<List<StockItem>> getStockItems() async {
+    final rows = await localDataSource.getStockItems();
+    return rows.map((row) => row.toEntity()).toList();
   }
 
   @override

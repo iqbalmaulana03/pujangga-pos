@@ -69,15 +69,6 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
               GoRoute(
                 path: AppRoutes.stock,
                 builder: (context, state) => const StokPage(),
-                routes: [
-                  GoRoute(
-                    path: ':itemId',
-                    builder: (context, state) {
-                      final itemId = state.pathParameters['itemId'] ?? '-';
-                      return DetailStokPage(itemId: itemId);
-                    },
-                  ),
-                ],
               ),
             ],
           ),
@@ -100,6 +91,13 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
         builder: (context, state) {
           final itemId = state.pathParameters['id'] ?? '-';
           return ItemFormPage(itemId: itemId);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.stock}/:itemId',
+        builder: (context, state) {
+          final itemId = state.pathParameters['itemId'] ?? '-';
+          return DetailStokPage(itemId: itemId);
         },
       ),
       GoRoute(
