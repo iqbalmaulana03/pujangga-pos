@@ -1,12 +1,50 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/stock_adjustment_request.dart';
+import '../models/stock_item_db_model.dart';
 import '../models/stock_movement_db_model.dart';
 
 class StockLocalDataSource {
   const StockLocalDataSource({required this.database});
 
   final AppDatabase database;
+
+  Future<List<StockItemDbModel>> getStockItems() async {
+    final db = await database.database();
+    final rows = await db.rawQuery('''
+      SELECT
+        items.*,
+        categories.name AS category_name
+      FROM items
+      LEFT JOIN categories ON categories.id = items.category_id
+      WHERE items.item_type = 'product'
+      ORDER BY items.stock_qty ASC, items.name ASC
+    ''');
+
+    return rows.map(StockItemDbModel.fromMap).toList();
+  }
+
+  Future<StockItemDbModel?> getStockItemById(String itemId) async {
+    final db = await database.database();
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        items.*,
+        categories.name AS category_name
+      FROM items
+      LEFT JOIN categories ON categories.id = items.category_id
+      WHERE items.id = ? AND items.item_type = 'product'
+      LIMIT 1
+      ''',
+      [int.parse(itemId)],
+    );
+
+    if (rows.isEmpty) {
+      return null;
+    }
+
+    return StockItemDbModel.fromMap(rows.first);
+  }
 
   Future<List<StockMovementDbModel>> getStockMovements(String itemId) async {
     final db = await database.database();
@@ -56,9 +94,9 @@ class StockLocalDataSource {
         'manual_reduce' => currentQty - request.quantity,
         'set_balance' => request.quantity,
         _ => throw const AppException(
-            'validation_error',
-            'Tipe penyesuaian stok tidak valid.',
-          ),
+          'validation_error',
+          'Tipe penyesuaian stok tidak valid.',
+        ),
       };
 
       if (nextQty < 0) {
@@ -71,10 +109,7 @@ class StockLocalDataSource {
       final timestamp = DateTime.now().toIso8601String();
       await txn.update(
         'items',
-        {
-          'stock_qty': nextQty,
-          'updated_at': timestamp,
-        },
+        {'stock_qty': nextQty, 'updated_at': timestamp},
         where: 'id = ?',
         whereArgs: [itemId],
       );
