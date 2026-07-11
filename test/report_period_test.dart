@@ -39,6 +39,8 @@ void main() {
       transactionCount: 9,
       topPaymentMethod: 'QRIS',
       itemSummaries: [],
+      paymentMethodBreakdown: const {},
+      salesTrend: const [],
     );
 
     expect(snapshot.hasTransactions, isTrue);

@@ -5,8 +5,11 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../shared/models/quick_action.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
+import '../../../riwayat/domain/entities/riwayat_transaksi_summary.dart';
+import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
+import '../../../stok/domain/entities/stock_item.dart';
+import '../../../stok/presentation/controllers/stok_controller.dart';
 
 class BerandaPage extends ConsumerWidget {
   const BerandaPage({super.key});
@@ -14,237 +17,296 @@ class BerandaPage extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref) async {
     ref.invalidate(businessProfileProvider);
     ref.invalidate(dashboardSummaryProvider);
+    ref.invalidate(riwayatControllerProvider);
+    ref.invalidate(stokControllerProvider);
 
     await Future.wait([
       ref.read(businessProfileProvider.future),
       ref.read(dashboardSummaryProvider.future),
+      ref.read(riwayatControllerProvider.future),
+      ref.read(stokControllerProvider.future),
     ]);
+  }
+
+  String _formatTime(DateTime value) {
+    final hour = value.hour;
+    final minute = value.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final hour12 = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$hour12:$minute $period';
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final profileAsync = ref.watch(businessProfileProvider);
     final dashboardAsync = ref.watch(dashboardSummaryProvider);
+    final riwayatAsync = ref.watch(riwayatControllerProvider);
+    final stokAsync = ref.watch(stokControllerProvider);
 
     return dashboardAsync.when(
       data: (summary) {
-        final profile = profileAsync.asData?.value;
-        final now = DateTime.now();
-        final dateLabel = _formatFullDate(now);
-        final quickActions = [
-          const QuickAction(
-            label: 'Buat Transaksi',
-            icon: Icons.point_of_sale_outlined,
-            route: AppRoutes.transaction,
-          ),
-          const QuickAction(
-            label: 'Tambah Item',
-            icon: Icons.add_box_outlined,
-            route: AppRoutes.catalogCreate,
-          ),
-          const QuickAction(
-            label: 'Lihat Laporan',
-            icon: Icons.bar_chart_outlined,
-            route: AppRoutes.reports,
-          ),
-          const QuickAction(
-            label: 'Riwayat',
-            icon: Icons.receipt_long_outlined,
-            route: AppRoutes.history,
-          ),
-        ];
+        final recentTransactions = riwayatAsync.maybeWhen(
+          data: (state) => state.allTransactions.take(3).toList(),
+          orElse: () => <RiwayatTransaksiSummary>[],
+        );
+
+        final lowStockItems = stokAsync.maybeWhen(
+          data: (state) => state.lowStockItems.take(3).toList(),
+          orElse: () => <StockItem>[],
+        );
 
         return RefreshIndicator(
           onRefresh: () => _refresh(ref),
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 120),
+            padding: const EdgeInsets.all(16),
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF11564F), Color(0xFF34716A)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        'RINGKASAN HARI INI',
-                        style: Theme.of(context).textTheme.labelMedium
-                            ?.copyWith(color: Colors.white),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      profile?.businessName ?? 'Beranda Pujangga POS',
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      profile == null
-                          ? dateLabel
-                          : '${profile.businessType} • $dateLabel',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFFE0EFE8),
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
+              // Daily Sales Summary Bento Section
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isNarrow = constraints.maxWidth < 400;
+                  if (isNarrow) {
+                    return Column(
+                      children: [
+                        _buildRevenueCard(context, summary.revenueToday),
+                        const SizedBox(height: 12),
+                        _buildTransactionCard(
+                          context,
+                          summary.transactionCountToday,
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Row(
                       children: [
                         Expanded(
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF11564F),
-                            ),
-                            onPressed: () => context.push(AppRoutes.transaction),
-                            child: const Text('Buat Transaksi'),
+                          child: _buildRevenueCard(
+                            context,
+                            summary.revenueToday,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              side: const BorderSide(color: Colors.white54),
-                            ),
-                            onPressed: () => context.push(AppRoutes.catalogCreate),
-                            child: const Text('Tambah Item'),
+                          child: _buildTransactionCard(
+                            context,
+                            summary.transactionCountToday,
                           ),
                         ),
                       ],
-                    ),
-                  ],
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 24),
+              // Quick Actions Section
+              const Text(
+                'Aksi Cepat',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF191C1C),
                 ),
               ),
-              const SizedBox(height: 20),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.28,
-                children: [
-                  _MetricCard(
-                    label: 'Omzet Hari Ini',
-                    value: CurrencyFormatter.format(summary.revenueToday),
-                    icon: Icons.payments_outlined,
-                    accent: const Color(0xFF11564F),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => context.push(AppRoutes.transaction),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0D5C56),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  _MetricCard(
-                    label: 'Transaksi Hari Ini',
-                    value: '${summary.transactionCountToday}',
-                    icon: Icons.receipt_long_outlined,
-                    accent: const Color(0xFF9C4F1A),
-                  ),
-                  _MetricCard(
-                    label: 'Item Terlaris',
-                    value: summary.topItemName ?? 'Belum ada',
-                    icon: Icons.local_fire_department_outlined,
-                    accent: const Color(0xFF6B4A8B),
-                    supporting: summary.topItemName == null
-                        ? 'Mulai transaksi pertama'
-                        : '${summary.topItemQuantity.toStringAsFixed(0)} terjual',
-                  ),
-                  _MetricCard(
-                    label: 'Metode Top',
-                    value: summary.topPaymentMethod ?? 'Belum ada',
-                    icon: Icons.qr_code_2_outlined,
-                    accent: const Color(0xFF4A6A3C),
-                    supporting: summary.hasTransactions
-                        ? 'Paling sering dipakai'
-                        : 'Data muncul setelah transaksi',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: Row(
                     children: [
-                      Text(
-                        'Fokus Operasional',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        summary.hasTransactions
-                            ? 'Hari ini ${profile?.businessName ?? 'usaha Anda'} sudah mencatat ${summary.transactionCountToday} transaksi dengan omzet ${CurrencyFormatter.format(summary.revenueToday)}.'
-                            : 'Belum ada transaksi hari ini. Gunakan shortcut di bawah untuk mulai operasional dan isi data laporan pertama.',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.copyWith(height: 1.4),
-                      ),
-                      const SizedBox(height: 14),
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(18),
+                          color: Colors.white.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        child: const Icon(
+                          Icons.point_of_sale,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
                         child: Column(
-                          children: [
-                            _FocusRow(
-                              label: 'Item paling laku',
-                              value: summary.topItemName ?? 'Belum ada data',
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Buat Transaksi',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                            const SizedBox(height: 10),
-                            _FocusRow(
-                              label: 'Pembayaran dominan',
-                              value:
-                                  summary.topPaymentMethod ?? 'Belum ada data',
-                            ),
-                            const SizedBox(height: 10),
-                            _FocusRow(
-                              label: 'Akses laporan',
-                              value: 'Buka tab Laporan untuk rekap lengkap',
+                            SizedBox(height: 4),
+                            Text(
+                              'Mulai pesanan baru',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                color: Colors.white70,
+                              ),
                             ),
                           ],
                         ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward,
+                        color: Colors.white,
+                        size: 24,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Shortcut Operasional',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-              ),
               const SizedBox(height: 12),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              Row(
                 children: [
-                  for (final action in quickActions)
-                    _QuickActionCard(action: action),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => context.push(AppRoutes.catalogCreate),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0D5C56),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.add_box,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Tambah Item',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => context.push(AppRoutes.reports),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFBEC9C6),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2F4F2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.bar_chart,
+                                color: Color(0xFF0D5C56),
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Lihat Laporan',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0D5C56),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
+              ),
+              const SizedBox(height: 24),
+              // Split Layout for Desktop / Tablet, Stack on Mobile
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 600;
+                  if (isWide) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: _buildRecentTransactions(
+                            context,
+                            recentTransactions,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 1,
+                          child: _buildLowStock(context, lowStockItems),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        _buildRecentTransactions(context, recentTransactions),
+                        const SizedBox(height: 24),
+                        _buildLowStock(context, lowStockItems),
+                      ],
+                    );
+                  }
+                },
               ),
             ],
           ),
@@ -278,173 +340,406 @@ class BerandaPage extends ConsumerWidget {
       },
     );
   }
-}
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.accent,
-    this.supporting,
-  });
-
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color accent;
-  final String? supporting;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: accent),
-            ),
-            const Spacer(),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            if (supporting != null) ...[
-              const SizedBox(height: 6),
+  Widget _buildRevenueCard(BuildContext context, double revenueToday) {
+    return Container(
+      height: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFECEEED)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
               Text(
-                supporting!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodySmall,
+                'Penjualan Hari Ini',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: Color(0xFF3F4947),
+                ),
+              ),
+              Icon(
+                Icons.payments,
+                color: Color(0xFF0D5C56),
               ),
             ],
-          ],
-        ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  CurrencyFormatter.format(revenueToday),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF191C1C),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: const [
+                  Icon(
+                    Icons.trending_up,
+                    color: Color(0xFF0D5C56),
+                    size: 14,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    '+12% dari kemarin',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0D5C56),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
-}
 
-String _formatFullDate(DateTime value) {
-  const days = [
-    'Senin',
-    'Selasa',
-    'Rabu',
-    'Kamis',
-    'Jumat',
-    'Sabtu',
-    'Minggu',
-  ];
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'Mei',
-    'Jun',
-    'Jul',
-    'Agu',
-    'Sep',
-    'Okt',
-    'Nov',
-    'Des',
-  ];
+  Widget _buildTransactionCard(BuildContext context, int transactionCount) {
+    return Container(
+      height: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFECEEED)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Text(
+                'Transaksi',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: Color(0xFF3F4947),
+                ),
+              ),
+              Icon(
+                Icons.receipt_long,
+                color: Color(0xFF0D5C56),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$transactionCount',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF191C1C),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Jam operasional aktif',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: Color(0xFF3F4947),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 
-  return '${days[value.weekday - 1]}, ${value.day} ${months[value.month - 1]} ${value.year}';
-}
-
-class _FocusRow extends StatelessWidget {
-  const _FocusRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
+  Widget _buildRecentTransactions(
+    BuildContext context,
+    List<RiwayatTransaksiSummary> transactions,
+  ) {
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text(
+                'Transaksi Terakhir',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF191C1C),
+                ),
+              ),
             ),
-          ),
+            TextButton(
+              onPressed: () => context.push(AppRoutes.history),
+              child: const Text(
+                'Lihat Semua',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0D5C56),
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.end,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFECEEED)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
+          clipBehavior: Clip.antiAlias,
+          child: transactions.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'Belum ada transaksi hari ini.',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: Color(0xFF3F4947),
+                      ),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (int i = 0; i < transactions.length; i++) ...[
+                      InkWell(
+                        onTap: () => context.push(
+                          '${AppRoutes.history}/${transactions[i].invoiceNumber}',
+                        ),
+                        child: Container(
+                          height: 72,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF8ED2CA),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.receipt,
+                                  color: Color(0xFF0D5C56),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Pesanan #${transactions[i].invoiceNumber}',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF191C1C),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _formatTime(transactions[i].createdAt),
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12,
+                                        color: Color(0xFF3F4947),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                CurrencyFormatter.format(
+                                  transactions[i].totalAmount,
+                                ),
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF191C1C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (i < transactions.length - 1)
+                        const Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: Color(0xFFECEEED),
+                          indent: 16,
+                          endIndent: 16,
+                        ),
+                    ],
+                  ],
+                ),
         ),
       ],
     );
   }
-}
 
-class _QuickActionCard extends StatelessWidget {
-  const _QuickActionCard({required this.action});
-
-  final QuickAction action;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 162,
-      child: Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push(action.route),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.secondaryContainer,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(action.icon),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  action.label,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Buka cepat',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+  Widget _buildLowStock(BuildContext context, List<StockItem> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: const [
+            Icon(
+              Icons.warning,
+              color: Color(0xFFBA1A1A),
+              size: 22,
             ),
-          ),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Peringatan Stok Menipis',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF191C1C),
+                ),
+              ),
+            ),
+          ],
         ),
-      ),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFDAD6),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFFFB4AB)),
+          ),
+          child: items.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  child: Text(
+                    'Semua stok barang aman.',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      color: Color(0xFFBA1A1A),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    for (int i = 0; i < items.length; i++) ...[
+                      GestureDetector(
+                        onTap: () => context.push(
+                          '${AppRoutes.stock}/${items[i].id}',
+                        ),
+                        child: Container(
+                          height: 48,
+                          margin: EdgeInsets.only(
+                            bottom: i < items.length - 1 ? 8 : 0,
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  items[i].name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    color: Color(0xFF191C1C),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '${items[i].currentStock.toStringAsFixed(0)} tersisa',
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 14,
+                                  color: Color(0xFFBA1A1A),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+        ),
+      ],
     );
   }
 }

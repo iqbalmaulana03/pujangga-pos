@@ -31,9 +31,9 @@ Design system utama:
 
 ### Alur Beranda dan Ringkasan
 
-- `Beranda (Refined)`
-  - Screen ID: `78fea7bf17994ea1bbcf5ca3de51c0b6`
-  - Fungsi: landing screen utama setelah setup
+- `Beranda (Margin Insights)`
+  - Screen ID: `3e1e0f8b40a642d7a78dd71a77bc45e1`
+  - Fungsi: landing screen utama setelah setup dengan ringkasan omzet dan margin hari ini
   - Terkait issue: `#6`
 
 ### Alur Katalog
@@ -43,9 +43,9 @@ Design system utama:
   - Fungsi: daftar barang dan jasa
   - Terkait issue: `#3`
 
-- `Tambah Barang (Refined)`
-  - Screen ID: `69e916e132b549ed87c38241c2748851`
-  - Fungsi: form tambah/edit item dengan pemisahan jelas antara produk dan jasa
+- `Tambah Barang (Margin Integration)`
+  - Screen ID: `b0e520e7ed2d4d7481c7b29017fa4e57`
+  - Fungsi: form tambah/edit item dengan pemisahan jelas antara produk dan jasa serta input harga modal/biaya dasar
   - Terkait issue: `#3`
 
 ### Alur Transaksi
@@ -69,9 +69,9 @@ Design system utama:
 
 ### Alur Laporan
 
-- `Laporan (Refined)`
-  - Screen ID: `62e0feb2c1cd431da53b60664d970555`
-  - Fungsi: laporan operasional utama
+- `Laporan (Margin Refined)`
+  - Screen ID: `0b87761dc37d4db3a89f40a1fdca0232`
+  - Fungsi: laporan operasional utama dengan ringkasan margin kotor
   - Terkait issue: `#6`
 
 ### Alur Riwayat Transaksi
@@ -93,9 +93,9 @@ Design system utama:
 
 ### Alur Pengaturan
 
-- `Pengaturan (Refined Local-First)`
-  - Screen ID: `3eadc083cfe94d7a8210c1f1e82e3cfe`
-  - Fungsi: pengaturan usaha, preferensi operasional, manajemen data lokal, tanpa konsep login atau logout
+- `Pengaturan (Capital Feature)`
+  - Screen ID: `575d0f627212423f83fa661c29db4395`
+  - Fungsi: pengaturan usaha dengan modal awal usaha, preferensi operasional, dan manajemen data lokal tanpa konsep login atau logout
   - Terkait issue: `#7`
 
 ## 2. Aturan Navigasi Final
@@ -126,12 +126,16 @@ Screen berikut tidak dipakai sebagai referensi utama jika sudah ada versi refine
 - `Transaction Detail` - `90f8f1bf8be349a2a1180c11120e0b21`
 - `Settings` - `51a67eb42b894b57962755d0241814f8`
 - `Beranda` - `cc1e8b29c9d8417f96196e6a65046720`
+- `Beranda (Refined)` - `78fea7bf17994ea1bbcf5ca3de51c0b6`
 - `Laporan` - `c24c1bf5bdfc4d04b3434a5e5f444f1b`
+- `Laporan (Refined)` - `62e0feb2c1cd431da53b60664d970555`
 - `Riwayat Transaksi` - `83445c138f0945a8a8c4b20154fa48e7`
 - `Tambah Barang` - `c526e0a669c14ecaa3518df5325b2df6`
+- `Tambah Barang (Refined)` - `69e916e132b549ed87c38241c2748851`
 - `Manajemen Stok` - `65f87a1902b04cde9ad0deb2fbf29e1a`
 - `Pengaturan` - `0030e516d208429c827c3a444beea7fe`
 - `Pengaturan (Refined)` - `19b70ffb87c84cf2a3878aefa3f825d3`
+- `Pengaturan (Refined Local-First)` - `3eadc083cfe94d7a8210c1f1e82e3cfe`
 
 ## 4. Status Final
 
@@ -140,5 +144,5 @@ Untuk scope MVP saat ini, canonical screen set di atas dianggap final dan siap d
 Artinya:
 
 - tidak ada refinement desain yang masih wajib dikerjakan sebelum implementasi
-- `Laporan (Refined)` sudah dianggap final untuk MVP
+- `Laporan (Margin Refined)` sudah dianggap final untuk MVP
 - refinement tambahan hanya dilakukan jika nanti ada keputusan produk baru, temuan QA, atau kebutuhan implementasi yang benar-benar memaksa perubahan

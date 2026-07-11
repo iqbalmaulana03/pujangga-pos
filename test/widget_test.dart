@@ -26,23 +26,22 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    final scrollable = find.byType(Scrollable).first;
+    final scrollable = find.byType(SingleChildScrollView);
 
-    expect(find.text('Siapkan Bisnis'), findsWidgets);
+    expect(find.text('Pujangga-POS'), findsWidgets);
     await tester.dragUntilVisible(
-      find.text('Informasi Utama'),
+      find.text('Nama Toko / Bisnis'),
       scrollable,
       const Offset(0, -250),
     );
-    expect(find.text('Informasi Utama'), findsOneWidget);
+    expect(find.text('Nama Toko / Bisnis'), findsOneWidget);
     await tester.dragUntilVisible(
-      find.text('Nama pemilik'),
+      find.text('Kategori Bisnis'),
       scrollable,
       const Offset(0, -300),
     );
-    expect(find.text('Nama pemilik'), findsOneWidget);
-    expect(find.text('Nomor kontak'), findsOneWidget);
-    expect(find.text('Alamat'), findsOneWidget);
+    expect(find.text('Kategori Bisnis'), findsOneWidget);
+    expect(find.text('Mata Uang'), findsOneWidget);
   });
 
   testWidgets('menampilkan beranda saat profil bisnis sudah ada', (
@@ -86,7 +85,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('RINGKASAN HARI INI'), findsOneWidget);
+    expect(find.text('Penjualan Hari Ini'), findsOneWidget);
     expect(find.text('Buat Transaksi'), findsWidgets);
   });
 
@@ -133,22 +132,22 @@ void main() {
     );
 
     await tester.pumpAndSettle();
-    expect(find.text('RINGKASAN HARI INI'), findsOneWidget);
+    expect(find.text('Penjualan Hari Ini'), findsOneWidget);
 
     await tester.tap(find.byTooltip('Pengaturan'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Pengaturan Usaha'), findsOneWidget);
+    expect(find.text('Pengaturan'), findsOneWidget);
     expect(find.text('Kedai Pujangga'), findsOneWidget);
     expect(find.text('Kedai Kopi'), findsOneWidget);
     expect(find.text('Iqbal'), findsOneWidget);
     final scrollable = find.byType(Scrollable).first;
     await tester.dragUntilVisible(
-      find.text('Preferensi Operasional'),
+      find.text('PREFERENSI OPERASIONAL'),
       scrollable,
       const Offset(0, -300),
     );
-    expect(find.text('Preferensi Operasional'), findsOneWidget);
+    expect(find.text('PREFERENSI OPERASIONAL'), findsOneWidget);
     expect(find.text('Rupiah (IDR)'), findsOneWidget);
   });
 }
