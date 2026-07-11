@@ -50,6 +50,41 @@ class AppDatabase {
     if (oldVersion < 5) {
       await _migrateToVersion5(db, oldVersion);
     }
+    if (oldVersion < 6) {
+      await _migrateToVersion6(db);
+    }
+  }
+
+  Future<void> _migrateToVersion6(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    
+    if (existingTables.contains('business_profile')) {
+      final columns = await db.rawQuery('PRAGMA table_info(business_profile)');
+      final hasColumn = columns.any((c) => c['name'] == 'modal_awal_usaha');
+      if (!hasColumn) {
+        await db.execute('ALTER TABLE business_profile ADD COLUMN modal_awal_usaha REAL');
+      }
+    }
+    
+    if (existingTables.contains('items')) {
+      final columns = await db.rawQuery('PRAGMA table_info(items)');
+      final hasHargaModal = columns.any((c) => c['name'] == 'harga_modal');
+      if (!hasHargaModal) {
+        await db.execute('ALTER TABLE items ADD COLUMN harga_modal REAL');
+      }
+      final hasBiayaDasar = columns.any((c) => c['name'] == 'biaya_dasar');
+      if (!hasBiayaDasar) {
+        await db.execute('ALTER TABLE items ADD COLUMN biaya_dasar REAL');
+      }
+    }
+    
+    if (existingTables.contains('sales_transaction_items')) {
+      final columns = await db.rawQuery('PRAGMA table_info(sales_transaction_items)');
+      final hasCostSnapshot = columns.any((c) => c['name'] == 'cost_price_snapshot');
+      if (!hasCostSnapshot) {
+        await db.execute('ALTER TABLE sales_transaction_items ADD COLUMN cost_price_snapshot REAL');
+      }
+    }
   }
 
   Future<void> _migrateToVersion5(Database db, int oldVersion) async {
@@ -238,6 +273,7 @@ class AppDatabase {
         phone TEXT,
         address TEXT,
         logo_path TEXT,
+        modal_awal_usaha REAL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -284,6 +320,8 @@ class AppDatabase {
         unit TEXT,
         sale_price REAL NOT NULL,
         stock_qty REAL NOT NULL DEFAULT 0,
+        harga_modal REAL,
+        biaya_dasar REAL,
         is_active INTEGER NOT NULL DEFAULT 1,
         notes TEXT,
         created_at TEXT NOT NULL,
@@ -328,6 +366,7 @@ class AppDatabase {
         line_subtotal REAL NOT NULL,
         line_discount_amount REAL NOT NULL DEFAULT 0,
         line_total REAL NOT NULL,
+        cost_price_snapshot REAL,
         created_at TEXT NOT NULL,
         FOREIGN KEY(transaction_id) REFERENCES sales_transactions(id) ON DELETE CASCADE,
         FOREIGN KEY(item_id) REFERENCES items(id)

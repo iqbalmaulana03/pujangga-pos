@@ -134,6 +134,20 @@ class TransactionLocalDataSource {
       });
 
       for (final cartItem in request.items) {
+        final itemRows = await txn.query(
+          'items',
+          columns: ['harga_modal', 'biaya_dasar'],
+          where: 'id = ?',
+          whereArgs: [int.parse(cartItem.item.id)],
+          limit: 1,
+        );
+        double? costPrice;
+        if (itemRows.isNotEmpty) {
+          costPrice = cartItem.item.isJasa
+              ? (itemRows.first['biaya_dasar'] as num?)?.toDouble()
+              : (itemRows.first['harga_modal'] as num?)?.toDouble();
+        }
+
         await txn.insert('sales_transaction_items', {
           'transaction_id': transactionId,
           'item_id': int.parse(cartItem.item.id),
@@ -145,6 +159,7 @@ class TransactionLocalDataSource {
           'line_subtotal': cartItem.lineSubtotal,
           'line_discount_amount': cartItem.itemDiscountAmount,
           'line_total': cartItem.lineTotal,
+          'cost_price_snapshot': costPrice,
           'created_at': createdAtIso,
         });
       }

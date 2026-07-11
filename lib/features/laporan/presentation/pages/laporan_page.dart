@@ -7,6 +7,7 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../domain/entities/item_sales_summary.dart';
 import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
+import '../../domain/entities/margin_item_summary.dart';
 import '../controllers/laporan_controller.dart';
 
 class LaporanPage extends ConsumerWidget {
@@ -38,86 +39,206 @@ class LaporanPage extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // Total Revenue Card
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.02),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isNarrow = constraints.maxWidth < 600;
+                    final revenueCard = Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBEC9C6).withValues(alpha: 0.3)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Total Pendapatan',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF3F4947),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            CurrencyFormatter.format(snapshot.revenue),
-                            style: const TextStyle(
+                          const Text(
+                            'Total Pendapatan',
+                            style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 28,
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D5C56),
+                              color: Color(0xFF3F4947),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          if (snapshot.hasTransactions)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDDEEE7),
-                                borderRadius: BorderRadius.circular(4),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                CurrencyFormatter.format(snapshot.revenue),
+                                style: const TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0D5C56),
+                                ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.trending_up, size: 12, color: Color(0xFF0D5C56)),
-                                  SizedBox(width: 2),
-                                  Text(
-                                    '12%',
+                              const SizedBox(width: 8),
+                              if (snapshot.hasTransactions)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDDEEE7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Icon(Icons.trending_up, size: 12, color: Color(0xFF0D5C56)),
+                                      SizedBox(width: 2),
+                                      Text(
+                                        '12%',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF0D5C56),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatRange(snapshot),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              color: Color(0xFF3F4947),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    final marginCard = Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBEC9C6).withValues(alpha: 0.3)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Margin Kotor',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF3F4947),
+                                ),
+                              ),
+                              if (!snapshot.marginIsComplete)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFDAD6),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'Margin belum lengkap',
                                     style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFFBA1A1A),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                snapshot.marginIsComplete
+                                    ? CurrencyFormatter.format(snapshot.margin)
+                                    : 'Belum Lengkap',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: snapshot.marginIsComplete
+                                      ? const Color(0xFF0D5C56)
+                                      : const Color(0xFFBA1A1A),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (snapshot.marginIsComplete && snapshot.revenue > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDDEEE7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '${(snapshot.margin / snapshot.revenue * 100).toStringAsFixed(0)}%',
+                                    style: const TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       color: Color(0xFF0D5C56),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatRange(snapshot),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 11,
+                              color: Color(0xFF3F4947),
                             ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatRange(snapshot),
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          color: Color(0xFF3F4947),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+
+                    if (isNarrow) {
+                      return Column(
+                        children: [
+                          revenueCard,
+                          const SizedBox(height: 12),
+                          marginCard,
+                        ],
+                      );
+                    } else {
+                      return Row(
+                        children: [
+                          Expanded(child: revenueCard),
+                          const SizedBox(width: 12),
+                          Expanded(child: marginCard),
+                        ],
+                      );
+                    }
+                  },
                 ),
                 const SizedBox(height: 12),
 
@@ -197,6 +318,10 @@ class LaporanPage extends ConsumerWidget {
                 else ...[
                   // Top Selling Items Card
                   _buildTopSellingCard(snapshot.itemSummaries),
+                  const SizedBox(height: 16),
+
+                  // Top Margin Items Card
+                  _buildTopMarginItemsCard(snapshot.topMarginItems, snapshot.catalogMarginIsComplete),
                   const SizedBox(height: 16),
 
                   // Payment Methods Breakdown Card
@@ -713,5 +838,155 @@ class LaporanPage extends ConsumerWidget {
     ];
 
     return (long ? longMonths : shortMonths)[month - 1];
+  }
+
+  Widget _buildTopMarginItemsCard(List<MarginItemSummary> items, bool catalogMarginIsComplete) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFBEC9C6).withValues(alpha: 0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Produk Margin Tertinggi',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF191C1C),
+                ),
+              ),
+              if (!catalogMarginIsComplete)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFDAD6),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'Margin belum lengkap',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFBA1A1A),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (items.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: Text(
+                  'Belum ada data margin item.',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF3F4947),
+                  ),
+                ),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: items.length,
+              separatorBuilder: (context, index) => const Divider(height: 1, thickness: 1, color: Color(0xFFECEEED)),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Row(
+                    children: [
+                      // Rank number badge
+                      Container(
+                        width: 24,
+                        height: 24,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: index == 0 ? const Color(0xFF0D5C56) : const Color(0xFFECEEED),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${index + 1}',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: index == 0 ? Colors.white : const Color(0xFF3F4947),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Item Name & Category / Price
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name,
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF191C1C),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              '${CurrencyFormatter.format(item.sellingPrice)}${item.unitLabel != null && item.unitLabel!.isNotEmpty ? '/${item.unitLabel}' : ''}',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                color: Color(0xFF3F4947),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Margin percent
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDDEEE7),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '${item.marginPercent.toStringAsFixed(0)}% Margin',
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0D5C56),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
   }
 }
