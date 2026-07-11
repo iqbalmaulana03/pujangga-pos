@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:io';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../../setup_usaha/domain/entities/business_profile.dart';
+import '../controllers/pengaturan_backup_controller.dart';
 import '../controllers/pengaturan_profil_controller.dart';
 import '../controllers/pengaturan_settings_controller.dart';
 
@@ -18,7 +19,8 @@ class PengaturanPage extends ConsumerStatefulWidget {
 }
 
 class _PengaturanPageState extends ConsumerState<PengaturanPage> {
-  bool _autoPrintReceipt = true; // Stateful dummy switch for aesthetics to match Stitch
+  bool _autoPrintReceipt =
+      true; // Stateful dummy switch for aesthetics to match Stitch
 
   Future<void> _handleProfileSubmit(BusinessProfile profile) async {
     try {
@@ -40,17 +42,23 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
 
   Future<void> _handleSettingsSubmit(AppSettings settings) async {
     try {
-      await ref.read(pengaturanSettingsControllerProvider.notifier).save(settings);
+      await ref
+          .read(pengaturanSettingsControllerProvider.notifier)
+          .save(settings);
       ref.invalidate(appSettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Preferensi operasional berhasil diperbarui.')),
+          const SnackBar(
+            content: Text('Preferensi operasional berhasil diperbarui.'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memperbarui preferensi: ${e.toString()}')),
+          SnackBar(
+            content: Text('Gagal memperbarui preferensi: ${e.toString()}'),
+          ),
         );
       }
     }
@@ -80,6 +88,60 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     }
   }
 
+  Future<void> _handleCreateBackup() async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    try {
+      final backup = await ref
+          .read(pengaturanBackupControllerProvider.notifier)
+          .createBackup();
+
+      if (!mounted) {
+        return;
+      }
+
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cadangan data berhasil dibuat: ${backup.fileName} (${backup.totalRecords} record).',
+          ),
+        ),
+      );
+
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            subject: 'Cadangan Data Pujangga POS',
+            text:
+                'File backup lokal Pujangga POS dibuat pada ${backup.generatedAt.toLocal().toIso8601String()}.',
+            files: [XFile(backup.filePath)],
+          ),
+        );
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Cadangan tersimpan di ${backup.filePath}, tetapi menu bagikan gagal dibuka: $error',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mencadangkan data: ${error.toString()}')),
+      );
+    }
+  }
+
   void _showEditProfileDialog(BusinessProfile? profile) {
     final nameCtrl = TextEditingController(text: profile?.businessName ?? '');
     final typeCtrl = TextEditingController(text: profile?.businessType ?? '');
@@ -94,10 +156,16 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text(
             'Edit Profil Usaha',
-            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Color(0xFF0D5C56)),
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0D5C56),
+            ),
           ),
           content: SingleChildScrollView(
             child: Form(
@@ -111,7 +179,9 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                       labelText: 'Nama Usaha *',
                       border: UnderlineInputBorder(),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Nama usaha wajib diisi' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Nama usaha wajib diisi'
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -120,7 +190,9 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                       labelText: 'Kategori / Jenis Usaha *',
                       border: UnderlineInputBorder(),
                     ),
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Jenis usaha wajib diisi' : null,
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Jenis usaha wajib diisi'
+                        : null,
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -163,7 +235,10 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Color(0xFF3F4947))),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF3F4947)),
+              ),
             ),
             FilledButton(
               onPressed: () {
@@ -171,17 +246,27 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                   final newProfile = BusinessProfile(
                     businessName: nameCtrl.text.trim(),
                     businessType: typeCtrl.text.trim(),
-                    ownerName: ownerCtrl.text.trim().isEmpty ? null : ownerCtrl.text.trim(),
-                    contactNumber: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-                    address: addrCtrl.text.trim().isEmpty ? null : addrCtrl.text.trim(),
-                    logoPath: logoCtrl.text.trim().isEmpty ? null : logoCtrl.text.trim(),
+                    ownerName: ownerCtrl.text.trim().isEmpty
+                        ? null
+                        : ownerCtrl.text.trim(),
+                    contactNumber: phoneCtrl.text.trim().isEmpty
+                        ? null
+                        : phoneCtrl.text.trim(),
+                    address: addrCtrl.text.trim().isEmpty
+                        ? null
+                        : addrCtrl.text.trim(),
+                    logoPath: logoCtrl.text.trim().isEmpty
+                        ? null
+                        : logoCtrl.text.trim(),
                     modalAwalUsaha: profile?.modalAwalUsaha,
                   );
                   Navigator.pop(context);
                   _handleProfileSubmit(newProfile);
                 }
               },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D5C56),
+              ),
               child: const Text('Simpan'),
             ),
           ],
@@ -202,7 +287,9 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text(
             'Modal Awal Usaha',
             style: TextStyle(
@@ -235,7 +322,10 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Color(0xFF3F4947))),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF3F4947)),
+              ),
             ),
             FilledButton(
               onPressed: () {
@@ -247,7 +337,9 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                   Navigator.pop(context);
                 }
               },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D5C56),
+              ),
               child: const Text('Simpan'),
             ),
           ],
@@ -261,47 +353,56 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       context: context,
       builder: (context) {
         return SimpleDialog(
-          title: const Text('Pilih Mata Uang', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Pilih Mata Uang',
+            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+          ),
           children: [
             SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(context);
-                _handleSettingsSubmit(AppSettings(
-                  currencyCode: 'IDR',
-                  currencySymbol: 'Rp',
-                  defaultTaxPercent: settings.defaultTaxPercent,
-                  stockAllowNegative: settings.stockAllowNegative,
-                  receiptHeader: settings.receiptHeader,
-                  receiptFooter: settings.receiptFooter,
-                ));
+                _handleSettingsSubmit(
+                  AppSettings(
+                    currencyCode: 'IDR',
+                    currencySymbol: 'Rp',
+                    defaultTaxPercent: settings.defaultTaxPercent,
+                    stockAllowNegative: settings.stockAllowNegative,
+                    receiptHeader: settings.receiptHeader,
+                    receiptFooter: settings.receiptFooter,
+                  ),
+                );
               },
               child: const Text('Rupiah (IDR) - Rp'),
             ),
             SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(context);
-                _handleSettingsSubmit(AppSettings(
-                  currencyCode: 'USD',
-                  currencySymbol: '\$',
-                  defaultTaxPercent: settings.defaultTaxPercent,
-                  stockAllowNegative: settings.stockAllowNegative,
-                  receiptHeader: settings.receiptHeader,
-                  receiptFooter: settings.receiptFooter,
-                ));
+                _handleSettingsSubmit(
+                  AppSettings(
+                    currencyCode: 'USD',
+                    currencySymbol: '\$',
+                    defaultTaxPercent: settings.defaultTaxPercent,
+                    stockAllowNegative: settings.stockAllowNegative,
+                    receiptHeader: settings.receiptHeader,
+                    receiptFooter: settings.receiptFooter,
+                  ),
+                );
               },
               child: const Text('US Dollar (USD) - \$'),
             ),
             SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(context);
-                _handleSettingsSubmit(AppSettings(
-                  currencyCode: 'SGD',
-                  currencySymbol: 'S\$',
-                  defaultTaxPercent: settings.defaultTaxPercent,
-                  stockAllowNegative: settings.stockAllowNegative,
-                  receiptHeader: settings.receiptHeader,
-                  receiptFooter: settings.receiptFooter,
-                ));
+                _handleSettingsSubmit(
+                  AppSettings(
+                    currencyCode: 'SGD',
+                    currencySymbol: 'S\$',
+                    defaultTaxPercent: settings.defaultTaxPercent,
+                    stockAllowNegative: settings.stockAllowNegative,
+                    receiptHeader: settings.receiptHeader,
+                    receiptFooter: settings.receiptFooter,
+                  ),
+                );
               },
               child: const Text('Singapore Dollar (SGD) - S\$'),
             ),
@@ -312,14 +413,19 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   }
 
   void _showTaxDialog(AppSettings settings) {
-    final taxCtrl = TextEditingController(text: settings.defaultTaxPercent.toStringAsFixed(0));
+    final taxCtrl = TextEditingController(
+      text: settings.defaultTaxPercent.toStringAsFixed(0),
+    );
     final formKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Atur Pajak Default (%)', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Atur Pajak Default (%)',
+            style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+          ),
           content: Form(
             key: formKey,
             child: TextFormField(
@@ -338,24 +444,31 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Color(0xFF3F4947))),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF3F4947)),
+              ),
             ),
             FilledButton(
               onPressed: () {
                 if (formKey.currentState!.validate()) {
                   final parsedTax = double.parse(taxCtrl.text);
                   Navigator.pop(context);
-                  _handleSettingsSubmit(AppSettings(
-                    currencyCode: settings.currencyCode,
-                    currencySymbol: settings.currencySymbol,
-                    defaultTaxPercent: parsedTax,
-                    stockAllowNegative: settings.stockAllowNegative,
-                    receiptHeader: settings.receiptHeader,
-                    receiptFooter: settings.receiptFooter,
-                  ));
+                  _handleSettingsSubmit(
+                    AppSettings(
+                      currencyCode: settings.currencyCode,
+                      currencySymbol: settings.currencySymbol,
+                      defaultTaxPercent: parsedTax,
+                      stockAllowNegative: settings.stockAllowNegative,
+                      receiptHeader: settings.receiptHeader,
+                      receiptFooter: settings.receiptFooter,
+                    ),
+                  );
                 }
               },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D5C56),
+              ),
               child: const Text('Simpan'),
             ),
           ],
@@ -369,19 +482,33 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Reset Data Aplikasi?', style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold, color: Color(0xFFBA1A1A))),
-          content: const Text('Apakah Anda yakin ingin menghapus semua data transaksi, katalog barang, dan profil usaha? Tindakan ini bersifat permanen dan tidak dapat dibatalkan.'),
+          title: const Text(
+            'Reset Data Aplikasi?',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              color: Color(0xFFBA1A1A),
+            ),
+          ),
+          content: const Text(
+            'Apakah Anda yakin ingin menghapus semua data transaksi, katalog barang, dan profil usaha? Tindakan ini bersifat permanen dan tidak dapat dibatalkan.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Color(0xFF3F4947))),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF3F4947)),
+              ),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.pop(context);
                 _handleResetDatabase();
               },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFBA1A1A)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFBA1A1A),
+              ),
               child: const Text('Reset Semua Data'),
             ),
           ],
@@ -407,6 +534,8 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(businessProfileProvider);
     final settingsAsync = ref.watch(appSettingsProvider);
+    final backupState = ref.watch(pengaturanBackupControllerProvider);
+    final isBackingUp = backupState.isLoading;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
@@ -430,11 +559,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFBEC9C6),
-          ),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFBEC9C6)),
         ),
       ),
       body: profileAsync.when(
@@ -471,7 +596,10 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                             decoration: BoxDecoration(
                               color: const Color(0xFFECEEED),
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFFBEC9C6), width: 1),
+                              border: Border.all(
+                                color: const Color(0xFFBEC9C6),
+                                width: 1,
+                              ),
                             ),
                             child: const Icon(
                               Icons.storefront,
@@ -485,7 +613,8 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  profile?.businessName ?? 'Nama Usaha Belum Diisi',
+                                  profile?.businessName ??
+                                      'Nama Usaha Belum Diisi',
                                   style: const TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 18,
@@ -496,7 +625,11 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    const Icon(Icons.local_cafe, size: 14, color: Color(0xFF3F4947)),
+                                    const Icon(
+                                      Icons.local_cafe,
+                                      size: 14,
+                                      color: Color(0xFF3F4947),
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       profile?.businessType ?? 'Kategori Usaha',
@@ -510,15 +643,24 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                                 ),
                                 const SizedBox(height: 12),
                                 if (profile?.ownerName != null) ...[
-                                  _buildProfileDetailRow(Icons.person, profile!.ownerName!),
+                                  _buildProfileDetailRow(
+                                    Icons.person,
+                                    profile!.ownerName!,
+                                  ),
                                   const SizedBox(height: 4),
                                 ],
                                 if (profile?.contactNumber != null) ...[
-                                  _buildProfileDetailRow(Icons.phone, profile!.contactNumber!),
+                                  _buildProfileDetailRow(
+                                    Icons.phone,
+                                    profile!.contactNumber!,
+                                  ),
                                   const SizedBox(height: 4),
                                 ],
                                 if (profile?.address != null) ...[
-                                  _buildProfileDetailRow(Icons.location_on, profile!.address!),
+                                  _buildProfileDetailRow(
+                                    Icons.location_on,
+                                    profile!.address!,
+                                  ),
                                 ],
                               ],
                             ),
@@ -529,7 +671,10 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         top: 0,
                         right: 0,
                         child: IconButton(
-                          icon: const Icon(Icons.edit, color: Color(0xFF0D5C56)),
+                          icon: const Icon(
+                            Icons.edit,
+                            color: Color(0xFF0D5C56),
+                          ),
                           onPressed: () => _showEditProfileDialog(profile),
                         ),
                       ),
@@ -581,14 +726,23 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         value: _getCurrencyLabel(settings.currencyCode),
                         onTap: () => _showCurrencyDialog(settings),
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildRowAction(
                         icon: Icons.receipt,
                         title: 'Pajak Default',
-                        value: '${settings.defaultTaxPercent.toStringAsFixed(0)}%',
+                        value:
+                            '${settings.defaultTaxPercent.toStringAsFixed(0)}%',
                         onTap: () => _showTaxDialog(settings),
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildSwitchRow(
                         icon: Icons.print,
                         title: 'Cetak Struk Otomatis',
@@ -599,20 +753,26 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                           });
                         },
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildSwitchRow(
                         icon: Icons.exposure_neg_1,
                         title: 'Izinkan Stok Minus',
                         value: settings.stockAllowNegative,
                         onChanged: (val) {
-                          _handleSettingsSubmit(AppSettings(
-                            currencyCode: settings.currencyCode,
-                            currencySymbol: settings.currencySymbol,
-                            defaultTaxPercent: settings.defaultTaxPercent,
-                            stockAllowNegative: val,
-                            receiptHeader: settings.receiptHeader,
-                            receiptFooter: settings.receiptFooter,
-                          ));
+                          _handleSettingsSubmit(
+                            AppSettings(
+                              currencyCode: settings.currencyCode,
+                              currencySymbol: settings.currencySymbol,
+                              defaultTaxPercent: settings.defaultTaxPercent,
+                              stockAllowNegative: val,
+                              receiptHeader: settings.receiptHeader,
+                              receiptFooter: settings.receiptFooter,
+                            ),
+                          );
                         },
                       ),
                     ],
@@ -636,35 +796,60 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         icon: Icons.cloud_upload,
                         iconColor: const Color(0xFF0D5C56),
                         title: 'Cadangkan Data',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Cadangkan data berhasil disimpan secara lokal.')),
-                          );
-                        },
+                        trailing: isBackingUp
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : null,
+                        onTap: isBackingUp ? null : _handleCreateBackup,
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildRowAction(
                         icon: Icons.cloud_download,
                         iconColor: const Color(0xFF0D5C56),
                         title: 'Pulihkan Data',
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Data cadangan berhasil dipulihkan.')),
+                            const SnackBar(
+                              content: Text(
+                                'Data cadangan berhasil dipulihkan.',
+                              ),
+                            ),
                           );
                         },
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildRowAction(
                         icon: Icons.ios_share,
                         iconColor: const Color(0xFF0D5C56),
                         title: 'Ekspor Laporan Penjualan (CSV)',
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Laporan penjualan berhasil diekspor ke CSV.')),
+                            const SnackBar(
+                              content: Text(
+                                'Laporan penjualan berhasil diekspor ke CSV.',
+                              ),
+                            ),
                           );
                         },
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildRowAction(
                         icon: Icons.delete_forever,
                         iconColor: const Color(0xFFBA1A1A),
@@ -692,14 +877,24 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                       _buildRowAction(
                         icon: Icons.help,
                         title: 'Pusat Bantuan',
-                        trailing: const Icon(Icons.open_in_new, size: 16, color: Color(0xFF3F4947)),
+                        trailing: const Icon(
+                          Icons.open_in_new,
+                          size: 16,
+                          color: Color(0xFF3F4947),
+                        ),
                         onTap: () {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Membuka pusat bantuan...')),
+                            const SnackBar(
+                              content: Text('Membuka pusat bantuan...'),
+                            ),
                           );
                         },
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildRowAction(
                         icon: Icons.info,
                         title: 'Tentang Pujangga-POS',
@@ -708,13 +903,21 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                             context: context,
                             applicationName: 'Pujangga-POS',
                             applicationVersion: 'v1.2.0',
-                            applicationLegalese: '© 2026 Advanced Agentic Coding Team.',
+                            applicationLegalese:
+                                '© 2026 Advanced Agentic Coding Team.',
                           );
                         },
                       ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: const [
@@ -745,10 +948,16 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => _buildErrorScreen(error.toString(), () => ref.invalidate(appSettingsProvider)),
+          error: (error, _) => _buildErrorScreen(
+            error.toString(),
+            () => ref.invalidate(appSettingsProvider),
+          ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _buildErrorScreen(error.toString(), () => ref.invalidate(businessProfileProvider)),
+        error: (error, _) => _buildErrorScreen(
+          error.toString(),
+          () => ref.invalidate(businessProfileProvider),
+        ),
       ),
     );
   }
@@ -797,7 +1006,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     Color? iconColor,
     Color? titleColor,
     Widget? trailing,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
   }) {
     return InkWell(
       onTap: onTap,
@@ -829,7 +1038,12 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
               ),
               const SizedBox(width: 4),
             ],
-            trailing ?? const Icon(Icons.chevron_right, size: 18, color: Color(0xFF3F4947)),
+            trailing ??
+                const Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Color(0xFF3F4947),
+                ),
           ],
         ),
       ),
@@ -875,7 +1089,11 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.warning_amber_rounded, size: 48, color: Color(0xFFBA1A1A)),
+            const Icon(
+              Icons.warning_amber_rounded,
+              size: 48,
+              color: Color(0xFFBA1A1A),
+            ),
             const SizedBox(height: 16),
             const Text(
               'Gagal memuat pengaturan',
@@ -890,12 +1108,17 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
             Text(
               errorMsg,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF3F4947)),
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                color: Color(0xFF3F4947),
+              ),
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: onRetry,
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D5C56),
+              ),
               child: const Text('Muat Ulang'),
             ),
           ],
