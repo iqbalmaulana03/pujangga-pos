@@ -390,7 +390,7 @@ class _AdjustmentSheetState extends ConsumerState<_AdjustmentSheet> {
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                value: _adjustmentType,
+                initialValue: _adjustmentType,
                 decoration: const InputDecoration(
                   labelText: 'Jenis penyesuaian',
                 ),

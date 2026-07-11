@@ -139,6 +139,81 @@ class ReportLocalDataSource {
       end: range.endExclusive,
     );
 
+    // Calculate actual payment methods breakdown percentages
+    final db = await database.database();
+    final paymentRows = await db.rawQuery(
+      '''
+      SELECT payment_method, COALESCE(SUM(total_amount), 0) AS total_revenue
+      FROM sales_transactions
+      WHERE transaction_date >= ? AND transaction_date < ?
+      GROUP BY payment_method
+      ''',
+      [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
+    );
+
+    double cashTotal = 0;
+    double qrisTotal = 0;
+    double transferTotal = 0;
+    double otherTotal = 0;
+
+    for (final row in paymentRows) {
+      final method = row['payment_method'] as String? ?? 'cash';
+      final rev = (row['total_revenue'] as num?)?.toDouble() ?? 0;
+      switch (method.toLowerCase()) {
+        case 'cash':
+        case 'tunai':
+          cashTotal += rev;
+          break;
+        case 'qris':
+          qrisTotal += rev;
+          break;
+        case 'transfer':
+          transferTotal += rev;
+          break;
+        default:
+          otherTotal += rev;
+          break;
+      }
+    }
+
+    final totalPaymentRev = cashTotal + qrisTotal + transferTotal + otherTotal;
+    final Map<String, double> paymentBreakdown = {};
+    if (totalPaymentRev > 0) {
+      paymentBreakdown['Tunai'] = cashTotal / totalPaymentRev;
+      paymentBreakdown['QRIS'] = qrisTotal / totalPaymentRev;
+      paymentBreakdown['Transfer'] = transferTotal / totalPaymentRev;
+      paymentBreakdown['Lainnya'] = otherTotal / totalPaymentRev;
+    } else {
+      paymentBreakdown['Tunai'] = 0.0;
+      paymentBreakdown['QRIS'] = 0.0;
+      paymentBreakdown['Transfer'] = 0.0;
+      paymentBreakdown['Lainnya'] = 0.0;
+    }
+
+    // Calculate actual sales trend data points (exactly 7 intervals)
+    final duration = range.endExclusive.difference(range.start);
+    final intervalMs = duration.inMilliseconds / 7;
+    final List<SalesTrendPoint> trend = [];
+
+    for (int i = 0; i < 7; i++) {
+      final intervalStart = range.start.add(Duration(milliseconds: (i * intervalMs).round()));
+      final intervalEnd = range.start.add(Duration(milliseconds: ((i + 1) * intervalMs).round()));
+      final val = await getRevenueForRange(intervalStart, intervalEnd);
+
+      String label = '';
+      if (period == ReportPeriod.harian) {
+        final hour = intervalEnd.hour.toString().padLeft(2, '0');
+        label = '$hour:00';
+      } else if (period == ReportPeriod.mingguan) {
+        const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+        label = days[intervalStart.weekday - 1];
+      } else {
+        label = 'Tgl ${intervalStart.day}';
+      }
+
+      trend.add(SalesTrendPoint(label: label, value: val));
+    }
+
     return SalesReportSnapshot(
       period: period,
       start: range.start,
@@ -147,6 +222,8 @@ class ReportLocalDataSource {
       transactionCount: transactionCount,
       topPaymentMethod: topPaymentMethod,
       itemSummaries: items,
+      paymentMethodBreakdown: paymentBreakdown,
+      salesTrend: trend,
     );
   }
 

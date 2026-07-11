@@ -15,6 +15,7 @@ Banyak pelaku usaha masih mencatat transaksi secara manual melalui buku tulis, k
 - Transaksi harian sulit direkap.
 - Stok sering tidak akurat.
 - Pemilik usaha sulit mengetahui produk atau layanan paling laris.
+- Pemilik usaha sulit mengetahui modal yang sudah dikeluarkan dan margin yang dihasilkan.
 - Kesalahan pencatatan kas sering terjadi.
 - Riwayat transaksi sulit dicari saat dibutuhkan.
 
@@ -32,6 +33,7 @@ Pujangga-POS dibuat untuk mengatasi masalah tersebut melalui aplikasi Android ya
 
 - Mencatat transaksi dalam waktu kurang dari 30 detik.
 - Mengetahui omzet harian secara cepat.
+- Mengetahui modal awal, biaya dasar item, dan margin secara lebih jelas.
 - Melihat stok barang dengan lebih akurat.
 - Mencatat layanan jasa seperti potong rambut, shaving, atau servis.
 - Mengurangi ketergantungan pada pencatatan manual.
@@ -158,6 +160,7 @@ Kebutuhan tambahan:
 - Kategori produk/jasa.
 - Pencarian item cepat.
 - Filter berdasarkan kategori dan tipe.
+- Input harga modal atau biaya dasar item untuk kebutuhan hitung margin.
 
 ### 7.3 Transaksi Penjualan
 
@@ -216,6 +219,7 @@ Untuk MVP minimum:
 Dashboard menampilkan:
 
 - Omzet hari ini.
+- Margin hari ini.
 - Jumlah transaksi hari ini.
 - Item terlaris.
 - Metode pembayaran teratas.
@@ -226,6 +230,7 @@ Laporan minimum:
 - Penjualan mingguan.
 - Penjualan bulanan.
 - Rekap per produk/jasa.
+- Ringkasan modal dan margin.
 
 ### 7.7 Pengaturan Usaha
 
@@ -235,6 +240,7 @@ Pengguna dapat mengatur:
 - Logo usaha.
 - Alamat.
 - Nomor kontak.
+- Modal awal usaha.
 - Mata uang default rupiah.
 - Format tampilan struk sederhana.
 
@@ -260,6 +266,7 @@ Fitur berikut tidak wajib untuk rilis MVP, tetapi perlu masuk roadmap:
 
 - Sebagai pemilik usaha, saya ingin membuat katalog produk dan jasa agar transaksi lebih cepat.
 - Sebagai pemilik usaha, saya ingin melihat omzet harian agar saya tahu performa usaha hari ini.
+- Sebagai pemilik usaha, saya ingin mencatat modal awal dan biaya dasar item agar saya bisa melihat margin usaha.
 - Sebagai pemilik usaha, saya ingin memantau stok barang agar tidak kehabisan produk.
 - Sebagai pemilik usaha, saya ingin mencari riwayat transaksi agar mudah mengecek transaksi sebelumnya.
 
@@ -282,6 +289,7 @@ Fitur berikut tidak wajib untuk rilis MVP, tetapi perlu masuk roadmap:
 - Sistem harus memungkinkan pembuatan, perubahan, dan penonaktifan item.
 - Sistem harus membedakan item barang dan jasa.
 - Sistem harus mendukung kategori item.
+- Sistem harus menyimpan harga modal atau biaya dasar item untuk kebutuhan analisis margin.
 
 ### 10.3 Penjualan
 
@@ -294,8 +302,18 @@ Fitur berikut tidak wajib untuk rilis MVP, tetapi perlu masuk roadmap:
 ### 10.4 Laporan
 
 - Sistem harus menampilkan ringkasan omzet berdasarkan rentang waktu.
+- Sistem harus menampilkan ringkasan margin berdasarkan rentang waktu.
 - Sistem harus menampilkan rekap item terjual.
+- Sistem harus dapat menghitung margin per item dan margin total transaksi berdasarkan harga jual dikurangi harga modal atau biaya dasar.
 - Sistem harus menampilkan jumlah transaksi per hari.
+
+### 10.4.1 Modal dan Margin
+
+- Sistem harus memungkinkan pengguna menyimpan modal awal usaha pada pengaturan usaha.
+- Sistem harus memungkinkan pengguna mengisi harga modal untuk item barang.
+- Sistem harus memungkinkan pengguna mengisi biaya dasar untuk item jasa bila relevan.
+- Sistem harus menghitung estimasi margin kotor pada level item, transaksi, dan laporan.
+- Sistem harus tetap dapat berfungsi jika sebagian item belum memiliki harga modal, dengan menandai margin sebagai belum lengkap.
 
 ### 10.5 Stok
 
@@ -325,6 +343,7 @@ Fitur berikut tidak wajib untuk rilis MVP, tetapi perlu masuk roadmap:
 
 - Data transaksi tidak boleh hilang saat aplikasi ditutup normal.
 - SQLite harus menjadi sumber data utama untuk transaksi, stok, katalog, dan pengaturan usaha.
+- SQLite harus menjadi sumber data utama untuk modal awal, harga modal item, dan data margin turunan.
 
 ### Keamanan
 
@@ -362,6 +381,7 @@ Modul utama aplikasi:
 - Riwayat transaksi.
 - Stok.
 - Dashboard dan laporan.
+- Modal dan margin.
 - Pengaturan.
 - Database lokal SQLite.
 
@@ -390,6 +410,8 @@ Modul utama aplikasi:
 - Waktu rata-rata membuat transaksi.
 - Tingkat error penyimpanan transaksi.
 - Jumlah koreksi stok manual.
+- Persentase item yang sudah memiliki data harga modal.
+- Frekuensi pembukaan laporan margin.
 
 ## 15. Risiko Produk
 
@@ -428,6 +450,8 @@ Prioritas 1:
 - Transaksi penjualan.
 - Riwayat transaksi.
 - Laporan harian dasar.
+- Input modal awal usaha.
+- Input harga modal item dan tampilan margin dasar.
 - Penyimpanan SQLite penuh untuk semua data inti.
 
 Prioritas 2:
@@ -450,6 +474,7 @@ MVP dianggap berhasil jika:
 - Pengguna dapat menyelesaikan setup awal usaha kurang dari 5 menit.
 - Pengguna dapat mencatat transaksi barang atau jasa tanpa error kritis.
 - Pengguna dapat melihat omzet harian dan riwayat transaksi.
+- Pengguna dapat mengisi modal awal usaha dan melihat margin dasar dari transaksi yang memiliki data modal.
 - Stok barang berkurang otomatis setelah penjualan.
 - Seluruh data inti tersimpan dan dapat dibaca kembali dari SQLite dengan stabil.
 - Aplikasi layak dipakai untuk operasional harian usaha kecil di perangkat Android.
@@ -463,6 +488,8 @@ Hal yang perlu diputuskan sebelum desain dan development detail:
 - Apakah printer struk bluetooth masuk MVP atau fase berikutnya.
 - Apakah setiap jenis usaha butuh template katalog bawaan saat setup awal.
 - Apakah perlu proteksi aplikasi sederhana seperti PIN lokal meskipun tidak ada login.
+- Apakah margin cukup ditampilkan sebagai margin kotor pada MVP, tanpa memasukkan biaya operasional lain.
+- Apakah modal awal usaha hanya sebagai angka referensi atau ikut masuk ke ringkasan profitabilitas.
 
 ## 20. Rekomendasi Langkah Berikutnya
 

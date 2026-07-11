@@ -7,7 +7,7 @@ class AppTheme {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: seed,
       brightness: Brightness.light,
-      primary: const Color(0xFF00433E),
+      primary: const Color(0xFF0D5C56),
       secondary: const Color(0xFF5F5E5B),
       surface: const Color(0xFFF8FAF8),
     );

@@ -1,6 +1,13 @@
 import 'item_sales_summary.dart';
 import 'report_period.dart';
 
+class SalesTrendPoint {
+  const SalesTrendPoint({required this.label, required this.value});
+
+  final String label;
+  final double value;
+}
+
 class SalesReportSnapshot {
   const SalesReportSnapshot({
     required this.period,
@@ -10,6 +17,8 @@ class SalesReportSnapshot {
     required this.transactionCount,
     required this.topPaymentMethod,
     required this.itemSummaries,
+    required this.paymentMethodBreakdown,
+    required this.salesTrend,
   });
 
   final ReportPeriod period;
@@ -19,6 +28,8 @@ class SalesReportSnapshot {
   final int transactionCount;
   final String? topPaymentMethod;
   final List<ItemSalesSummary> itemSummaries;
+  final Map<String, double> paymentMethodBreakdown;
+  final List<SalesTrendPoint> salesTrend;
 
   bool get hasTransactions => transactionCount > 0;
 

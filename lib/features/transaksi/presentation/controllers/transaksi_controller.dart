@@ -9,6 +9,7 @@ import '../../domain/entities/transaksi_item.dart';
 import '../../domain/entities/transaksi_receipt.dart';
 import '../../domain/entities/transaksi_submit_request.dart';
 import '../../domain/repositories/transaction_repository.dart';
+import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import '../models/transaksi_state.dart';
 
 final transactionLocalDataSourceProvider = Provider<TransactionLocalDataSource>(
@@ -140,6 +141,23 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         cartItems: current.cartItems
             .where((cartItem) => cartItem.item.id != itemId)
             .toList(),
+      ),
+    );
+  }
+
+  void clearCart() {
+    final current = _currentState;
+    if (current == null) {
+      return;
+    }
+
+    state = AsyncData(
+      _buildState(
+        current,
+        cartItems: [],
+        orderDiscountAmount: 0,
+        taxAmount: 0,
+        cashPaidAmount: 0,
       ),
     );
   }
@@ -277,13 +295,22 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
   }) {
+    double? calculatedTax = taxAmount;
+    if (calculatedTax == null && cartItems != null) {
+      final subtotal = cartItems.fold<double>(0, (t, i) => t + i.lineSubtotal);
+      final discount = cartItems.fold<double>(0, (t, i) => t + i.itemDiscountAmount);
+      final settings = ref.read(appSettingsProvider).asData?.value;
+      final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
+      calculatedTax = ((subtotal - discount) * (taxRatePercent / 100.0)).roundToDouble();
+    }
+
     final nextState = current.copyWith(
       catalogItems: catalogItems,
       cartItems: cartItems,
       searchQuery: searchQuery,
       typeFilter: typeFilter,
       orderDiscountAmount: orderDiscountAmount,
-      taxAmount: taxAmount,
+      taxAmount: calculatedTax ?? current.taxAmount,
       paymentMethod: paymentMethod,
       cashPaidAmount: cashPaidAmount,
       resetCashPaidAmount: resetCashPaidAmount,
