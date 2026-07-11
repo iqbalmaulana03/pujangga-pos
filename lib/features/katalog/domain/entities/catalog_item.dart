@@ -9,6 +9,7 @@ class CatalogItem {
     this.sku,
     this.stockQuantity,
     this.unitLabel,
+    this.costPrice,
   });
 
   final String id;
@@ -20,6 +21,7 @@ class CatalogItem {
   final String? sku;
   final int? stockQuantity;
   final String? unitLabel;
+  final double? costPrice;
 
   bool get isBarang => itemType == 'barang';
   bool get isJasa => itemType == 'jasa';

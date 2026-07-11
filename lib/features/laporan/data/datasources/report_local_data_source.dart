@@ -3,6 +3,7 @@ import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/item_sales_summary.dart';
 import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
+import '../../domain/entities/margin_item_summary.dart';
 
 class ReportLocalDataSource {
   const ReportLocalDataSource({required this.database});
@@ -111,12 +112,33 @@ class ReportLocalDataSource {
       range.endExclusive,
     );
 
+    final db = await database.database();
+    
+    // Calculate total margin and completeness flag for today
+    final marginRows = await db.rawQuery(
+      '''
+      SELECT 
+        COALESCE(SUM(sti.line_total - (sti.qty * COALESCE(sti.cost_price_snapshot, 0))), 0) AS total_margin,
+        COUNT(CASE WHEN sti.cost_price_snapshot IS NULL THEN 1 END) AS missing_cost_count
+      FROM sales_transaction_items sti
+      INNER JOIN sales_transactions st ON st.id = sti.transaction_id
+      WHERE st.transaction_date >= ? AND st.transaction_date < ?
+      ''',
+      [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
+    );
+
+    final marginToday = (marginRows.first['total_margin'] as num?)?.toDouble() ?? 0;
+    final missingCostCount = (marginRows.first['missing_cost_count'] as num?)?.toInt() ?? 0;
+    final marginTodayIsComplete = missingCostCount == 0;
+
     return DashboardSummary(
       revenueToday: revenue,
       transactionCountToday: transactionCount,
       topItemName: topItemRows.isEmpty ? null : topItemRows.first.itemName,
       topItemQuantity: topItemRows.isEmpty ? 0 : topItemRows.first.quantitySold,
       topPaymentMethod: topPaymentMethod,
+      marginToday: marginToday,
+      marginTodayIsComplete: marginTodayIsComplete,
     );
   }
 
@@ -214,6 +236,64 @@ class ReportLocalDataSource {
       trend.add(SalesTrendPoint(label: label, value: val));
     }
 
+    // Calculate total margin and completeness flag for period
+    final marginRows = await db.rawQuery(
+      '''
+      SELECT 
+        COALESCE(SUM(sti.line_total - (sti.qty * COALESCE(sti.cost_price_snapshot, 0))), 0) AS total_margin,
+        COUNT(CASE WHEN sti.cost_price_snapshot IS NULL THEN 1 END) AS missing_cost_count
+      FROM sales_transaction_items sti
+      INNER JOIN sales_transactions st ON st.id = sti.transaction_id
+      WHERE st.transaction_date >= ? AND st.transaction_date < ?
+      ''',
+      [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
+    );
+
+    final margin = (marginRows.first['total_margin'] as num?)?.toDouble() ?? 0;
+    final missingCostCount = (marginRows.first['missing_cost_count'] as num?)?.toInt() ?? 0;
+    final marginIsComplete = missingCostCount == 0;
+
+    // Check if any active item in the catalog is missing cost data
+    final missingCatalogCostRows = await db.rawQuery(
+      '''
+      SELECT COUNT(*) AS missing_count
+      FROM items
+      WHERE is_active = 1 AND (
+        (item_type = 'product' AND harga_modal IS NULL) OR
+        (item_type = 'service' AND biaya_dasar IS NULL)
+      )
+      '''
+    );
+    final hasMissingCatalogCost = (missingCatalogCostRows.first['missing_count'] as num?)?.toInt() ?? 0;
+    final catalogMarginIsComplete = hasMissingCatalogCost == 0;
+
+    // Query top 5 margin items from active catalog items that have cost data
+    final topMarginRows = await db.rawQuery(
+      '''
+      SELECT 
+        name,
+        item_type,
+        sale_price,
+        unit,
+        COALESCE(harga_modal, biaya_dasar) AS cost_val,
+        ((sale_price - COALESCE(harga_modal, biaya_dasar)) / sale_price * 100) AS margin_pct
+      FROM items
+      WHERE is_active = 1 AND sale_price > 0 AND COALESCE(harga_modal, biaya_dasar) IS NOT NULL
+      ORDER BY margin_pct DESC
+      LIMIT 5
+      '''
+    );
+
+    final List<MarginItemSummary> topMarginItems = topMarginRows.map((row) {
+      return MarginItemSummary(
+        name: row['name'] as String,
+        itemType: row['item_type'] as String == 'service' ? 'jasa' : 'barang',
+        marginPercent: (row['margin_pct'] as num).toDouble(),
+        sellingPrice: (row['sale_price'] as num).toDouble(),
+        unitLabel: row['unit'] as String?,
+      );
+    }).toList();
+
     return SalesReportSnapshot(
       period: period,
       start: range.start,
@@ -224,6 +304,10 @@ class ReportLocalDataSource {
       itemSummaries: items,
       paymentMethodBreakdown: paymentBreakdown,
       salesTrend: trend,
+      margin: margin,
+      marginIsComplete: marginIsComplete,
+      catalogMarginIsComplete: catalogMarginIsComplete,
+      topMarginItems: topMarginItems,
     );
   }
 

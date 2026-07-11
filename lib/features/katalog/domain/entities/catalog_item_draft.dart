@@ -8,6 +8,7 @@ class CatalogItemDraft {
     this.sku,
     this.stockQuantity,
     this.unitLabel,
+    this.costPrice,
   });
 
   final String name;
@@ -18,6 +19,7 @@ class CatalogItemDraft {
   final String? sku;
   final int? stockQuantity;
   final String? unitLabel;
+  final double? costPrice;
 
   bool get isBarang => itemType == 'barang';
 }

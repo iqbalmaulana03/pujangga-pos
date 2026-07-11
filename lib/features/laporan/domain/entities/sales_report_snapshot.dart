@@ -1,5 +1,6 @@
 import 'item_sales_summary.dart';
 import 'report_period.dart';
+import 'margin_item_summary.dart';
 
 class SalesTrendPoint {
   const SalesTrendPoint({required this.label, required this.value});
@@ -19,6 +20,10 @@ class SalesReportSnapshot {
     required this.itemSummaries,
     required this.paymentMethodBreakdown,
     required this.salesTrend,
+    required this.margin,
+    required this.marginIsComplete,
+    required this.catalogMarginIsComplete,
+    required this.topMarginItems,
   });
 
   final ReportPeriod period;
@@ -30,6 +35,10 @@ class SalesReportSnapshot {
   final List<ItemSalesSummary> itemSummaries;
   final Map<String, double> paymentMethodBreakdown;
   final List<SalesTrendPoint> salesTrend;
+  final double margin;
+  final bool marginIsComplete;
+  final bool catalogMarginIsComplete;
+  final List<MarginItemSummary> topMarginItems;
 
   bool get hasTransactions => transactionCount > 0;
 

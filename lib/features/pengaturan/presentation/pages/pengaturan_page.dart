@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io';
 
+import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../../setup_usaha/domain/entities/business_profile.dart';
@@ -173,9 +175,76 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                     contactNumber: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
                     address: addrCtrl.text.trim().isEmpty ? null : addrCtrl.text.trim(),
                     logoPath: logoCtrl.text.trim().isEmpty ? null : logoCtrl.text.trim(),
+                    modalAwalUsaha: profile?.modalAwalUsaha,
                   );
                   Navigator.pop(context);
                   _handleProfileSubmit(newProfile);
+                }
+              },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+              child: const Text('Simpan'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showModalAwalUsahaDialog(BusinessProfile? profile) {
+    final controller = TextEditingController(
+      text: profile?.modalAwalUsaha != null
+          ? profile!.modalAwalUsaha!.toStringAsFixed(0)
+          : '',
+    );
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Modal Awal Usaha',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0D5C56),
+            ),
+          ),
+          content: Form(
+            key: formKey,
+            child: TextFormField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Jumlah Modal (Rp)',
+                hintText: 'e.g. 5000000',
+              ),
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Modal awal wajib diisi';
+                }
+                final parsed = double.tryParse(v.trim());
+                if (parsed == null || parsed < 0) {
+                  return 'Modal awal harus berupa angka >= 0';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Color(0xFF3F4947))),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (formKey.currentState!.validate()) {
+                  final parsed = double.parse(controller.text.trim());
+                  _handleProfileSubmit(
+                    profile!.copyWith(modalAwalUsaha: parsed),
+                  );
+                  Navigator.pop(context);
                 }
               },
               style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
@@ -463,6 +532,31 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                           icon: const Icon(Icons.edit, color: Color(0xFF0D5C56)),
                           onPressed: () => _showEditProfileDialog(profile),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Business Administration Card
+                _buildSectionHeader('ADMINISTRASI BISNIS'),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildRowAction(
+                        icon: Icons.account_balance_wallet,
+                        title: 'Modal Awal Usaha',
+                        value: profile?.modalAwalUsaha != null
+                            ? CurrencyFormatter.format(profile!.modalAwalUsaha!)
+                            : 'Rp 0',
+                        onTap: () => _showModalAwalUsahaDialog(profile),
                       ),
                     ],
                   ),

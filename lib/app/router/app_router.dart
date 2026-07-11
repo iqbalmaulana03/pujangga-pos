@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/beranda/presentation/pages/beranda_page.dart';
@@ -33,7 +34,12 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
     routes: [
       GoRoute(
         path: AppRoutes.setup,
-        builder: (context, state) => const SetupUsahaPage(),
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: const SetupUsahaPage(),
+          direction: SlideDirection.fadeOnly,
+        ),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -84,46 +90,126 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
       ),
       GoRoute(
         path: AppRoutes.catalogCreate,
-        builder: (context, state) => const ItemFormPage(),
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: const ItemFormPage(),
+          direction: SlideDirection.rightToLeft,
+        ),
       ),
       GoRoute(
         path: '${AppRoutes.catalog}/edit/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final itemId = state.pathParameters['id'] ?? '-';
-          return ItemFormPage(itemId: itemId);
+          return buildPageWithTransition<void>(
+            context: context,
+            state: state,
+            child: ItemFormPage(itemId: itemId),
+            direction: SlideDirection.rightToLeft,
+          );
         },
       ),
       GoRoute(
         path: '${AppRoutes.stock}/:itemId',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final itemId = state.pathParameters['itemId'] ?? '-';
-          return DetailStokPage(itemId: itemId);
+          return buildPageWithTransition<void>(
+            context: context,
+            state: state,
+            child: DetailStokPage(itemId: itemId),
+            direction: SlideDirection.rightToLeft,
+          );
         },
       ),
       GoRoute(
         path: AppRoutes.history,
-        builder: (context, state) => const RiwayatPage(),
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: const RiwayatPage(),
+          direction: SlideDirection.rightToLeft,
+        ),
         routes: [
           GoRoute(
             path: ':id',
-            builder: (context, state) {
+            pageBuilder: (context, state) {
               final transactionId = state.pathParameters['id'] ?? '-';
-              return DetailTransaksiPage(transactionId: transactionId);
+              return buildPageWithTransition<void>(
+                context: context,
+                state: state,
+                child: DetailTransaksiPage(transactionId: transactionId),
+                direction: SlideDirection.rightToLeft,
+              );
             },
           ),
         ],
       ),
       GoRoute(
         path: '${AppRoutes.transactionSuccess}/:invoiceNumber',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final invoiceNumber = state.pathParameters['invoiceNumber'] ?? '-';
-          return TransaksiBerhasilPage(invoiceNumber: invoiceNumber);
+          return buildPageWithTransition<void>(
+            context: context,
+            state: state,
+            child: TransaksiBerhasilPage(invoiceNumber: invoiceNumber),
+            direction: SlideDirection.bottomToTop,
+          );
         },
       ),
       GoRoute(
         path: AppRoutes.settings,
-        builder: (context, state) => const PengaturanPage(),
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: const PengaturanPage(),
+          direction: SlideDirection.rightToLeft,
+        ),
       ),
     ],
   );
+}
+
+CustomTransitionPage<T> buildPageWithTransition<T>({
+  required BuildContext context,
+  required GoRouterState state,
+  required Widget child,
+  required SlideDirection direction,
+}) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      Offset begin;
+      switch (direction) {
+        case SlideDirection.rightToLeft:
+          begin = const Offset(1.0, 0.0);
+          break;
+        case SlideDirection.bottomToTop:
+          begin = const Offset(0.0, 1.0);
+          break;
+        case SlideDirection.fadeOnly:
+          return FadeTransition(opacity: animation, child: child);
+      }
+
+      final tween = Tween(begin: begin, end: Offset.zero).chain(
+        CurveTween(curve: Curves.easeInOutCubic),
+      );
+
+      return SlideTransition(
+        position: animation.drive(tween),
+        child: FadeTransition(
+          opacity: animation,
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+enum SlideDirection {
+  rightToLeft,
+  bottomToTop,
+  fadeOnly,
 }

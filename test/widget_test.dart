@@ -66,6 +66,8 @@ void main() {
               topItemName: 'Es Kopi Susu',
               topItemQuantity: 6,
               topPaymentMethod: 'QRIS',
+              marginToday: 0.0,
+              marginTodayIsComplete: true,
             );
           }),
           appSettingsProvider.overrideWith((ref) async {
@@ -114,6 +116,8 @@ void main() {
               topItemName: 'Es Kopi Susu',
               topItemQuantity: 6,
               topPaymentMethod: 'QRIS',
+              marginToday: 0.0,
+              marginTodayIsComplete: true,
             );
           }),
           appSettingsProvider.overrideWith((ref) async {

@@ -11,6 +11,7 @@ class CatalogItemDbModel {
     this.sku,
     this.stockQuantity,
     this.unitLabel,
+    this.costPrice,
   });
 
   final int id;
@@ -22,6 +23,7 @@ class CatalogItemDbModel {
   final String? sku;
   final int? stockQuantity;
   final String? unitLabel;
+  final double? costPrice;
 
   factory CatalogItemDbModel.fromMap(Map<String, Object?> map) {
     return CatalogItemDbModel(
@@ -40,6 +42,8 @@ class CatalogItemDbModel {
           ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
               ?.toInt(),
       unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
+      costPrice: (map['harga_modal'] as num?)?.toDouble() ??
+          (map['biaya_dasar'] as num?)?.toDouble(),
     );
   }
 
@@ -54,6 +58,7 @@ class CatalogItemDbModel {
       sku: sku,
       stockQuantity: stockQuantity,
       unitLabel: unitLabel,
+      costPrice: costPrice,
     );
   }
 

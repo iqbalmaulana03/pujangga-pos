@@ -41,6 +41,10 @@ void main() {
       itemSummaries: [],
       paymentMethodBreakdown: const {},
       salesTrend: const [],
+      margin: 0.0,
+      marginIsComplete: true,
+      catalogMarginIsComplete: true,
+      topMarginItems: const [],
     );
 
     expect(snapshot.hasTransactions, isTrue);

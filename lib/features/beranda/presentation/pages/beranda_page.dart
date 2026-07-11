@@ -62,7 +62,7 @@ class BerandaPage extends ConsumerWidget {
               // Daily Sales Summary Bento Section
               LayoutBuilder(
                 builder: (context, constraints) {
-                  final isNarrow = constraints.maxWidth < 400;
+                  final isNarrow = constraints.maxWidth < 720;
                   if (isNarrow) {
                     return Column(
                       children: [
@@ -71,6 +71,12 @@ class BerandaPage extends ConsumerWidget {
                         _buildTransactionCard(
                           context,
                           summary.transactionCountToday,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildMarginCard(
+                          context,
+                          summary.marginToday,
+                          summary.marginTodayIsComplete,
                         ),
                       ],
                     );
@@ -88,6 +94,14 @@ class BerandaPage extends ConsumerWidget {
                           child: _buildTransactionCard(
                             context,
                             summary.transactionCountToday,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMarginCard(
+                            context,
+                            summary.marginToday,
+                            summary.marginTodayIsComplete,
                           ),
                         ),
                       ],
@@ -364,12 +378,15 @@ class BerandaPage extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text(
-                'Penjualan Hari Ini',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  color: Color(0xFF3F4947),
+              Expanded(
+                child: Text(
+                  'Penjualan Hari Ini',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF3F4947),
+                  ),
                 ),
               ),
               Icon(
@@ -402,13 +419,16 @@ class BerandaPage extends ConsumerWidget {
                     size: 14,
                   ),
                   SizedBox(width: 4),
-                  Text(
-                    '+12% dari kemarin',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0D5C56),
+                  Expanded(
+                    child: Text(
+                      '+12% dari kemarin',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF0D5C56),
+                      ),
                     ),
                   ),
                 ],
@@ -443,12 +463,15 @@ class BerandaPage extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: const [
-              Text(
-                'Transaksi',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  color: Color(0xFF3F4947),
+              Expanded(
+                child: Text(
+                  'Transaksi',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF3F4947),
+                  ),
                 ),
               ),
               Icon(
@@ -475,6 +498,77 @@ class BerandaPage extends ConsumerWidget {
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
+                  color: Color(0xFF3F4947),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMarginCard(BuildContext context, double marginToday, bool isComplete) {
+    return Container(
+      height: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFECEEED)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Expanded(
+                child: Text(
+                  'Margin Hari Ini',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF3F4947),
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.account_balance_wallet,
+                color: Color(0xFF0D5C56),
+              ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  isComplete ? CurrencyFormatter.format(marginToday) : 'Belum Lengkap',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: isComplete ? 28 : 22,
+                    fontWeight: FontWeight.bold,
+                    color: isComplete ? const Color(0xFF191C1C) : const Color(0xFFBA1A1A),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                isComplete ? 'Selisih harga jual & modal' : 'Isi harga modal produk',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
                   color: Color(0xFF3F4947),
                 ),
               ),

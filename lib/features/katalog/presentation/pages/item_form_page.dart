@@ -24,6 +24,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   final _unitController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController(text: '0');
+  final _costController = TextEditingController();
 
   String _itemType = 'barang';
   bool _isActive = true;
@@ -40,6 +41,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
     _unitController.dispose();
     _priceController.dispose();
     _stockController.dispose();
+    _costController.dispose();
     super.dispose();
   }
 
@@ -59,6 +61,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       stockQuantity: _itemType == 'barang'
           ? int.parse(_stockController.text.trim())
           : null,
+      costPrice: double.tryParse(_costController.text.trim()),
     );
 
     setState(() {
@@ -133,6 +136,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           _unitController.text = item.unitLabel ?? '';
           _priceController.text = item.sellingPrice.toStringAsFixed(0);
           _stockController.text = '${item.stockQuantity ?? 0}';
+          _costController.text = item.costPrice != null ? item.costPrice!.toStringAsFixed(0) : '';
           _itemType = item.itemType;
           _isActive = item.isActive;
           _didHydrate = true;
@@ -536,6 +540,70 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 }
                                 return null;
                               },
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              isProduct ? 'HARGA MODAL' : 'BIAYA DASAR (OPSIONAL)',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF3F4947),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _costController,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF191C1C),
+                              ),
+                              decoration: InputDecoration(
+                                prefixIcon: const Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 12),
+                                  child: Text(
+                                    'Rp',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0D5C56),
+                                    ),
+                                  ),
+                                ),
+                                prefixIconConstraints: const BoxConstraints(
+                                  minWidth: 0,
+                                  minHeight: 0,
+                                ),
+                                hintText: '0',
+                                filled: true,
+                                fillColor: const Color(0xFFF2F4F2),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFF0D5C56),
+                                    width: 1.5,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Digunakan untuk perhitungan margin',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 11,
+                                fontStyle: FontStyle.italic,
+                                color: Color(0xFF3F4947),
+                              ),
                             ),
                             const SizedBox(height: 16),
                             Row(

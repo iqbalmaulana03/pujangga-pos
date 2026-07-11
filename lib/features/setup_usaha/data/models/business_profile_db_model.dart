@@ -9,6 +9,7 @@ class BusinessProfileDbModel {
     this.contactNumber,
     this.ownerName,
     this.logoPath,
+    this.modalAwalUsaha,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -20,6 +21,7 @@ class BusinessProfileDbModel {
   final String? contactNumber;
   final String? ownerName;
   final String? logoPath;
+  final double? modalAwalUsaha;
   final String createdAt;
   final String updatedAt;
 
@@ -32,6 +34,7 @@ class BusinessProfileDbModel {
       'phone': contactNumber,
       'owner_name': ownerName,
       'logo_path': logoPath,
+      'modal_awal_usaha': modalAwalUsaha,
       'created_at': createdAt,
       'updated_at': updatedAt,
     };
@@ -47,6 +50,7 @@ class BusinessProfileDbModel {
       contactNumber: profile.contactNumber,
       ownerName: profile.ownerName,
       logoPath: profile.logoPath,
+      modalAwalUsaha: profile.modalAwalUsaha,
       createdAt: timestamp,
       updatedAt: timestamp,
     );
@@ -61,6 +65,7 @@ class BusinessProfileDbModel {
       contactNumber: map['phone'] as String?,
       ownerName: map['owner_name'] as String?,
       logoPath: map['logo_path'] as String?,
+      modalAwalUsaha: (map['modal_awal_usaha'] as num?)?.toDouble(),
       createdAt: map['created_at'] as String,
       updatedAt: map['updated_at'] as String,
     );
@@ -74,6 +79,7 @@ class BusinessProfileDbModel {
       contactNumber: contactNumber,
       ownerName: ownerName,
       logoPath: logoPath,
+      modalAwalUsaha: modalAwalUsaha,
     );
   }
 }
