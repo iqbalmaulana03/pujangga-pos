@@ -7,10 +7,12 @@ import '../../../../core/utils/currency_formatter.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../domain/entities/app_settings.dart';
+import '../../domain/entities/app_backup_restore_candidate.dart';
 import '../../../setup_usaha/domain/entities/business_profile.dart';
 import '../controllers/pengaturan_backup_controller.dart';
 import '../controllers/pengaturan_profil_controller.dart';
 import '../controllers/pengaturan_reset_controller.dart';
+import '../controllers/pengaturan_restore_controller.dart';
 import '../controllers/pengaturan_settings_controller.dart';
 
 class PengaturanPage extends ConsumerStatefulWidget {
@@ -147,6 +149,65 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal mencadangkan data: ${error.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _handlePickRestoreFile() async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    try {
+      final candidate = await ref
+          .read(pengaturanRestoreControllerProvider.notifier)
+          .pickBackupFile();
+
+      if (!mounted || candidate == null) {
+        return;
+      }
+
+      _showRestoreConfirmDialog(candidate);
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal membaca file backup: ${error.toString()}'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleRestoreBackup(AppBackupRestoreCandidate candidate) async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    try {
+      await ref
+          .read(pengaturanRestoreControllerProvider.notifier)
+          .restoreBackup(candidate);
+
+      if (!mounted) {
+        return;
+      }
+
+      context.go(
+        candidate.hasBusinessProfile ? AppRoutes.home : AppRoutes.setup,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Data dari ${candidate.fileName} berhasil dipulihkan ke aplikasi.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal memulihkan data: ${error.toString()}')),
       );
     }
   }
@@ -557,6 +618,68 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     );
   }
 
+  void _showRestoreConfirmDialog(AppBackupRestoreCandidate candidate) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            'Pulihkan Data?',
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF0D5C56),
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Backup terpilih: ${candidate.fileName}',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Text('Dibuat pada ${candidate.generatedAt.toIso8601String()}'),
+              const SizedBox(height: 8),
+              Text('Total data: ${candidate.totalRecords} record'),
+              const SizedBox(height: 12),
+              const Text(
+                'Data aktif aplikasi akan ditimpa seluruhnya oleh isi backup ini. Pastikan Anda sudah yakin sebelum melanjutkan.',
+                style: TextStyle(
+                  color: Color(0xFFBA1A1A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Color(0xFF3F4947)),
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _handleRestoreBackup(candidate);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0D5C56),
+              ),
+              child: const Text('Pulihkan Data'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _getCurrencyLabel(String code) {
     switch (code) {
       case 'IDR':
@@ -576,8 +699,10 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     final settingsAsync = ref.watch(appSettingsProvider);
     final backupState = ref.watch(pengaturanBackupControllerProvider);
     final resetState = ref.watch(pengaturanResetControllerProvider);
+    final restoreState = ref.watch(pengaturanRestoreControllerProvider);
     final isBackingUp = backupState.isLoading;
     final isResetting = resetState.isLoading;
+    final isRestoring = restoreState.isLoading;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
@@ -858,15 +983,16 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         icon: Icons.cloud_download,
                         iconColor: const Color(0xFF0D5C56),
                         title: 'Pulihkan Data',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Data cadangan berhasil dipulihkan.',
-                              ),
-                            ),
-                          );
-                        },
+                        trailing: isRestoring
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : null,
+                        onTap: isRestoring ? null : _handlePickRestoreFile,
                       ),
                       const Divider(
                         height: 1,
