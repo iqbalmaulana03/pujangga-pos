@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../domain/entities/app_settings.dart';
 import '../../../setup_usaha/domain/entities/business_profile.dart';
 import '../controllers/pengaturan_backup_controller.dart';
 import '../controllers/pengaturan_profil_controller.dart';
+import '../controllers/pengaturan_reset_controller.dart';
 import '../controllers/pengaturan_settings_controller.dart';
 
 class PengaturanPage extends ConsumerStatefulWidget {
@@ -65,25 +67,32 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   }
 
   Future<void> _handleResetDatabase() async {
-    final db = await ref.read(appDatabaseProvider).database();
-    await db.transaction((txn) async {
-      await txn.delete('stock_movements');
-      await txn.delete('sales_transaction_items');
-      await txn.delete('sales_transactions');
-      await txn.delete('items');
-      await txn.delete('categories');
-      await txn.delete('business_profile');
-      await txn.delete('app_settings');
-    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
-    ref.invalidate(appStartupProvider);
-    ref.invalidate(businessProfileProvider);
-    ref.invalidate(appSettingsProvider);
+    try {
+      await ref.read(pengaturanResetControllerProvider.notifier).resetAppData();
 
-    if (mounted) {
-      context.go('/');
+      if (!mounted) {
+        return;
+      }
+
+      context.go(AppRoutes.setup);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Data aplikasi berhasil direset.')),
+        const SnackBar(
+          content: Text(
+            'Semua data aplikasi berhasil dihapus. Silakan siapkan usaha lagi untuk mulai memakai aplikasi.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mereset data aplikasi: ${error.toString()}'),
+        ),
       );
     }
   }
@@ -478,10 +487,16 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   }
 
   void _showResetConfirmDialog() {
+    final isResetting = ref.read(pengaturanResetControllerProvider).isLoading;
+
     showDialog(
       context: context,
+      barrierDismissible: !isResetting,
       builder: (context) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const Text(
             'Reset Data Aplikasi?',
             style: TextStyle(
@@ -490,26 +505,51 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
               color: Color(0xFFBA1A1A),
             ),
           ),
-          content: const Text(
-            'Apakah Anda yakin ingin menghapus semua data transaksi, katalog barang, dan profil usaha? Tindakan ini bersifat permanen dan tidak dapat dibatalkan.',
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Semua data inti akan dihapus permanen dari perangkat ini, termasuk profil usaha, pengaturan, katalog, transaksi, dan histori stok.',
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Tindakan ini tidak bisa dibatalkan. Sebaiknya cadangkan data terlebih dahulu jika masih dibutuhkan.',
+                style: TextStyle(
+                  color: Color(0xFFBA1A1A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: isResetting ? null : () => Navigator.pop(context),
               child: const Text(
                 'Batal',
                 style: TextStyle(color: Color(0xFF3F4947)),
               ),
             ),
             FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                _handleResetDatabase();
-              },
+              onPressed: isResetting
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _handleResetDatabase();
+                    },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFBA1A1A),
               ),
-              child: const Text('Reset Semua Data'),
+              child: isResetting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Reset Semua Data'),
             ),
           ],
         );
@@ -535,7 +575,9 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     final profileAsync = ref.watch(businessProfileProvider);
     final settingsAsync = ref.watch(appSettingsProvider);
     final backupState = ref.watch(pengaturanBackupControllerProvider);
+    final resetState = ref.watch(pengaturanResetControllerProvider);
     final isBackingUp = backupState.isLoading;
+    final isResetting = resetState.isLoading;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
@@ -845,16 +887,63 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                           );
                         },
                       ),
-                      const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: Color(0xFFF2F4F2),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3F1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: const Color(0xFFF2B8B5).withValues(alpha: 0.7),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: 16,
+                              color: Color(0xFFBA1A1A),
+                            ),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Tindakan destruktif. Cadangkan data terlebih dahulu jika masih dibutuhkan.',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  height: 1.4,
+                                  color: Color(0xFFBA1A1A),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       _buildRowAction(
                         icon: Icons.delete_forever,
+                        trailing: isResetting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : null,
+                        enabled: !isResetting,
+                        backgroundColor: const Color(0xFFFFF3F1),
                         iconColor: const Color(0xFFBA1A1A),
                         title: 'Reset Data Aplikasi',
                         titleColor: const Color(0xFFBA1A1A),
+                        subtitle:
+                            'Hapus seluruh data lokal dan kembalikan aplikasi ke kondisi awal.',
                         onTap: _showResetConfirmDialog,
                       ),
                     ],
@@ -1002,49 +1091,78 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   Widget _buildRowAction({
     required IconData icon,
     required String title,
+    String? subtitle,
     String? value,
     Color? iconColor,
     Color? titleColor,
+    Color? backgroundColor,
     Widget? trailing,
+    bool enabled = true,
     VoidCallback? onTap,
   }) {
     return InkWell(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: iconColor ?? const Color(0xFF3F4947)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  color: titleColor ?? const Color(0xFF191C1C),
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            crossAxisAlignment: subtitle != null
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: iconColor ?? const Color(0xFF3F4947)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        color: titleColor ?? const Color(0xFF191C1C),
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          height: 1.4,
+                          color: Color(0xFF5B6663),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ),
-            if (value != null) ...[
-              Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: Color(0xFF3F4947),
+              if (value != null) ...[
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    color: Color(0xFF3F4947),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 4),
+                const SizedBox(width: 4),
+              ],
+              trailing ??
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: Color(0xFF3F4947),
+                  ),
             ],
-            trailing ??
-                const Icon(
-                  Icons.chevron_right,
-                  size: 18,
-                  color: Color(0xFF3F4947),
-                ),
-          ],
+          ),
         ),
       ),
     );

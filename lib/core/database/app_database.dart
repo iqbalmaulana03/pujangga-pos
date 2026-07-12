@@ -13,13 +13,17 @@ class AppDatabase {
 
   Database? _database;
 
+  Future<String> databasePath() async {
+    final dbPath = await getDatabasesPath();
+    return path.join(dbPath, AppConstants.databaseName);
+  }
+
   Future<Database> database() async {
     if (_database != null) {
       return _database!;
     }
 
-    final dbPath = await getDatabasesPath();
-    final fullPath = path.join(dbPath, AppConstants.databaseName);
+    final fullPath = await databasePath();
 
     _logger.info('Initializing database at $fullPath');
 
@@ -32,6 +36,19 @@ class AppDatabase {
     );
 
     return _database!;
+  }
+
+  Future<void> reset() async {
+    final existingDatabase = _database;
+    final fullPath = await databasePath();
+
+    if (existingDatabase != null && existingDatabase.isOpen) {
+      await existingDatabase.close();
+    }
+
+    _database = null;
+    _logger.info('Deleting database at $fullPath');
+    await deleteDatabase(fullPath);
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -57,15 +74,17 @@ class AppDatabase {
 
   Future<void> _migrateToVersion6(Database db) async {
     final existingTables = await _getExistingTables(db);
-    
+
     if (existingTables.contains('business_profile')) {
       final columns = await db.rawQuery('PRAGMA table_info(business_profile)');
       final hasColumn = columns.any((c) => c['name'] == 'modal_awal_usaha');
       if (!hasColumn) {
-        await db.execute('ALTER TABLE business_profile ADD COLUMN modal_awal_usaha REAL');
+        await db.execute(
+          'ALTER TABLE business_profile ADD COLUMN modal_awal_usaha REAL',
+        );
       }
     }
-    
+
     if (existingTables.contains('items')) {
       final columns = await db.rawQuery('PRAGMA table_info(items)');
       final hasHargaModal = columns.any((c) => c['name'] == 'harga_modal');
@@ -77,12 +96,18 @@ class AppDatabase {
         await db.execute('ALTER TABLE items ADD COLUMN biaya_dasar REAL');
       }
     }
-    
+
     if (existingTables.contains('sales_transaction_items')) {
-      final columns = await db.rawQuery('PRAGMA table_info(sales_transaction_items)');
-      final hasCostSnapshot = columns.any((c) => c['name'] == 'cost_price_snapshot');
+      final columns = await db.rawQuery(
+        'PRAGMA table_info(sales_transaction_items)',
+      );
+      final hasCostSnapshot = columns.any(
+        (c) => c['name'] == 'cost_price_snapshot',
+      );
       if (!hasCostSnapshot) {
-        await db.execute('ALTER TABLE sales_transaction_items ADD COLUMN cost_price_snapshot REAL');
+        await db.execute(
+          'ALTER TABLE sales_transaction_items ADD COLUMN cost_price_snapshot REAL',
+        );
       }
     }
   }
@@ -405,7 +430,9 @@ class AppDatabase {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_sales_transaction_items_item_id ON sales_transaction_items(item_id)',
     );
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_items_name ON items(name)');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_items_name ON items(name)',
+    );
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_items_sku ON items(sku) WHERE sku IS NOT NULL AND sku != \'\'',
     );
