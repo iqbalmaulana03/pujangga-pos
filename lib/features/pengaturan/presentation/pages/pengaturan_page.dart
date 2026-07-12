@@ -13,6 +13,7 @@ import '../controllers/pengaturan_backup_controller.dart';
 import '../controllers/pengaturan_profil_controller.dart';
 import '../controllers/pengaturan_reset_controller.dart';
 import '../controllers/pengaturan_restore_controller.dart';
+import '../controllers/pengaturan_sales_report_export_controller.dart';
 import '../controllers/pengaturan_settings_controller.dart';
 
 class PengaturanPage extends ConsumerStatefulWidget {
@@ -149,6 +150,64 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal mencadangkan data: ${error.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _handleExportSalesReportCsv() async {
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+    try {
+      final export = await ref
+          .read(pengaturanSalesReportExportControllerProvider.notifier)
+          .exportSalesReport();
+
+      if (!mounted) {
+        return;
+      }
+
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Laporan penjualan berhasil diekspor: ${export.fileName} (${export.transactionCount} transaksi).',
+          ),
+        ),
+      );
+
+      try {
+        await SharePlus.instance.share(
+          ShareParams(
+            subject: 'Laporan Penjualan CSV',
+            text:
+                'File CSV laporan penjualan Pujangga POS dibuat pada ${export.generatedAt.toLocal().toIso8601String()}.',
+            files: [XFile(export.filePath)],
+          ),
+        );
+      } catch (error) {
+        if (!mounted) {
+          return;
+        }
+
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'File CSV tersimpan di ${export.filePath}, tetapi menu bagikan gagal dibuka: $error',
+            ),
+          ),
+        );
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Gagal mengekspor laporan penjualan: ${error.toString()}',
+          ),
+        ),
       );
     }
   }
@@ -700,9 +759,13 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     final backupState = ref.watch(pengaturanBackupControllerProvider);
     final resetState = ref.watch(pengaturanResetControllerProvider);
     final restoreState = ref.watch(pengaturanRestoreControllerProvider);
+    final exportState = ref.watch(
+      pengaturanSalesReportExportControllerProvider,
+    );
     final isBackingUp = backupState.isLoading;
     final isResetting = resetState.isLoading;
     final isRestoring = restoreState.isLoading;
+    final isExporting = exportState.isLoading;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
@@ -1003,15 +1066,16 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         icon: Icons.ios_share,
                         iconColor: const Color(0xFF0D5C56),
                         title: 'Ekspor Laporan Penjualan (CSV)',
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Laporan penjualan berhasil diekspor ke CSV.',
-                              ),
-                            ),
-                          );
-                        },
+                        trailing: isExporting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : null,
+                        onTap: isExporting ? null : _handleExportSalesReportCsv,
                       ),
                     ],
                   ),
