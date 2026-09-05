@@ -1,4 +1,4 @@
-enum ReportPeriod { harian, mingguan, bulanan }
+enum ReportPeriod { harian, mingguan, bulanan, tahunan, kustom }
 
 class ReportRange {
   const ReportRange({required this.start, required this.endExclusive});
@@ -16,6 +16,10 @@ extension ReportPeriodX on ReportPeriod {
         return 'Mingguan';
       case ReportPeriod.bulanan:
         return 'Bulanan';
+      case ReportPeriod.tahunan:
+        return 'Tahunan';
+      case ReportPeriod.kustom:
+        return 'Kustom';
     }
   }
 
@@ -27,6 +31,10 @@ extension ReportPeriodX on ReportPeriod {
         return 'Performa penjualan 7 hari berjalan.';
       case ReportPeriod.bulanan:
         return 'Ringkasan penjualan untuk bulan berjalan.';
+      case ReportPeriod.tahunan:
+        return 'Ringkasan penjualan untuk tahun berjalan.';
+      case ReportPeriod.kustom:
+        return 'Ringkasan penjualan pada rentang waktu yang dipilih.';
     }
   }
 
@@ -51,6 +59,17 @@ extension ReportPeriodX on ReportPeriod {
         return ReportRange(
           start: start,
           endExclusive: DateTime(now.year, now.month + 1),
+        );
+      case ReportPeriod.tahunan:
+        final start = DateTime(now.year);
+        return ReportRange(
+          start: start,
+          endExclusive: DateTime(now.year + 1),
+        );
+      case ReportPeriod.kustom:
+        return ReportRange(
+          start: today,
+          endExclusive: today.add(const Duration(days: 1)),
         );
     }
   }

@@ -30,6 +30,26 @@ void main() {
     expect(range.endExclusive, DateTime(2026, 8, 1));
   });
 
+  test('range tahunan dimulai dari tanggal satu januari tahun berjalan', () {
+    final range = ReportPeriod.tahunan.resolveRange(
+      DateTime(2026, 7, 23, 9, 0),
+    );
+
+    expect(range.start, DateTime(2026, 1, 1));
+    expect(range.endExclusive, DateTime(2027, 1, 1));
+  });
+
+  test('range kustom secara default me-resolve ke hari berjalan', () {
+    // Karena resolveRange murni tidak memiliki konteks provider customRange, 
+    // ekspektasinya mengembalikan range hari ini untuk mencegah null/error.
+    final reference = DateTime(2026, 7, 23, 9, 0);
+    final range = ReportPeriod.kustom.resolveRange(reference);
+
+    final expectedStart = DateTime(2026, 7, 23);
+    expect(range.start, expectedStart);
+    expect(range.endExclusive, expectedStart.add(const Duration(days: 1)));
+  });
+
   test('snapshot laporan menghitung rata-rata transaksi', () {
     final snapshot = SalesReportSnapshot(
       period: ReportPeriod.harian,

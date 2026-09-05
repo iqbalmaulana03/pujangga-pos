@@ -12,6 +12,7 @@ class TransaksiReceipt {
     required this.totalAmount,
     required this.changeAmount,
     required this.items,
+    this.status = 'completed',
     this.cashPaidAmount,
   });
 
@@ -24,6 +25,7 @@ class TransaksiReceipt {
   final double taxAmount;
   final double totalAmount;
   final double changeAmount;
+  final String status;
   final double? cashPaidAmount;
   final List<TransaksiCartItem> items;
 }

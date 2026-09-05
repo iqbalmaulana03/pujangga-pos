@@ -24,6 +24,7 @@ class SalesReportSnapshot {
     required this.marginIsComplete,
     required this.catalogMarginIsComplete,
     required this.topMarginItems,
+    this.totalExpenses = 0.0,
   });
 
   final ReportPeriod period;
@@ -39,8 +40,10 @@ class SalesReportSnapshot {
   final bool marginIsComplete;
   final bool catalogMarginIsComplete;
   final List<MarginItemSummary> topMarginItems;
+  final double totalExpenses;
 
   bool get hasTransactions => transactionCount > 0;
+  double get netProfit => margin - totalExpenses;
 
   double get averageTransactionValue {
     if (transactionCount == 0) {

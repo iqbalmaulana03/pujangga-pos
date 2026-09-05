@@ -359,14 +359,37 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '#${tx.invoiceNumber}',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D5C56),
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              '#${tx.invoiceNumber}',
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0D5C56),
+                              ),
+                            ),
+                            if (tx.status == 'voided') ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFDAD6),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'Dibatalkan',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFFBA1A1A),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 4),
                         Text(

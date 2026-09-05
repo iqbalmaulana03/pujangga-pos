@@ -76,6 +76,8 @@ class BerandaPage extends ConsumerWidget {
                         _buildMarginCard(
                           context,
                           summary.marginToday,
+                          summary.totalExpensesToday,
+                          summary.netProfitToday,
                           summary.marginTodayIsComplete,
                         ),
                       ],
@@ -101,6 +103,8 @@ class BerandaPage extends ConsumerWidget {
                           child: _buildMarginCard(
                             context,
                             summary.marginToday,
+                            summary.totalExpensesToday,
+                            summary.netProfitToday,
                             summary.marginTodayIsComplete,
                           ),
                         ),
@@ -273,12 +277,63 @@ class BerandaPage extends ConsumerWidget {
                             ),
                             const SizedBox(height: 12),
                             const Text(
-                              'Lihat Laporan',
+                              'Laporan',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF0D5C56),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => context.push(AppRoutes.addExpense),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFBEC9C6),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF2F4F2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.money_off,
+                                color: Color(0xFFBA1A1A),
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Pengeluaran',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFBA1A1A),
                               ),
                             ),
                           ],
@@ -508,9 +563,9 @@ class BerandaPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildMarginCard(BuildContext context, double marginToday, bool isComplete) {
+  Widget _buildMarginCard(BuildContext context, double marginToday, double totalExpensesToday, double netProfitToday, bool isComplete) {
     return Container(
-      height: 140,
+      height: 160,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -533,7 +588,7 @@ class BerandaPage extends ConsumerWidget {
             children: const [
               Expanded(
                 child: Text(
-                  'Margin Hari Ini',
+                  'Keuntungan Bersih',
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontFamily: 'Inter',
@@ -554,7 +609,7 @@ class BerandaPage extends ConsumerWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  isComplete ? CurrencyFormatter.format(marginToday) : 'Belum Lengkap',
+                  isComplete ? CurrencyFormatter.format(netProfitToday) : 'Belum Lengkap',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: isComplete ? 28 : 22,
@@ -563,15 +618,31 @@ class BerandaPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                isComplete ? 'Selisih harga jual & modal' : 'Isi harga modal produk',
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  color: Color(0xFF3F4947),
+              const SizedBox(height: 8),
+              if (isComplete) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Margin Kotor:', style: TextStyle(fontSize: 10, color: Color(0xFF3F4947))),
+                    Text(CurrencyFormatter.format(marginToday), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  ],
                 ),
-              ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('- Pengeluaran:', style: TextStyle(fontSize: 10, color: Color(0xFFBA1A1A))),
+                    Text(CurrencyFormatter.format(totalExpensesToday), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFBA1A1A))),
+                  ],
+                ),
+              ] else
+                const Text(
+                  'Isi harga modal produk',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: Color(0xFF3F4947),
+                  ),
+                ),
             ],
           ),
         ],

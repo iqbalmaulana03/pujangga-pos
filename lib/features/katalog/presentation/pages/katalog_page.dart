@@ -706,14 +706,33 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
-                        child: Text(
-                          CurrencyFormatter.format(item.sellingPrice),
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D5C56),
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              CurrencyFormatter.format(item.sellingPrice),
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0D5C56),
+                              ),
+                            ),
+                            if (item.wholesalePrice != null &&
+                                item.wholesaleMinQuantity != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  'Grosir: ${CurrencyFormatter.format(item.wholesalePrice!)} (Min. ${item.wholesaleMinQuantity})',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF0D5C56),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       PopupMenuButton<String>(

@@ -13,6 +13,7 @@ import '../../features/stok/presentation/pages/detail_stok_page.dart';
 import '../../features/stok/presentation/pages/stok_page.dart';
 import '../../features/transaksi/presentation/pages/transaksi_berhasil_page.dart';
 import '../../features/transaksi/presentation/pages/transaksi_page.dart';
+import '../../features/pengeluaran/presentation/pages/tambah_pengeluaran_page.dart';
 import '../../shared/widgets/main_navigation_shell.dart';
 
 class AppRoutes {
@@ -26,6 +27,7 @@ class AppRoutes {
   static const stock = '/stock';
   static const reports = '/reports';
   static const settings = '/settings';
+  static const addExpense = '/add-expense';
 }
 
 GoRouter buildAppRouter({required bool hasBusinessProfile}) {
@@ -163,6 +165,15 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
           state: state,
           child: const PengaturanPage(),
           direction: SlideDirection.rightToLeft,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.addExpense,
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: const TambahPengeluaranPage(),
+          direction: SlideDirection.bottomToTop,
         ),
       ),
     ],

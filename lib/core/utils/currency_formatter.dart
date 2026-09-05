@@ -9,5 +9,12 @@ class CurrencyFormatter {
     decimalDigits: 0,
   );
 
+  static final NumberFormat _noSymbolFormatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: '',
+    decimalDigits: 0,
+  );
+
   static String format(num value) => _idrFormatter.format(value);
+  static String formatNoSymbol(num value) => _noSymbolFormatter.format(value).trim();
 }

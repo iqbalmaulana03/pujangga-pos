@@ -6,6 +6,7 @@ class RiwayatTransaksiSummary {
     required this.paymentMethod,
     required this.itemCount,
     required this.itemNames,
+    this.status = 'completed',
   });
 
   final String invoiceNumber;
@@ -14,6 +15,7 @@ class RiwayatTransaksiSummary {
   final String paymentMethod;
   final int itemCount;
   final List<String> itemNames;
+  final String status;
 
   String get itemSummary {
     if (itemNames.isEmpty) {

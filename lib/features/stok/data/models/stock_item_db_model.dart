@@ -8,6 +8,9 @@ class StockItemDbModel {
     required this.sellingPrice,
     required this.currentStock,
     required this.isActive,
+    required this.createdAt,
+    this.costPrice,
+    this.lastSoldAt,
     this.sku,
     this.unitLabel,
   });
@@ -18,6 +21,9 @@ class StockItemDbModel {
   final double sellingPrice;
   final int currentStock;
   final bool isActive;
+  final DateTime createdAt;
+  final double? costPrice;
+  final DateTime? lastSoldAt;
   final String? sku;
   final String? unitLabel;
 
@@ -31,6 +37,11 @@ class StockItemDbModel {
       sellingPrice: (map['sale_price'] as num).toDouble(),
       currentStock: ((map['stock_qty'] as num?) ?? 0).toInt(),
       isActive: (map['is_active'] as num).toInt() == 1,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      costPrice: (map['harga_modal'] as num?)?.toDouble(),
+      lastSoldAt: map['last_sold_at'] != null 
+          ? DateTime.parse(map['last_sold_at'] as String) 
+          : null,
       sku: map['sku'] as String?,
       unitLabel: map['unit'] as String?,
     );
@@ -44,6 +55,9 @@ class StockItemDbModel {
       sellingPrice: sellingPrice,
       currentStock: currentStock,
       isActive: isActive,
+      createdAt: createdAt,
+      costPrice: costPrice,
+      lastSoldAt: lastSoldAt,
       sku: sku,
       unitLabel: unitLabel,
     );

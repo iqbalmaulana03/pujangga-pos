@@ -2,6 +2,7 @@ import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/item_sales_summary.dart';
 import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
+import '../../domain/entities/capital_metrics.dart';
 import '../../domain/repositories/report_repository.dart';
 import '../datasources/report_local_data_source.dart';
 
@@ -32,10 +33,17 @@ class ReportRepositoryImpl implements ReportRepository {
   Future<SalesReportSnapshot> getSalesReportSnapshot({
     required ReportPeriod period,
     DateTime? reference,
+    ReportRange? customRange,
   }) {
     return localDataSource.getSalesReportSnapshot(
       period: period,
       reference: reference,
+      customRange: customRange,
     );
+  }
+
+  @override
+  Future<CapitalMetrics> getCapitalMetrics() {
+    return localDataSource.getCapitalMetrics();
   }
 }

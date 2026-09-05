@@ -25,12 +25,12 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
 });
 
 final transaksiControllerProvider =
-    AsyncNotifierProvider<TransaksiController, TransaksiState>(
+    AsyncNotifierProvider.autoDispose<TransaksiController, TransaksiState>(
       TransaksiController.new,
     );
 
 final transaksiReceiptProvider =
-    FutureProvider.family<TransaksiReceipt?, String>((ref, invoiceNumber) {
+    FutureProvider.autoDispose.family<TransaksiReceipt?, String>((ref, invoiceNumber) {
       return ref
           .watch(transactionRepositoryProvider)
           .getReceiptByInvoice(invoiceNumber);
@@ -143,6 +143,28 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
             .toList(),
       ),
     );
+  }
+
+  void setQuantity(String itemId, int quantity) {
+    final current = _currentState;
+    if (current == null) {
+      return;
+    }
+
+    if (quantity <= 0) {
+      removeItem(itemId);
+      return;
+    }
+
+    final updatedCart = current.cartItems.map((cartItem) {
+      if (cartItem.item.id != itemId) {
+        return cartItem;
+      }
+
+      return cartItem.copyWith(quantity: quantity);
+    }).toList();
+
+    state = AsyncData(_buildState(current, cartItems: updatedCart));
   }
 
   void clearCart() {

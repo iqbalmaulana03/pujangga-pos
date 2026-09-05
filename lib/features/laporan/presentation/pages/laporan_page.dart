@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,7 @@ import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
 import '../../domain/entities/margin_item_summary.dart';
 import '../controllers/laporan_controller.dart';
+import '../widgets/capital_growth_section.dart';
 
 class LaporanPage extends ConsumerWidget {
   const LaporanPage({super.key});
@@ -16,7 +18,9 @@ class LaporanPage extends ConsumerWidget {
   Future<void> _refresh(WidgetRef ref, ReportPeriod period) async {
     ref.invalidate(salesReportSnapshotByPeriodProvider(period));
     ref.invalidate(salesReportSnapshotProvider);
+    ref.invalidate(capitalMetricsProvider);
     await ref.read(salesReportSnapshotByPeriodProvider(period).future);
+    await ref.read(capitalMetricsProvider.future);
   }
 
   @override
@@ -82,31 +86,6 @@ class LaporanPage extends ConsumerWidget {
                                   color: Color(0xFF0D5C56),
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              if (snapshot.hasTransactions)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFDDEEE7),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Icon(Icons.trending_up, size: 12, color: Color(0xFF0D5C56)),
-                                      SizedBox(width: 2),
-                                      Text(
-                                        '12%',
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: Color(0xFF0D5C56),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -143,7 +122,7 @@ class LaporanPage extends ConsumerWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
-                                'Margin Kotor',
+                                'Keuntungan Bersih',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 12,
@@ -177,7 +156,7 @@ class LaporanPage extends ConsumerWidget {
                             children: [
                               Text(
                                 snapshot.marginIsComplete
-                                    ? CurrencyFormatter.format(snapshot.margin)
+                                    ? CurrencyFormatter.format(snapshot.netProfit)
                                     : 'Belum Lengkap',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
@@ -197,7 +176,7 @@ class LaporanPage extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    '${(snapshot.margin / snapshot.revenue * 100).toStringAsFixed(0)}%',
+                                    '${(snapshot.netProfit / snapshot.revenue * 100).toStringAsFixed(0)}%',
                                     style: const TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 10,
@@ -208,7 +187,24 @@ class LaporanPage extends ConsumerWidget {
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
+                          if (snapshot.marginIsComplete) ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Margin Kotor:', style: TextStyle(fontSize: 10, color: Color(0xFF3F4947))),
+                                Text(CurrencyFormatter.format(snapshot.margin), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('- Pengeluaran:', style: TextStyle(fontSize: 10, color: Color(0xFFBA1A1A))),
+                                Text(CurrencyFormatter.format(snapshot.totalExpenses), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFBA1A1A))),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                          ],
                           Text(
                             _formatRange(snapshot),
                             style: const TextStyle(
@@ -330,6 +326,10 @@ class LaporanPage extends ConsumerWidget {
 
                   // Sales Trend Card
                   _buildSalesTrendCard(snapshot.salesTrend, selectedPeriod),
+                  const SizedBox(height: 16),
+
+                  // Capital Growth & ROI Section
+                  const CapitalGrowthSection(),
                 ],
               ],
             ),
@@ -374,41 +374,95 @@ class LaporanPage extends ConsumerWidget {
   }
 
   Widget _buildPeriodSelector(BuildContext context, WidgetRef ref, ReportPeriod selectedPeriod) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: const Color(0xFFECEEED),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          for (final period in ReportPeriod.values)
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  ref.read(selectedReportPeriodProvider.notifier).select(period);
-                },
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    color: selectedPeriod == period ? const Color(0xFF0D5C56) : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    period.label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: selectedPeriod == period ? Colors.white : const Color(0xFF3F4947),
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFECEEED),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                for (final period in ReportPeriod.values.where((p) => p != ReportPeriod.kustom))
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        ref.read(selectedReportPeriodProvider.notifier).select(period);
+                        ref.read(customReportRangeProvider.notifier).setRange(null);
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: selectedPeriod == period ? const Color(0xFF0D5C56) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          period.label,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: selectedPeriod == period ? Colors.white : const Color(0xFF3F4947),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
+              ],
             ),
-        ],
-      ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          onPressed: () async {
+            final now = DateTime.now();
+            final currentRange = ref.read(customReportRangeProvider);
+            final initialRange = currentRange != null 
+                ? DateTimeRange(start: currentRange.start, end: currentRange.endExclusive.subtract(const Duration(days: 1))) 
+                : DateTimeRange(start: now.subtract(const Duration(days: 7)), end: now);
+
+            final picked = await showDateRangePicker(
+              context: context,
+              firstDate: DateTime(2020),
+              lastDate: now,
+              initialDateRange: initialRange,
+              builder: (context, child) {
+                return Theme(
+                  data: Theme.of(context).copyWith(
+                    colorScheme: const ColorScheme.light(
+                      primary: Color(0xFF0D5C56),
+                      onPrimary: Colors.white,
+                      surface: Colors.white,
+                      onSurface: Color(0xFF191C1C),
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+            );
+
+            if (picked != null) {
+              ref.read(customReportRangeProvider.notifier).setRange(ReportRange(
+                start: picked.start,
+                endExclusive: picked.end.add(const Duration(days: 1)),
+              ));
+              ref.read(selectedReportPeriodProvider.notifier).select(ReportPeriod.kustom);
+            }
+          },
+          icon: Icon(
+            Icons.calendar_month_outlined, 
+            color: selectedPeriod == ReportPeriod.kustom ? const Color(0xFF0D5C56) : const Color(0xFF3F4947),
+          ),
+          style: IconButton.styleFrom(
+            backgroundColor: selectedPeriod == ReportPeriod.kustom ? const Color(0xFFDDEEE7) : const Color(0xFFECEEED),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            padding: const EdgeInsets.all(12),
+          ),
+        ),
+      ],
     );
   }
 
@@ -646,14 +700,20 @@ class LaporanPage extends ConsumerWidget {
   }
 
   Widget _buildSalesTrendCard(List<SalesTrendPoint> trend, ReportPeriod period) {
-    final maxVal = trend.map((e) => e.value).fold<double>(0.0, (m, v) => v > m ? v : m);
-    
     String periodText = '24 Jam Terakhir';
     if (period == ReportPeriod.mingguan) {
       periodText = '7 Hari Terakhir';
     } else if (period == ReportPeriod.bulanan) {
       periodText = 'Bulan Ini';
+    } else if (period == ReportPeriod.tahunan) {
+      periodText = 'Tahun Ini';
+    } else if (period == ReportPeriod.kustom) {
+      periodText = 'Kustom';
     }
+
+    final maxVal = trend.map((e) => e.value).fold<double>(0.0, (m, v) => v > m ? v : m);
+    double interval = maxVal / 4;
+    if (interval == 0) interval = 1;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -690,38 +750,105 @@ class LaporanPage extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 24),
-          // Custom vertical bar chart using containers
           SizedBox(
-            height: 120,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (final point in trend)
-                  _buildBar(
-                    maxVal > 0 ? (point.value / maxVal) : 0.0,
-                    _formatValueShort(point.value),
-                    point.value > 0 && point.value == maxVal,
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final point in trend)
-                Expanded(
-                  child: Text(
-                    point.label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 8,
-                      color: Color(0xFF3F4947),
-                    ),
+            height: 180,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: maxVal * 1.2,
+                barTouchData: BarTouchData(
+                  enabled: true,
+                  touchTooltipData: BarTouchTooltipData(
+                    getTooltipColor: (_) => const Color(0xFF191C1C),
+                    getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                      return BarTooltipItem(
+                        CurrencyFormatter.format(rod.toY),
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          fontFamily: 'Inter',
+                        ),
+                      );
+                    },
                   ),
                 ),
-            ],
+                titlesData: FlTitlesData(
+                  show: true,
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        final index = value.toInt();
+                        if (index < 0 || index >= trend.length) return const SizedBox();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            trend[index].label,
+                            style: const TextStyle(
+                              color: Color(0xFF3F4947),
+                              fontSize: 9,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        );
+                      },
+                      reservedSize: 28,
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 40,
+                      interval: interval,
+                      getTitlesWidget: (value, meta) {
+                        if (value == 0) return const SizedBox();
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: Text(
+                            _formatValueShort(value),
+                            textAlign: TextAlign.right,
+                            style: const TextStyle(
+                              color: Color(0xFF3F4947),
+                              fontSize: 10,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: interval,
+                  getDrawingHorizontalLine: (value) {
+                    return FlLine(
+                      color: const Color(0xFFECEEED),
+                      strokeWidth: 1,
+                    );
+                  },
+                ),
+                borderData: FlBorderData(show: false),
+                barGroups: List.generate(trend.length, (index) {
+                  final isMax = trend[index].value > 0 && trend[index].value == maxVal;
+                  return BarChartGroupData(
+                    x: index,
+                    barRods: [
+                      BarChartRodData(
+                        toY: trend[index].value,
+                        color: isMax ? const Color(0xFF0D5C56) : const Color(0xFFBEC9C6),
+                        width: 16,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
           ),
         ],
       ),
@@ -739,35 +866,7 @@ class LaporanPage extends ConsumerWidget {
     return value.toStringAsFixed(0);
   }
 
-  Widget _buildBar(double heightPercent, String label, bool isHighlighted) {
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 9,
-                fontWeight: isHighlighted ? FontWeight.bold : FontWeight.normal,
-                color: isHighlighted ? const Color(0xFF0D5C56) : const Color(0xFF3F4947),
-              ),
-            ),
-            const SizedBox(height: 4),
-            Container(
-              height: 80 * heightPercent,
-              decoration: BoxDecoration(
-                color: isHighlighted ? const Color(0xFF0D5C56) : const Color(0xFFBEC9C6),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   String _formatRange(SalesReportSnapshot snapshot) {
     switch (snapshot.period) {
@@ -778,6 +877,11 @@ class LaporanPage extends ConsumerWidget {
         return '${_formatShortDate(snapshot.start)} - ${_formatShortDateWithYear(end)}';
       case ReportPeriod.bulanan:
         return _formatMonthYear(snapshot.start);
+      case ReportPeriod.tahunan:
+        return snapshot.start.year.toString();
+      case ReportPeriod.kustom:
+        final end = snapshot.endExclusive.subtract(const Duration(days: 1));
+        return '${_formatShortDate(snapshot.start)} - ${_formatShortDateWithYear(end)}';
     }
   }
 

@@ -8,6 +8,7 @@ class RiwayatTransaksiSummaryDbModel {
     required this.paymentMethod,
     required this.itemCount,
     required this.itemNames,
+    this.status = 'completed',
   });
 
   final String invoiceNumber;
@@ -16,6 +17,7 @@ class RiwayatTransaksiSummaryDbModel {
   final String paymentMethod;
   final int itemCount;
   final List<String> itemNames;
+  final String status;
 
   factory RiwayatTransaksiSummaryDbModel.fromMap(Map<String, Object?> map) {
     final rawNames = (map['item_names'] as String? ?? '').trim();
@@ -28,6 +30,7 @@ class RiwayatTransaksiSummaryDbModel {
       itemNames: rawNames.isEmpty
           ? const []
           : rawNames.split('|||').map((name) => name.trim()).toList(),
+      status: map['status'] as String? ?? 'completed',
     );
   }
 
@@ -39,6 +42,7 @@ class RiwayatTransaksiSummaryDbModel {
       paymentMethod: paymentMethod,
       itemCount: itemCount,
       itemNames: itemNames,
+      status: status,
     );
   }
 }

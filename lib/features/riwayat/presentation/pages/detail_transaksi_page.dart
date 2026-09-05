@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
+import '../controllers/riwayat_controller.dart';
 
 class DetailTransaksiPage extends ConsumerWidget {
   const DetailTransaksiPage({required this.transactionId, super.key});
@@ -72,43 +73,81 @@ class DetailTransaksiPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Status Card Success Check
-                        Column(
-                          children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFABEFE7),
-                                shape: BoxShape.circle,
+                        if (receipt.status == 'voided')
+                          Column(
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFFDAD6),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.cancel,
+                                  size: 40,
+                                  color: Color(0xFFBA1A1A),
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.check_circle,
-                                size: 40,
-                                color: Color(0xFF0D5C56),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Transaksi Dibatalkan',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFBA1A1A),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Pembayaran Berhasil',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF191C1C),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Data telah divoid dan stok dikembalikan',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: Color(0xFF3F4947),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Transaksi telah selesai',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: Color(0xFF3F4947),
+                            ],
+                          )
+                        else
+                          // Status Card Success Check
+                          Column(
+                            children: [
+                              Container(
+                                width: 64,
+                                height: 64,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFABEFE7),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_circle,
+                                  size: 40,
+                                  color: Color(0xFF0D5C56),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Pembayaran Berhasil',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF191C1C),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Transaksi telah selesai',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: Color(0xFF3F4947),
+                                ),
+                              ),
+                            ],
+                          ),
                         const SizedBox(height: 24),
 
                         // Transaction Info Card
@@ -408,6 +447,64 @@ class DetailTransaksiPage extends ConsumerWidget {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (receipt.status == 'completed') ...[
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      title: const Text('Batalkan Transaksi?'),
+                                      content: const Text(
+                                        'Transaksi ini akan dibatalkan (void). Data penjualan akan ditarik dari laporan dan stok barang akan dikembalikan otomatis. Tindakan ini tidak dapat diurungkan.',
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: const Text('Tutup'),
+                                        ),
+                                        FilledButton(
+                                          onPressed: () {
+                                            Navigator.pop(ctx);
+                                            ref.read(riwayatControllerProvider.notifier).voidTransaction(receipt.invoiceNumber).then((_) {
+                                              if (!context.mounted) return;
+                                              ref.invalidate(transaksiReceiptProvider(transactionId));
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(content: Text('Transaksi berhasil dibatalkan.')),
+                                              );
+                                            });
+                                          },
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: const Color(0xFFBA1A1A),
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: const Text('Ya, Batalkan'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Color(0xFFBA1A1A)),
+                                  foregroundColor: const Color(0xFFBA1A1A),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Batalkan Transaksi (Void)',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
                           SizedBox(
                             width: double.infinity,
                             height: 48,
@@ -453,6 +550,7 @@ class DetailTransaksiPage extends ConsumerWidget {
                               ),
                             ),
                           ),
+
                         ],
                       ),
                     ),

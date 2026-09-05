@@ -14,7 +14,8 @@ class StockLocalDataSource {
     final rows = await db.rawQuery('''
       SELECT
         items.*,
-        categories.name AS category_name
+        categories.name AS category_name,
+        (SELECT MAX(created_at) FROM sales_transaction_items WHERE item_id = items.id) AS last_sold_at
       FROM items
       LEFT JOIN categories ON categories.id = items.category_id
       WHERE items.item_type = 'product'
@@ -30,7 +31,8 @@ class StockLocalDataSource {
       '''
       SELECT
         items.*,
-        categories.name AS category_name
+        categories.name AS category_name,
+        (SELECT MAX(created_at) FROM sales_transaction_items WHERE item_id = items.id) AS last_sold_at
       FROM items
       LEFT JOIN categories ON categories.id = items.category_id
       WHERE items.id = ? AND items.item_type = 'product'

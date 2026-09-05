@@ -59,6 +59,8 @@ class AppDatabase {
     await _createSalesTransactionsTable(db);
     await _createSalesTransactionItemsTable(db);
     await _createStockMovementsTable(db);
+    await _createExpensesTable(db);
+    await _createCapitalHistoryTable(db);
     await _createIndexes(db);
     await _seedDefaultSettings(db);
   }
@@ -69,6 +71,67 @@ class AppDatabase {
     }
     if (oldVersion < 6) {
       await _migrateToVersion6(db);
+    }
+    if (oldVersion < 7) {
+      await _migrateToVersion7(db);
+    }
+    if (oldVersion < 8) {
+      await _migrateToVersion8(db);
+    }
+    if (oldVersion < 9) {
+      await _migrateToVersion9(db);
+    }
+    if (oldVersion < 10) {
+      await _migrateToVersion10(db);
+    }
+  }
+
+  Future<void> _migrateToVersion10(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (existingTables.contains('sales_transactions')) {
+      final columns = await db.rawQuery('PRAGMA table_info(sales_transactions)');
+      final hasStatus = columns.any((c) => c['name'] == 'status');
+      if (!hasStatus) {
+        await db.execute('ALTER TABLE sales_transactions ADD COLUMN status TEXT NOT NULL DEFAULT \'completed\'');
+      }
+    }
+  }
+
+  Future<void> _migrateToVersion8(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (existingTables.contains('items')) {
+      final columns = await db.rawQuery('PRAGMA table_info(items)');
+      
+      final hasWholesalePrice = columns.any((c) => c['name'] == 'wholesale_price');
+      if (!hasWholesalePrice) {
+        await db.execute('ALTER TABLE items ADD COLUMN wholesale_price REAL');
+      }
+      
+      final hasWholesaleMin = columns.any((c) => c['name'] == 'wholesale_min_quantity');
+      if (!hasWholesaleMin) {
+        await db.execute('ALTER TABLE items ADD COLUMN wholesale_min_quantity INTEGER');
+      }
+    }
+  }
+
+  Future<void> _migrateToVersion9(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (!existingTables.contains('capital_history')) {
+      await _createCapitalHistoryTable(db);
+      
+      if (existingTables.contains('business_profile')) {
+        final profileRows = await db.query('business_profile', limit: 1);
+        if (profileRows.isNotEmpty) {
+          final profile = profileRows.first;
+          final amount = (profile['modal_awal_usaha'] as num?)?.toDouble();
+          if (amount != null && amount > 0) {
+            await db.insert('capital_history', {
+              'amount': amount,
+              'created_at': _nowIsoString(),
+            });
+          }
+        }
+      }
     }
   }
 
@@ -112,6 +175,13 @@ class AppDatabase {
     }
   }
 
+  Future<void> _migrateToVersion7(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (!existingTables.contains('expenses')) {
+      await _createExpensesTable(db);
+    }
+  }
+
   Future<void> _migrateToVersion5(Database db, int oldVersion) async {
     final existingTables = await _getExistingTables(db);
 
@@ -131,6 +201,7 @@ class AppDatabase {
     await db.execute('DROP TABLE IF EXISTS stock_movements');
     await db.execute('DROP TABLE IF EXISTS sales_transaction_items');
     await db.execute('DROP TABLE IF EXISTS sales_transactions');
+    await db.execute('DROP TABLE IF EXISTS expenses');
     await db.execute('DROP TABLE IF EXISTS items');
     await db.execute('DROP TABLE IF EXISTS categories');
     await db.execute('DROP TABLE IF EXISTS app_settings');
@@ -143,6 +214,7 @@ class AppDatabase {
     await _createSalesTransactionsTable(db);
     await _createSalesTransactionItemsTable(db);
     await _createStockMovementsTable(db);
+    await _createExpensesTable(db);
     await _createIndexes(db);
     await _seedDefaultSettings(db);
 
@@ -348,6 +420,8 @@ class AppDatabase {
         harga_modal REAL,
         biaya_dasar REAL,
         is_active INTEGER NOT NULL DEFAULT 1,
+        wholesale_price REAL,
+        wholesale_min_quantity INTEGER,
         notes TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -371,6 +445,7 @@ class AppDatabase {
         change_amount REAL NOT NULL DEFAULT 0,
         customer_name TEXT,
         notes TEXT,
+        status TEXT NOT NULL DEFAULT 'completed',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )
@@ -413,6 +488,31 @@ class AppDatabase {
         notes TEXT,
         created_at TEXT NOT NULL,
         FOREIGN KEY(item_id) REFERENCES items(id)
+      )
+    ''');
+  }
+
+  Future<void> _createExpensesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE expenses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        notes TEXT,
+        expense_date TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
+  Future<void> _createCapitalHistoryTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE capital_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount REAL NOT NULL,
+        created_at TEXT NOT NULL,
+        notes TEXT
       )
     ''');
   }

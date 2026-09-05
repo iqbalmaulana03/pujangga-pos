@@ -34,7 +34,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     super.dispose();
   }
 
-  Future<void> _submitTransaction() async {
+  Future<void> _submitTransaction({BuildContext? bottomSheetContext}) async {
     final controller = ref.read(transaksiControllerProvider.notifier);
 
     try {
@@ -49,6 +49,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
       ref.invalidate(salesReportSnapshotProvider);
       ref.invalidate(stokControllerProvider);
       ref.invalidate(riwayatControllerProvider);
+
+      if (bottomSheetContext != null && bottomSheetContext.mounted) {
+        Navigator.pop(bottomSheetContext);
+      }
 
       context.push('${AppRoutes.transactionSuccess}/${receipt.invoiceNumber}');
     } catch (error) {
@@ -161,6 +165,104 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
       ref
           .read(transaksiControllerProvider.notifier)
           .updateItemDiscount(cartItem.item.id, result);
+    }
+  }
+
+  Future<void> _editQuantity(
+    BuildContext context,
+    TransaksiCartItem cartItem,
+  ) async {
+    final controller = TextEditingController(
+      text: cartItem.quantity.toString(),
+    );
+
+    final result = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ubah Kuantitas ${cartItem.item.name}',
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0D5C56),
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Masukkan jumlah barang secara manual.',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  color: Color(0xFF3F4947),
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Kuantitas',
+                  filled: true,
+                  fillColor: const Color(0xFFF2F4F2),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF0D5C56), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(int.tryParse(controller.text.trim()));
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D5C56),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Simpan',
+                    style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (result != null && result > 0) {
+      ref
+          .read(transaksiControllerProvider.notifier)
+          .setQuantity(cartItem.item.id, result);
+    } else if (result != null && result == 0) {
+      ref.read(transaksiControllerProvider.notifier).removeItem(cartItem.item.id);
     }
   }
 
@@ -283,7 +385,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 final liveState = ref.watch(transaksiControllerProvider).value;
                 if (liveState == null || liveState.cartItems.isEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    Navigator.pop(context);
+                    if (context.mounted && ModalRoute.of(context)?.isCurrent == true) {
+                      Navigator.pop(context);
+                    }
                   });
                   return const SizedBox.shrink();
                 }
@@ -821,13 +925,20 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     child: Icon(Icons.remove, size: 16, color: Color(0xFF3F4947)),
                   ),
                 ),
-                Text(
-                  '${cartItem.quantity}',
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF191C1C),
+                GestureDetector(
+                  onTap: () => _editQuantity(context, cartItem),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Text(
+                      '${cartItem.quantity}',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0D5C56),
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
                   ),
                 ),
                 GestureDetector(
@@ -1144,7 +1255,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           SizedBox(
             height: 52,
             child: FilledButton.icon(
-              onPressed: state.isSubmitting || !state.canSubmit ? null : _submitTransaction,
+              onPressed: state.isSubmitting || !state.canSubmit 
+                  ? null 
+                  : () => _submitTransaction(bottomSheetContext: isBottomSheet ? context : null),
               icon: const Icon(Icons.payments_outlined, size: 20),
               label: Text(
                 state.isSubmitting ? 'Memproses...' : 'Proses Pembayaran',

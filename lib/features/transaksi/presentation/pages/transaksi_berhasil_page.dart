@@ -191,7 +191,7 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            '${item.quantity}x ${CurrencyFormatter.format(item.item.sellingPrice)}',
+                                            '${item.quantity}x ${CurrencyFormatter.format(item.unitPrice)}',
                                             style: const TextStyle(
                                               fontFamily: 'Inter',
                                               fontSize: 12,

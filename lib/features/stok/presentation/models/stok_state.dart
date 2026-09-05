@@ -29,6 +29,15 @@ class StokState {
       allItems.where((item) => item.isLowStock).toList()
         ..sort((a, b) => a.currentStock.compareTo(b.currentStock));
 
+  double get liveAssetValuation => 
+      allItems.fold(0.0, (sum, item) => sum + item.totalAssetValue);
+
+  int get deadStockCount => 
+      allItems.where((item) => item.isDeadStock).length;
+
+  double get deadStockValuation => 
+      allItems.where((item) => item.isDeadStock).fold(0.0, (sum, item) => sum + item.totalAssetValue);
+
   StokState copyWith({
     List<StockItem>? allItems,
     List<StockItem>? filteredItems,

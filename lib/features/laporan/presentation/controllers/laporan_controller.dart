@@ -6,6 +6,7 @@ import '../../data/repositories/report_repository_impl.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
+import '../../domain/entities/capital_metrics.dart';
 import '../../domain/repositories/report_repository.dart';
 
 final reportLocalDataSourceProvider = Provider<ReportLocalDataSource>((ref) {
@@ -18,7 +19,7 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
   );
 });
 
-final dashboardSummaryProvider = FutureProvider<DashboardSummary>((ref) {
+final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((ref) {
   return ref.watch(reportRepositoryProvider).getDashboardSummary();
 });
 
@@ -27,16 +28,26 @@ final selectedReportPeriodProvider =
       SelectedReportPeriodController.new,
     );
 
+final customReportRangeProvider =
+    NotifierProvider<CustomReportRangeController, ReportRange?>(
+      CustomReportRangeController.new,
+    );
+
 final salesReportSnapshotByPeriodProvider =
-    FutureProvider.family<SalesReportSnapshot, ReportPeriod>((ref, period) {
+    FutureProvider.autoDispose.family<SalesReportSnapshot, ReportPeriod>((ref, period) {
+      final customRange = ref.watch(customReportRangeProvider);
       return ref
           .watch(reportRepositoryProvider)
-          .getSalesReportSnapshot(period: period);
+          .getSalesReportSnapshot(period: period, customRange: customRange);
     });
 
-final salesReportSnapshotProvider = FutureProvider<SalesReportSnapshot>((ref) {
+final salesReportSnapshotProvider = FutureProvider.autoDispose<SalesReportSnapshot>((ref) {
   final period = ref.watch(selectedReportPeriodProvider);
   return ref.watch(salesReportSnapshotByPeriodProvider(period).future);
+});
+
+final capitalMetricsProvider = FutureProvider.autoDispose<CapitalMetrics>((ref) {
+  return ref.watch(reportRepositoryProvider).getCapitalMetrics();
 });
 
 class SelectedReportPeriodController extends Notifier<ReportPeriod> {
@@ -47,5 +58,14 @@ class SelectedReportPeriodController extends Notifier<ReportPeriod> {
 
   void select(ReportPeriod period) {
     state = period;
+  }
+}
+
+class CustomReportRangeController extends Notifier<ReportRange?> {
+  @override
+  ReportRange? build() => null;
+
+  void setRange(ReportRange? range) {
+    state = range;
   }
 }

@@ -129,6 +129,7 @@ class TransactionLocalDataSource {
         'change_amount': changeAmount,
         'customer_name': null,
         'notes': null,
+        'status': 'completed',
         'created_at': createdAtIso,
         'updated_at': createdAtIso,
       });
@@ -253,6 +254,7 @@ class TransactionLocalDataSource {
       totalAmount: (transaction['total_amount'] as num).toDouble(),
       changeAmount: (transaction['change_amount'] as num).toDouble(),
       cashPaidAmount: (transaction['paid_amount'] as num?)?.toDouble(),
+      status: transaction['status'] as String? ?? 'completed',
       items: items,
     );
   }

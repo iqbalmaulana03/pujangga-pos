@@ -7,6 +7,7 @@ class DashboardSummary {
     required this.topPaymentMethod,
     required this.marginToday,
     required this.marginTodayIsComplete,
+    this.totalExpensesToday = 0.0,
   });
 
   final double revenueToday;
@@ -16,6 +17,8 @@ class DashboardSummary {
   final String? topPaymentMethod;
   final double marginToday;
   final bool marginTodayIsComplete;
+  final double totalExpensesToday;
 
   bool get hasTransactions => transactionCountToday > 0;
+  double get netProfitToday => marginToday - totalExpensesToday;
 }

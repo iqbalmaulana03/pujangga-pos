@@ -65,4 +65,39 @@ void main() {
     expect(paidState.canSubmit, isTrue);
     expect(paidState.changeAmount, 10000);
   });
+
+  test('menghitung harga grosir secara otomatis ketika kuantitas memenuhi syarat', () {
+    const barangGrosir = TransaksiItem(
+      id: 'barang-grosir',
+      name: 'Pensil',
+      category: 'ATK',
+      itemType: 'barang',
+      sellingPrice: 5000,
+      wholesalePrice: 4000,
+      wholesaleMinQuantity: 12,
+      isActive: true,
+    );
+
+    // Beli 10 (belum grosir) -> 10 * 5000 = 50000
+    const stateRetail = TransaksiState(
+      cartItems: [
+        TransaksiCartItem(item: barangGrosir, quantity: 10, itemDiscountAmount: 0),
+      ],
+      paymentMethod: 'tunai',
+      cashPaidAmount: 50000,
+    );
+
+    expect(stateRetail.subtotalAmount, 50000);
+
+    // Beli 12 (sudah grosir) -> 12 * 4000 = 48000
+    const stateGrosir = TransaksiState(
+      cartItems: [
+        TransaksiCartItem(item: barangGrosir, quantity: 12, itemDiscountAmount: 0),
+      ],
+      paymentMethod: 'tunai',
+      cashPaidAmount: 50000,
+    );
+
+    expect(stateGrosir.subtotalAmount, 48000);
+  });
 }

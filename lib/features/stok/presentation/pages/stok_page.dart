@@ -70,6 +70,28 @@ class _StokPageState extends ConsumerState<StokPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Nilai Aset Stok',
+                        value: CurrencyFormatter.format(state.liveAssetValuation),
+                        valueColor: const Color(0xFF0D5C56),
+                        icon: Icons.account_balance_wallet_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildMetricCard(
+                        title: 'Stok Mati (Dead Stock)',
+                        value: CurrencyFormatter.format(state.deadStockValuation),
+                        valueColor: const Color(0xFFBA1A1A),
+                        icon: Icons.money_off_outlined,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
 
                 // Search & Category Filter Section Card
@@ -454,6 +476,26 @@ class _StokPageState extends ConsumerState<StokPage> {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: Color(0xFF3F4947),
+                            ),
+                          ),
+                        ],
+                        if (item.isDeadStock) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFDAD6),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: const Color(0xFFBA1A1A)),
+                            ),
+                            child: const Text(
+                              'Stok Mati (>30 hari)',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFBA1A1A),
+                              ),
                             ),
                           ),
                         ],

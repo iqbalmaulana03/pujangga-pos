@@ -19,11 +19,11 @@ final stockRepositoryProvider = Provider<StockRepository>((ref) {
   );
 });
 
-final stokControllerProvider = AsyncNotifierProvider<StokController, StokState>(
+final stokControllerProvider = AsyncNotifierProvider.autoDispose<StokController, StokState>(
   StokController.new,
 );
 
-final stockItemProvider = FutureProvider.family<StockItem?, String>((
+final stockItemProvider = FutureProvider.autoDispose.family<StockItem?, String>((
   ref,
   itemId,
 ) {
@@ -31,11 +31,11 @@ final stockItemProvider = FutureProvider.family<StockItem?, String>((
 });
 
 final stockMovementsProvider =
-    FutureProvider.family<List<StockMovement>, String>((ref, itemId) {
+    FutureProvider.autoDispose.family<List<StockMovement>, String>((ref, itemId) {
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
-final stockItemDetailProvider = FutureProvider.family<StockItem?, String>((
+final stockItemDetailProvider = FutureProvider.autoDispose.family<StockItem?, String>((
   ref,
   itemId,
 ) {
@@ -43,7 +43,7 @@ final stockItemDetailProvider = FutureProvider.family<StockItem?, String>((
 });
 
 final stockMovementDetailProvider =
-    FutureProvider.family<List<StockMovement>, String>((ref, itemId) {
+    FutureProvider.autoDispose.family<List<StockMovement>, String>((ref, itemId) {
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 

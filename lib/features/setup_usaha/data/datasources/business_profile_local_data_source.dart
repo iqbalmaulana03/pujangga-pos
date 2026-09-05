@@ -17,7 +17,7 @@ class BusinessProfileLocalDataSource {
 
   Future<void> saveProfile(BusinessProfileDbModel profile) async {
     final db = await database.database();
-    final rows = await db.query('business_profile', columns: ['id'], limit: 1);
+    final rows = await db.query('business_profile', columns: ['id', 'modal_awal_usaha'], limit: 1);
 
     if (rows.isEmpty) {
       await db.insert(
@@ -25,10 +25,21 @@ class BusinessProfileLocalDataSource {
         profile.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      
+      if (profile.modalAwalUsaha != null && profile.modalAwalUsaha! > 0) {
+        await db.insert('capital_history', {
+          'amount': profile.modalAwalUsaha!,
+          'created_at': DateTime.now().toIso8601String(),
+          'notes': 'Initial Setup'
+        });
+      }
       return;
     }
 
     final existingId = (rows.first['id'] as num).toInt();
+    final oldModal = (rows.first['modal_awal_usaha'] as num?)?.toDouble() ?? 0.0;
+    final newModal = profile.modalAwalUsaha ?? 0.0;
+
     await db.update(
       'business_profile',
       {
@@ -38,6 +49,14 @@ class BusinessProfileLocalDataSource {
       where: 'id = ?',
       whereArgs: [existingId],
     );
+    
+    if (oldModal != newModal && newModal > 0) {
+      await db.insert('capital_history', {
+        'amount': newModal,
+        'created_at': DateTime.now().toIso8601String(),
+        'notes': 'Capital Update'
+      });
+    }
   }
 
   Future<BusinessProfileDbModel?> getProfile() async {

@@ -10,6 +10,8 @@ class TransaksiItemDbModel {
     required this.isActive,
     this.stockQuantity,
     this.unitLabel,
+    this.wholesalePrice,
+    this.wholesaleMinQuantity,
   });
 
   final int id;
@@ -20,6 +22,8 @@ class TransaksiItemDbModel {
   final bool isActive;
   final int? stockQuantity;
   final String? unitLabel;
+  final double? wholesalePrice;
+  final int? wholesaleMinQuantity;
 
   factory TransaksiItemDbModel.fromMap(Map<String, Object?> map) {
     return TransaksiItemDbModel(
@@ -36,6 +40,8 @@ class TransaksiItemDbModel {
               ?.toInt(),
       unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
       isActive: (map['is_active'] as num).toInt() == 1,
+      wholesalePrice: (map['wholesale_price'] as num?)?.toDouble(),
+      wholesaleMinQuantity: (map['wholesale_min_quantity'] as num?)?.toInt(),
     );
   }
 
@@ -49,6 +55,8 @@ class TransaksiItemDbModel {
       stockQuantity: stockQuantity,
       unitLabel: unitLabel,
       isActive: isActive,
+      wholesalePrice: wholesalePrice,
+      wholesaleMinQuantity: wholesaleMinQuantity,
     );
   }
 }

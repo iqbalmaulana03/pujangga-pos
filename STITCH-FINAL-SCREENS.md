@@ -91,6 +91,12 @@ Design system utama:
   - Fungsi: detail transaksi seperti ringkasan struk
   - Terkait issue: `#8`
 
+### Alur Pengeluaran Operasional
+
+- `Tambah Pengeluaran`
+  - Screen ID: `ba07a54505bf424ba01b0adb920cead6`
+  - Fungsi: form pencatatan biaya operasional harian
+
 ### Alur Pengaturan
 
 - `Pengaturan (Capital Feature)`

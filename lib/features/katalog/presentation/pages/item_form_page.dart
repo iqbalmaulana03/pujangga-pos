@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/currency_formatter.dart';
+import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
 import '../../domain/entities/catalog_item_draft.dart';
 import '../controllers/katalog_controller.dart';
@@ -25,9 +27,12 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   final _priceController = TextEditingController();
   final _stockController = TextEditingController(text: '0');
   final _costController = TextEditingController();
+  final _wholesalePriceController = TextEditingController();
+  final _wholesaleMinController = TextEditingController();
 
   String _itemType = 'barang';
   bool _isActive = true;
+  bool _enableWholesale = false;
   bool _isSubmitting = false;
   bool _didHydrate = false;
 
@@ -42,6 +47,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
     _priceController.dispose();
     _stockController.dispose();
     _costController.dispose();
+    _wholesalePriceController.dispose();
+    _wholesaleMinController.dispose();
     super.dispose();
   }
 
@@ -62,6 +69,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           ? int.parse(_stockController.text.trim())
           : null,
       costPrice: double.tryParse(_costController.text.trim()),
+      wholesalePrice: _enableWholesale ? double.tryParse(_wholesalePriceController.text.trim()) : null,
+      wholesaleMinQuantity: _enableWholesale ? int.tryParse(_wholesaleMinController.text.trim()) : null,
     );
 
     setState(() {
@@ -69,6 +78,40 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
     });
 
     try {
+      if (_itemType == 'barang') {
+        final costPrice = draft.costPrice ?? 0;
+        final stockQty = draft.stockQuantity ?? 0;
+        if (costPrice > 0 && stockQty > 0) {
+          final metrics = await ref.read(capitalMetricsProvider.future);
+          
+          double oldStockValue = 0;
+          if (_isEditMode) {
+            final oldItem = await ref.read(catalogItemProvider(widget.itemId!).future);
+            if (oldItem != null && oldItem.costPrice != null && oldItem.stockQuantity != null) {
+              oldStockValue = oldItem.costPrice! * oldItem.stockQuantity!;
+            }
+          }
+          
+          final newStockValue = costPrice * stockQty;
+          final addedStockValue = newStockValue - oldStockValue;
+          
+          if (addedStockValue > metrics.currentCash) {
+            if (mounted) {
+              final formatter = CurrencyFormatter.format(metrics.currentCash);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Stok gagal disimpan. Sisa Kas Anda ($formatter) tidak mencukupi untuk nilai stok ini.'),
+                ),
+              );
+              setState(() {
+                _isSubmitting = false;
+              });
+            }
+            return;
+          }
+        }
+      }
+
       final repository = ref.read(catalogRepositoryProvider);
       if (_isEditMode) {
         await repository.updateItem(widget.itemId!, draft);
@@ -137,8 +180,11 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           _priceController.text = item.sellingPrice.toStringAsFixed(0);
           _stockController.text = '${item.stockQuantity ?? 0}';
           _costController.text = item.costPrice != null ? item.costPrice!.toStringAsFixed(0) : '';
+          _wholesalePriceController.text = item.wholesalePrice != null ? item.wholesalePrice!.toStringAsFixed(0) : '';
+          _wholesaleMinController.text = item.wholesaleMinQuantity != null ? '${item.wholesaleMinQuantity}' : '';
           _itemType = item.itemType;
           _isActive = item.isActive;
+          _enableWholesale = item.wholesalePrice != null;
           _didHydrate = true;
         }
 
@@ -691,6 +737,195 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 ),
                               ],
                             ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Wholesale Section
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: const [
+                                    Icon(
+                                      Icons.local_offer_outlined,
+                                      color: Color(0xFF3F4947),
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Harga Grosir',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF3F4947),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Switch(
+                                  value: _enableWholesale,
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _enableWholesale = val;
+                                    });
+                                  },
+                                  activeTrackColor: const Color(0xFF0D5C56).withValues(alpha: 0.5),
+                                  activeThumbColor: const Color(0xFF0D5C56),
+                                ),
+                              ],
+                            ),
+                            if (_enableWholesale) ...[
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'HARGA GROSIR',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF3F4947),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: _wholesalePriceController,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF191C1C),
+                                          ),
+                                          decoration: InputDecoration(
+                                            prefixIcon: const Padding(
+                                              padding: EdgeInsets.symmetric(horizontal: 12),
+                                              child: Text(
+                                                'Rp',
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Color(0xFF0D5C56),
+                                                ),
+                                              ),
+                                            ),
+                                            prefixIconConstraints: const BoxConstraints(
+                                              minWidth: 0,
+                                              minHeight: 0,
+                                            ),
+                                            hintText: '0',
+                                            filled: true,
+                                            fillColor: const Color(0xFFF2F4F2),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF0D5C56),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                          validator: (value) {
+                                            if (!_enableWholesale) return null;
+                                            final parsed = double.tryParse((value ?? '').trim());
+                                            if (parsed == null || parsed <= 0) {
+                                              return 'Tidak valid';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'MIN QTY',
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF3F4947),
+                                            letterSpacing: 0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        TextFormField(
+                                          controller: _wholesaleMinController,
+                                          keyboardType: TextInputType.number,
+                                          style: const TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Color(0xFF191C1C),
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: '2',
+                                            filled: true,
+                                            fillColor: const Color(0xFFF2F4F2),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(
+                                                color: Color(0xFF0D5C56),
+                                                width: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                          validator: (value) {
+                                            if (!_enableWholesale) return null;
+                                            final parsed = int.tryParse((value ?? '').trim());
+                                            if (parsed == null || parsed <= 1) {
+                                              return '> 1';
+                                            }
+                                            return null;
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),

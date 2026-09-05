@@ -8,6 +8,8 @@ class TransaksiItem {
     required this.isActive,
     this.stockQuantity,
     this.unitLabel,
+    this.wholesalePrice,
+    this.wholesaleMinQuantity,
   });
 
   final String id;
@@ -18,6 +20,8 @@ class TransaksiItem {
   final bool isActive;
   final int? stockQuantity;
   final String? unitLabel;
+  final double? wholesalePrice;
+  final int? wholesaleMinQuantity;
 
   bool get isBarang => itemType == 'barang';
   bool get isJasa => itemType == 'jasa';

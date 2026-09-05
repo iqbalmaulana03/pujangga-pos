@@ -11,7 +11,16 @@ class TransaksiCartItem {
   final int quantity;
   final double itemDiscountAmount;
 
-  double get lineSubtotal => item.sellingPrice * quantity;
+  double get unitPrice {
+    if (item.wholesalePrice != null &&
+        item.wholesaleMinQuantity != null &&
+        quantity >= item.wholesaleMinQuantity!) {
+      return item.wholesalePrice!;
+    }
+    return item.sellingPrice;
+  }
+
+  double get lineSubtotal => unitPrice * quantity;
   double get lineTotal => lineSubtotal - itemDiscountAmount;
 
   TransaksiCartItem copyWith({

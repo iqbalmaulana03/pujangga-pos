@@ -19,11 +19,11 @@ final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
 });
 
 final katalogControllerProvider =
-    AsyncNotifierProvider<KatalogController, KatalogState>(
+    AsyncNotifierProvider.autoDispose<KatalogController, KatalogState>(
       KatalogController.new,
     );
 
-final catalogItemProvider = FutureProvider.family<CatalogItem?, String>((
+final catalogItemProvider = FutureProvider.autoDispose.family<CatalogItem?, String>((
   ref,
   itemId,
 ) {

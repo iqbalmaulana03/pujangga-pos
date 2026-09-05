@@ -12,4 +12,9 @@ class RiwayatRepositoryImpl implements RiwayatRepository {
     final rows = await localDataSource.getTransactions();
     return rows.map((row) => row.toEntity()).toList();
   }
+
+  @override
+  Future<void> voidTransaction(String invoiceNumber) {
+    return localDataSource.voidTransaction(invoiceNumber);
+  }
 }
