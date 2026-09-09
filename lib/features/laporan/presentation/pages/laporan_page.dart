@@ -781,13 +781,19 @@ class LaporanPage extends ConsumerWidget {
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
                         if (index < 0 || index >= trend.length) return const SizedBox();
+                        
+                        String labelText = trend[index].label;
+                        if (trend.length >= 24 && labelText.contains(':')) {
+                          labelText = labelText.split(':').first;
+                        }
+
                         return Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
-                            trend[index].label,
+                            labelText,
                             style: const TextStyle(
                               color: Color(0xFF3F4947),
-                              fontSize: 9,
+                              fontSize: 8,
                               fontFamily: 'Inter',
                             ),
                           ),
@@ -841,7 +847,7 @@ class LaporanPage extends ConsumerWidget {
                       BarChartRodData(
                         toY: trend[index].value,
                         color: isMax ? const Color(0xFF0D5C56) : const Color(0xFFBEC9C6),
-                        width: 16,
+                        width: trend.length >= 24 ? 8 : 16,
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                       ),
                     ],

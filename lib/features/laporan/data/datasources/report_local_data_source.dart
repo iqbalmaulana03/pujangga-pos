@@ -236,7 +236,7 @@ class ReportLocalDataSource {
 
     // Calculate actual sales trend data points
     final duration = range.endExclusive.difference(range.start);
-    final int intervalCount = period == ReportPeriod.harian ? 8 : 7;
+    final int intervalCount = period == ReportPeriod.harian ? 24 : 7;
     final intervalMs = duration.inMilliseconds / intervalCount;
     final List<SalesTrendPoint> trend = [];
 
@@ -247,7 +247,7 @@ class ReportLocalDataSource {
 
       String label = '';
       if (period == ReportPeriod.harian) {
-        final hour = intervalEnd.hour.toString().padLeft(2, '0');
+        final hour = intervalStart.hour.toString().padLeft(2, '0');
         label = '$hour:00';
       } else if (period == ReportPeriod.mingguan) {
         const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
