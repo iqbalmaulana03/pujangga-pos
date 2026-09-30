@@ -91,6 +91,12 @@ class StockLocalDataSource {
       }
 
       final currentQty = (item['stock_qty'] as num).toDouble();
+      if (!request.quantity.isFinite || request.quantity < 0) {
+        throw const AppException(
+          'validation_error',
+          'Jumlah penyesuaian harus berupa angka positif yang valid.',
+        );
+      }
       final nextQty = switch (request.adjustmentType) {
         'manual_add' => currentQty + request.quantity,
         'manual_reduce' => currentQty - request.quantity,

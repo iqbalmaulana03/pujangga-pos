@@ -20,7 +20,7 @@ class TransaksiItemDbModel {
   final String itemType;
   final double sellingPrice;
   final bool isActive;
-  final int? stockQuantity;
+  final double? stockQuantity;
   final String? unitLabel;
   final double? wholesalePrice;
   final int? wholesaleMinQuantity;
@@ -37,7 +37,7 @@ class TransaksiItemDbModel {
           0,
       stockQuantity:
           ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
-              ?.toInt(),
+              ?.toDouble(),
       unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
       isActive: (map['is_active'] as num).toInt() == 1,
       wholesalePrice: (map['wholesale_price'] as num?)?.toDouble(),

@@ -83,6 +83,7 @@ class _AppSettingsFormState extends State<AppSettingsForm> {
         currencySymbol: 'Rp',
         defaultTaxPercent: double.tryParse(_taxController.text.trim()) ?? 0,
         stockAllowNegative: _stockAllowNegative,
+        autoPrintReceipt: widget.initialSettings.autoPrintReceipt,
         receiptHeader: _normalizeOptional(_receiptHeaderController.text),
         receiptFooter: _normalizeOptional(_receiptFooterController.text),
       ),

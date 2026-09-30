@@ -7,6 +7,7 @@ class AppSettingsDbModel {
     required this.currencySymbol,
     required this.defaultTaxPercent,
     required this.stockAllowNegative,
+    required this.autoPrintReceipt,
     required this.createdAt,
     required this.updatedAt,
     this.receiptHeader,
@@ -18,6 +19,7 @@ class AppSettingsDbModel {
   final String currencySymbol;
   final double defaultTaxPercent;
   final bool stockAllowNegative;
+  final bool autoPrintReceipt;
   final String createdAt;
   final String updatedAt;
   final String? receiptHeader;
@@ -30,6 +32,7 @@ class AppSettingsDbModel {
       currencySymbol: map['currency_symbol'] as String,
       defaultTaxPercent: (map['default_tax_percent'] as num).toDouble(),
       stockAllowNegative: (map['stock_allow_negative'] as num).toInt() == 1,
+      autoPrintReceipt: ((map['auto_print_receipt'] as num?)?.toInt() ?? 1) == 1,
       receiptHeader: map['receipt_header'] as String?,
       receiptFooter: map['receipt_footer'] as String?,
       createdAt: map['created_at'] as String,
@@ -45,6 +48,7 @@ class AppSettingsDbModel {
       currencySymbol: entity.currencySymbol,
       defaultTaxPercent: entity.defaultTaxPercent,
       stockAllowNegative: entity.stockAllowNegative,
+      autoPrintReceipt: entity.autoPrintReceipt,
       receiptHeader: entity.receiptHeader,
       receiptFooter: entity.receiptFooter,
       createdAt: timestamp,
@@ -61,6 +65,7 @@ class AppSettingsDbModel {
       'receipt_footer': receiptFooter,
       'default_tax_percent': defaultTaxPercent,
       'stock_allow_negative': stockAllowNegative ? 1 : 0,
+      'auto_print_receipt': autoPrintReceipt ? 1 : 0,
       'created_at': createdAt,
       'updated_at': updatedAt,
     };
@@ -72,6 +77,7 @@ class AppSettingsDbModel {
       currencySymbol: currencySymbol,
       defaultTaxPercent: defaultTaxPercent,
       stockAllowNegative: stockAllowNegative,
+      autoPrintReceipt: autoPrintReceipt,
       receiptHeader: receiptHeader,
       receiptFooter: receiptFooter,
     );

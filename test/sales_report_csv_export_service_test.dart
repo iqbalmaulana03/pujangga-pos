@@ -53,4 +53,35 @@ void main() {
     expect(lines.last, contains('"Tunai"'));
     expect(lines.last, contains('"Paket ""Hemat"", Es Teh"'));
   });
+
+  test('menetralkan awalan formula dan tetap mengutip newline pada teks', () {
+    final service = SalesReportCsvExportService(
+      database: AppDatabase.instance,
+      logger: Logger.root,
+    );
+
+    final csv = service.buildCsvForRows([
+      {
+        'invoice_no': 'INV-003',
+        'transaction_date': '2026-07-12T11:00:00.000',
+        'total_amount': 12000.0,
+        'payment_method': 'cash',
+        'item_count': 1,
+        'item_summary': '=HYPERLINK("https://invalid", "click"),\n@SUM(A1:A2)',
+      },
+      {
+        'invoice_no': '+CMD',
+        'transaction_date': '2026-07-12T12:00:00.000',
+        'total_amount': 1.0,
+        'payment_method': 'cash',
+        'item_count': 1,
+        'item_summary': '-1 + @name',
+      },
+    ]);
+
+    expect(csv, contains("\"'=HYPERLINK("));
+    expect(csv, contains("\"'+CMD\""));
+    expect(csv, contains("\"'-1 + @name\""));
+    expect(csv, contains('\n@SUM(A1:A2)'));
+  });
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../domain/entities/stock_item.dart';
 import '../controllers/stok_controller.dart';
 
@@ -31,10 +32,13 @@ class _StokPageState extends ConsumerState<StokPage> {
       backgroundColor: const Color(0xFFF8FAF8),
       body: stokAsync.when(
         data: (state) {
-          final outOfStockCount = state.allItems.where((item) => item.currentStock == 0).length;
+          final outOfStockCount = state.allItems
+              .where((item) => item.currentStock == 0)
+              .length;
 
           return RefreshIndicator(
-            onRefresh: () => ref.read(stokControllerProvider.notifier).refresh(),
+            onRefresh: () =>
+                ref.read(stokControllerProvider.notifier).refresh(),
             color: const Color(0xFF0D5C56),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -76,7 +80,9 @@ class _StokPageState extends ConsumerState<StokPage> {
                     Expanded(
                       child: _buildMetricCard(
                         title: 'Nilai Aset Stok',
-                        value: CurrencyFormatter.format(state.liveAssetValuation),
+                        value: CurrencyFormatter.format(
+                          state.liveAssetValuation,
+                        ),
                         valueColor: const Color(0xFF0D5C56),
                         icon: Icons.account_balance_wallet_outlined,
                       ),
@@ -85,7 +91,9 @@ class _StokPageState extends ConsumerState<StokPage> {
                     Expanded(
                       child: _buildMetricCard(
                         title: 'Stok Mati (Dead Stock)',
-                        value: CurrencyFormatter.format(state.deadStockValuation),
+                        value: CurrencyFormatter.format(
+                          state.deadStockValuation,
+                        ),
                         valueColor: const Color(0xFFBA1A1A),
                         icon: Icons.money_off_outlined,
                       ),
@@ -121,10 +129,16 @@ class _StokPageState extends ConsumerState<StokPage> {
                             .updateSearch,
                         decoration: InputDecoration(
                           hintText: 'Cari nama barang, kategori, atau SKU...',
-                          prefixIcon: const Icon(Icons.search, color: Color(0xFF3F4947)),
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xFF3F4947),
+                          ),
                           filled: true,
                           fillColor: const Color(0xFFF2F4F2),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                             borderSide: BorderSide.none,
@@ -151,7 +165,10 @@ class _StokPageState extends ConsumerState<StokPage> {
                                       .updateCategoryFilter(category);
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: state.categoryFilter == category
                                         ? const Color(0xFF0D5C56)
@@ -159,11 +176,14 @@ class _StokPageState extends ConsumerState<StokPage> {
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Text(
-                                    category == 'semua' ? 'Semua Kategori' : category,
+                                    category == 'semua'
+                                        ? 'Semua Kategori'
+                                        : category,
                                     style: TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 12,
-                                      fontWeight: state.categoryFilter == category
+                                      fontWeight:
+                                          state.categoryFilter == category
                                           ? FontWeight.bold
                                           : FontWeight.normal,
                                       color: state.categoryFilter == category
@@ -187,7 +207,11 @@ class _StokPageState extends ConsumerState<StokPage> {
                 if (state.lowStockItems.isNotEmpty) ...[
                   Row(
                     children: const [
-                      Icon(Icons.notification_important_outlined, color: Color(0xFF9C4F1A), size: 20),
+                      Icon(
+                        Icons.notification_important_outlined,
+                        color: Color(0xFF9C4F1A),
+                        size: 20,
+                      ),
                       SizedBox(width: 6),
                       Text(
                         'Perlu Perhatian Segera',
@@ -201,7 +225,9 @@ class _StokPageState extends ConsumerState<StokPage> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  ...state.lowStockItems.take(2).map(
+                  ...state.lowStockItems
+                      .take(2)
+                      .map(
                         (item) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: _buildAttentionCard(item),
@@ -231,7 +257,8 @@ class _StokPageState extends ConsumerState<StokPage> {
                   _buildEmptyStateCard(
                     icon: Icons.inventory_2_outlined,
                     title: 'Belum ada barang di katalog',
-                    subtitle: 'Tambahkan item bertipe barang dari katalog agar modul stok mulai menampilkan ringkasan.',
+                    subtitle:
+                        'Tambahkan item bertipe barang dari katalog agar modul stok mulai menampilkan ringkasan.',
                     actionLabel: 'Tambah Item',
                     onAction: () => context.push(AppRoutes.catalogCreate),
                   )
@@ -239,10 +266,13 @@ class _StokPageState extends ConsumerState<StokPage> {
                   _buildEmptyStateCard(
                     icon: Icons.filter_alt_off_outlined,
                     title: 'Tidak ada barang yang cocok',
-                    subtitle: 'Ubah kata kunci pencarian atau filter kategori untuk melihat item lain.',
+                    subtitle:
+                        'Ubah kata kunci pencarian atau filter kategori untuk melihat item lain.',
                   )
                 else
-                  ...state.filteredItems.map((item) => _buildStockItemCard(item)),
+                  ...state.filteredItems.map(
+                    (item) => _buildStockItemCard(item),
+                  ),
               ],
             ),
           );
@@ -254,7 +284,11 @@ class _StokPageState extends ConsumerState<StokPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded, size: 48, color: Color(0xFFBA1A1A)),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 48,
+                  color: Color(0xFFBA1A1A),
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Gagal memuat data stok',
@@ -269,12 +303,17 @@ class _StokPageState extends ConsumerState<StokPage> {
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF3F4947)),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    color: Color(0xFF3F4947),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => ref.invalidate(stokControllerProvider),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D5C56),
+                  ),
                   child: const Text('Muat Ulang'),
                 ),
               ],
@@ -312,9 +351,7 @@ class _StokPageState extends ConsumerState<StokPage> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Icon(icon, size: 18, color: const Color(0xFF3F4947)),
-            ],
+            children: [Icon(icon, size: 18, color: const Color(0xFF3F4947))],
           ),
           const SizedBox(height: 12),
           Text(
@@ -351,7 +388,9 @@ class _StokPageState extends ConsumerState<StokPage> {
         decoration: BoxDecoration(
           color: const Color(0xFFFFDAD6),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFBA1A1A).withValues(alpha: 0.3)),
+          border: Border.all(
+            color: const Color(0xFFBA1A1A).withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
@@ -379,7 +418,7 @@ class _StokPageState extends ConsumerState<StokPage> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Sisa stok: ${item.currentStock} ${item.unitLabel ?? "pcs"} • ${item.category}',
+                    'Sisa stok: ${QuantityFormatter.format(item.currentStock)} ${item.unitLabel ?? "pcs"} • ${item.category}',
                     style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 11,
@@ -482,11 +521,16 @@ class _StokPageState extends ConsumerState<StokPage> {
                         if (item.isDeadStock) ...[
                           const SizedBox(height: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFDAD6),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: const Color(0xFFBA1A1A)),
+                              border: Border.all(
+                                color: const Color(0xFFBA1A1A),
+                              ),
                             ),
                             child: const Text(
                               'Stok Mati (>30 hari)',
@@ -517,7 +561,10 @@ class _StokPageState extends ConsumerState<StokPage> {
                       ),
                       const SizedBox(height: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: stockBadgeColor,
                           borderRadius: BorderRadius.circular(8),
@@ -538,22 +585,32 @@ class _StokPageState extends ConsumerState<StokPage> {
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 12),
-                child: Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Color(0xFFF2F4F2),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.inventory_2, size: 16, color: Color(0xFF0D5C56)),
+                      const Icon(
+                        Icons.inventory_2,
+                        size: 16,
+                        color: Color(0xFF0D5C56),
+                      ),
                       const SizedBox(width: 6),
                       Text(
-                        '${item.currentStock} ${item.unitLabel ?? "pcs"}',
+                        '${QuantityFormatter.format(item.currentStock)} ${item.unitLabel ?? "pcs"}',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: isOutOfStock ? const Color(0xFFBA1A1A) : const Color(0xFF191C1C),
+                          color: isOutOfStock
+                              ? const Color(0xFFBA1A1A)
+                              : const Color(0xFF191C1C),
                         ),
                       ),
                     ],
@@ -570,7 +627,11 @@ class _StokPageState extends ConsumerState<StokPage> {
                         ),
                       ),
                       SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios, size: 10, color: Color(0xFF0D5C56)),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 10,
+                        color: Color(0xFF0D5C56),
+                      ),
                     ],
                   ),
                 ],
@@ -594,7 +655,9 @@ class _StokPageState extends ConsumerState<StokPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFBEC9C6).withValues(alpha: 0.3)),
+        border: Border.all(
+          color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         children: [
@@ -628,11 +691,17 @@ class _StokPageState extends ConsumerState<StokPage> {
                 onPressed: onAction,
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0D5C56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 child: Text(
                   actionLabel,
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),

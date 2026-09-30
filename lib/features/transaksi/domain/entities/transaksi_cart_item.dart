@@ -8,7 +8,7 @@ class TransaksiCartItem {
   });
 
   final TransaksiItem item;
-  final int quantity;
+  final double quantity;
   final double itemDiscountAmount;
 
   double get unitPrice {
@@ -25,7 +25,7 @@ class TransaksiCartItem {
 
   TransaksiCartItem copyWith({
     TransaksiItem? item,
-    int? quantity,
+    double? quantity,
     double? itemDiscountAmount,
   }) {
     return TransaksiCartItem(

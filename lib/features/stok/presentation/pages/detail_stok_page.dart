@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../domain/entities/stock_adjustment_request.dart';
 import '../../domain/entities/stock_item.dart';
 import '../../domain/entities/stock_movement.dart';
@@ -185,7 +186,8 @@ class _ItemSummaryCard extends StatelessWidget {
                 Expanded(
                   child: _SummaryStat(
                     label: 'Stok Saat Ini',
-                    value: '${item.currentStock} ${item.unitLabel ?? 'pcs'}',
+                    value:
+                        '${QuantityFormatter.format(item.currentStock)} ${item.unitLabel ?? 'pcs'}',
                     accent: stockTone,
                   ),
                 ),
@@ -283,7 +285,7 @@ class _MovementTile extends StatelessWidget {
       _ => Icons.point_of_sale_outlined,
     };
     final quantityLabel =
-        '${isDecrease ? '' : '+'}${movement.quantityChange.toStringAsFixed(0)}';
+        '${isDecrease ? '' : '+'}${QuantityFormatter.format(movement.quantityChange)}';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,7 +317,7 @@ class _MovementTile extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Stok ${movement.quantityBefore.toStringAsFixed(0)} -> ${movement.quantityAfter.toStringAsFixed(0)}',
+                'Stok ${QuantityFormatter.format(movement.quantityBefore)} -> ${QuantityFormatter.format(movement.quantityAfter)}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               if ((movement.notes ?? '').trim().isNotEmpty) ...[
@@ -418,14 +420,16 @@ class _AdjustmentSheetState extends ConsumerState<_AdjustmentSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _quantityController,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: _adjustmentType == 'set_balance'
                       ? 'Stok akhir'
                       : 'Jumlah penyesuaian',
                 ),
                 validator: (value) {
-                  final quantity = int.tryParse((value ?? '').trim());
+                  final quantity = QuantityFormatter.parse(value);
                   if (quantity == null) {
                     return 'Masukkan angka yang valid.';
                   }
@@ -478,7 +482,7 @@ class _AdjustmentSheetState extends ConsumerState<_AdjustmentSheet> {
             StockAdjustmentRequest(
               itemId: widget.item.id,
               adjustmentType: _adjustmentType,
-              quantity: double.parse(_quantityController.text.trim()),
+              quantity: QuantityFormatter.parse(_quantityController.text)!,
               notes: _notesController.text.trim().isEmpty
                   ? null
                   : _notesController.text.trim(),
@@ -579,6 +583,14 @@ String _movementLabel(StockMovement movement) {
       return 'Kurangi stok manual';
     case 'set_balance':
       return 'Set stok akhir';
+    case 'stock_in':
+      return movement.referenceType == 'initial_stock'
+          ? 'Stok awal katalog'
+          : 'Tambah stok dari katalog';
+    case 'stock_out':
+      return 'Kurangi stok dari katalog';
+    case 'catalog_edit':
+      return 'Perubahan stok dari katalog';
     case 'sale':
       return movement.referenceId == null
           ? 'Transaksi penjualan'

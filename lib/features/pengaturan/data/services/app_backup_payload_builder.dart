@@ -4,7 +4,7 @@ class AppBackupPayloadBuilder {
   const AppBackupPayloadBuilder();
 
   static const backupFormat = 'pujangga_pos_backup';
-  static const backupFormatVersion = 1;
+  static const backupFormatVersion = 2;
 
   Map<String, Object?> build({
     required DateTime generatedAt,

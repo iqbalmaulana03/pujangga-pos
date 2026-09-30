@@ -23,7 +23,7 @@ class CatalogItemDbModel {
   final double sellingPrice;
   final bool isActive;
   final String? sku;
-  final int? stockQuantity;
+  final double? stockQuantity;
   final String? unitLabel;
   final double? costPrice;
   final double? wholesalePrice;
@@ -44,9 +44,10 @@ class CatalogItemDbModel {
       sku: map['sku'] as String?,
       stockQuantity:
           ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
-              ?.toInt(),
+              ?.toDouble(),
       unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
-      costPrice: (map['harga_modal'] as num?)?.toDouble() ??
+      costPrice:
+          (map['harga_modal'] as num?)?.toDouble() ??
           (map['biaya_dasar'] as num?)?.toDouble(),
       wholesalePrice: (map['wholesale_price'] as num?)?.toDouble(),
       wholesaleMinQuantity: (map['wholesale_min_quantity'] as num?)?.toInt(),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/services/app_startup_service.dart';
+import '../features/pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -12,6 +13,7 @@ class PujanggaPosApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final startupState = ref.watch(appStartupProvider);
+    ref.listen(appSettingsProvider, (_, _) {});
 
     return startupState.when(
       data: (state) {

@@ -4,6 +4,7 @@ class AppSettings {
     required this.currencySymbol,
     required this.defaultTaxPercent,
     required this.stockAllowNegative,
+    this.autoPrintReceipt = true,
     this.receiptHeader,
     this.receiptFooter,
   });
@@ -12,6 +13,7 @@ class AppSettings {
   final String currencySymbol;
   final double defaultTaxPercent;
   final bool stockAllowNegative;
+  final bool autoPrintReceipt;
   final String? receiptHeader;
   final String? receiptFooter;
 }

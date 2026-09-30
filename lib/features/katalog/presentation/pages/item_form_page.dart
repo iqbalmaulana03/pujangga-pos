@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
+import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
 import '../../domain/entities/catalog_item_draft.dart';
 import '../controllers/katalog_controller.dart';
@@ -66,13 +68,16 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       sku: _skuController.text.trim(),
       unitLabel: _unitController.text.trim(),
       stockQuantity: _itemType == 'barang'
-          ? int.parse(_stockController.text.trim())
+          ? QuantityFormatter.parse(_stockController.text)!
           : null,
       costPrice: double.tryParse(_costController.text.trim()),
-      wholesalePrice: _enableWholesale ? double.tryParse(_wholesalePriceController.text.trim()) : null,
-      wholesaleMinQuantity: _enableWholesale ? int.tryParse(_wholesaleMinController.text.trim()) : null,
+      wholesalePrice: _enableWholesale
+          ? double.tryParse(_wholesalePriceController.text.trim())
+          : null,
+      wholesaleMinQuantity: _enableWholesale
+          ? int.tryParse(_wholesaleMinController.text.trim())
+          : null,
     );
-
     setState(() {
       _isSubmitting = true;
     });
@@ -83,24 +88,30 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
         final stockQty = draft.stockQuantity ?? 0;
         if (costPrice > 0 && stockQty > 0) {
           final metrics = await ref.read(capitalMetricsProvider.future);
-          
+
           double oldStockValue = 0;
           if (_isEditMode) {
-            final oldItem = await ref.read(catalogItemProvider(widget.itemId!).future);
-            if (oldItem != null && oldItem.costPrice != null && oldItem.stockQuantity != null) {
+            final oldItem = await ref.read(
+              catalogItemProvider(widget.itemId!).future,
+            );
+            if (oldItem != null &&
+                oldItem.costPrice != null &&
+                oldItem.stockQuantity != null) {
               oldStockValue = oldItem.costPrice! * oldItem.stockQuantity!;
             }
           }
-          
+
           final newStockValue = costPrice * stockQty;
           final addedStockValue = newStockValue - oldStockValue;
-          
+
           if (addedStockValue > metrics.currentCash) {
             if (mounted) {
               final formatter = CurrencyFormatter.format(metrics.currentCash);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Stok gagal disimpan. Sisa Kas Anda ($formatter) tidak mencukupi untuk nilai stok ini.'),
+                  content: Text(
+                    'Stok gagal disimpan. Sisa Kas Anda ($formatter) tidak mencukupi untuk nilai stok ini.',
+                  ),
                 ),
               );
               setState(() {
@@ -121,6 +132,12 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
 
       ref.invalidate(katalogControllerProvider);
       ref.invalidate(transaksiControllerProvider);
+      ref.invalidate(stokControllerProvider);
+      if (_isEditMode) {
+        ref.invalidate(stockItemProvider(widget.itemId!));
+        ref.invalidate(stockItemDetailProvider(widget.itemId!));
+        ref.invalidate(stockMovementDetailProvider(widget.itemId!));
+      }
 
       if (!mounted) {
         return;
@@ -178,10 +195,18 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           _skuController.text = item.sku ?? '';
           _unitController.text = item.unitLabel ?? '';
           _priceController.text = item.sellingPrice.toStringAsFixed(0);
-          _stockController.text = '${item.stockQuantity ?? 0}';
-          _costController.text = item.costPrice != null ? item.costPrice!.toStringAsFixed(0) : '';
-          _wholesalePriceController.text = item.wholesalePrice != null ? item.wholesalePrice!.toStringAsFixed(0) : '';
-          _wholesaleMinController.text = item.wholesaleMinQuantity != null ? '${item.wholesaleMinQuantity}' : '';
+          _stockController.text = QuantityFormatter.format(
+            item.stockQuantity ?? 0,
+          );
+          _costController.text = item.costPrice != null
+              ? item.costPrice!.toStringAsFixed(0)
+              : '';
+          _wholesalePriceController.text = item.wholesalePrice != null
+              ? item.wholesalePrice!.toStringAsFixed(0)
+              : '';
+          _wholesaleMinController.text = item.wholesaleMinQuantity != null
+              ? '${item.wholesaleMinQuantity}'
+              : '';
           _itemType = item.itemType;
           _isActive = item.isActive;
           _enableWholesale = item.wholesalePrice != null;
@@ -205,10 +230,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   }
 
   void _adjustStock(int amount) {
-    final current = int.tryParse(_stockController.text.trim()) ?? 0;
+    final current = QuantityFormatter.parse(_stockController.text) ?? 0;
     final next = (current + amount).clamp(0, 999999);
     setState(() {
-      _stockController.text = '$next';
+      _stockController.text = QuantityFormatter.format(next);
     });
   }
 
@@ -237,11 +262,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFBEC9C6),
-          ),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFBEC9C6)),
         ),
       ),
       body: Stack(
@@ -263,7 +284,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFFBEC9C6,
+                            ).withValues(alpha: 0.3),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -407,10 +430,13 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                           color: isProduct
                                               ? const Color(0xFF0D5C56)
                                               : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Icon(
                                               Icons.inventory_2,
@@ -449,10 +475,13 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                           color: !isProduct
                                               ? const Color(0xFF0D5C56)
                                               : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
                                             Icon(
                                               Icons.design_services,
@@ -492,7 +521,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFFBEC9C6,
+                            ).withValues(alpha: 0.3),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -546,11 +577,11 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 color: Color(0xFF191C1C),
                               ),
                               decoration: InputDecoration(
-                                prefixIcon: const Padding(
+                                prefixIcon: Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 12),
                                   child: Text(
-                                    'Rp',
-                                    style: TextStyle(
+                                    CurrencyFormatter.symbol,
+                                    style: const TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -586,10 +617,14 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 }
                                 return null;
                               },
+                              autovalidateMode:
+                                  AutovalidateMode.onUserInteraction,
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              isProduct ? 'HARGA MODAL' : 'BIAYA DASAR (OPSIONAL)',
+                              isProduct
+                                  ? 'HARGA MODAL'
+                                  : 'BIAYA DASAR (OPSIONAL)',
                               style: const TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 12,
@@ -609,11 +644,11 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 color: Color(0xFF191C1C),
                               ),
                               decoration: InputDecoration(
-                                prefixIcon: const Padding(
+                                prefixIcon: Padding(
                                   padding: EdgeInsets.symmetric(horizontal: 12),
                                   child: Text(
-                                    'Rp',
-                                    style: TextStyle(
+                                    CurrencyFormatter.symbol,
+                                    style: const TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -656,7 +691,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'SKU (OPSIONAL)',
@@ -677,13 +713,15 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                           filled: true,
                                           fillColor: const Color(0xFFF2F4F2),
                                           border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             borderSide: BorderSide.none,
                                           ),
                                           focusedBorder: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             borderSide: const BorderSide(
                                               color: Color(0xFF0D5C56),
                                               width: 1.5,
@@ -697,7 +735,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         isProduct ? 'SATUAN' : 'LABEL JASA',
@@ -714,17 +753,21 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                         controller: _unitController,
                                         textInputAction: TextInputAction.done,
                                         decoration: InputDecoration(
-                                          hintText: isProduct ? 'pcs' : 'layanan',
+                                          hintText: isProduct
+                                              ? 'pcs'
+                                              : 'layanan',
                                           filled: true,
                                           fillColor: const Color(0xFFF2F4F2),
                                           border: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             borderSide: BorderSide.none,
                                           ),
                                           focusedBorder: OutlineInputBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             borderSide: const BorderSide(
                                               color: Color(0xFF0D5C56),
                                               width: 1.5,
@@ -748,7 +791,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFFBEC9C6,
+                            ).withValues(alpha: 0.3),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -790,7 +835,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                       _enableWholesale = val;
                                     });
                                   },
-                                  activeTrackColor: const Color(0xFF0D5C56).withValues(alpha: 0.5),
+                                  activeTrackColor: const Color(
+                                    0xFF0D5C56,
+                                  ).withValues(alpha: 0.5),
                                   activeThumbColor: const Color(0xFF0D5C56),
                                 ),
                               ],
@@ -803,7 +850,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                   Expanded(
                                     flex: 2,
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const Text(
                                           'HARGA GROSIR',
@@ -826,11 +874,13 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                             color: Color(0xFF191C1C),
                                           ),
                                           decoration: InputDecoration(
-                                            prefixIcon: const Padding(
-                                              padding: EdgeInsets.symmetric(horizontal: 12),
+                                            prefixIcon: Padding(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                              ),
                                               child: Text(
-                                                'Rp',
-                                                style: TextStyle(
+                                                CurrencyFormatter.symbol,
+                                                style: const TextStyle(
                                                   fontFamily: 'Inter',
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
@@ -838,19 +888,22 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                                 ),
                                               ),
                                             ),
-                                            prefixIconConstraints: const BoxConstraints(
-                                              minWidth: 0,
-                                              minHeight: 0,
-                                            ),
+                                            prefixIconConstraints:
+                                                const BoxConstraints(
+                                                  minWidth: 0,
+                                                  minHeight: 0,
+                                                ),
                                             hintText: '0',
                                             filled: true,
                                             fillColor: const Color(0xFFF2F4F2),
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               borderSide: BorderSide.none,
                                             ),
                                             focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               borderSide: const BorderSide(
                                                 color: Color(0xFF0D5C56),
                                                 width: 1.5,
@@ -859,7 +912,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                           ),
                                           validator: (value) {
                                             if (!_enableWholesale) return null;
-                                            final parsed = double.tryParse((value ?? '').trim());
+                                            final parsed = double.tryParse(
+                                              (value ?? '').trim(),
+                                            );
                                             if (parsed == null || parsed <= 0) {
                                               return 'Tidak valid';
                                             }
@@ -873,7 +928,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                   Expanded(
                                     flex: 1,
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const Text(
                                           'MIN QTY',
@@ -900,11 +956,13 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                             filled: true,
                                             fillColor: const Color(0xFFF2F4F2),
                                             border: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               borderSide: BorderSide.none,
                                             ),
                                             focusedBorder: OutlineInputBorder(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               borderSide: const BorderSide(
                                                 color: Color(0xFF0D5C56),
                                                 width: 1.5,
@@ -913,7 +971,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                           ),
                                           validator: (value) {
                                             if (!_enableWholesale) return null;
-                                            final parsed = int.tryParse((value ?? '').trim());
+                                            final parsed = int.tryParse(
+                                              (value ?? '').trim(),
+                                            );
                                             if (parsed == null || parsed <= 1) {
                                               return '> 1';
                                             }
@@ -938,11 +998,14 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFECEEED).withValues(alpha: 0.2),
+                              color: const Color(
+                                0xFFECEEED,
+                              ).withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: const Color(0xFF0D5C56)
-                                    .withValues(alpha: 0.2),
+                                color: const Color(
+                                  0xFF0D5C56,
+                                ).withValues(alpha: 0.2),
                               ),
                               boxShadow: [
                                 BoxShadow(
@@ -1036,7 +1099,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                       width: 100,
                                       child: TextFormField(
                                         controller: _stockController,
-                                        keyboardType: TextInputType.number,
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
                                         textAlign: TextAlign.center,
                                         style: const TextStyle(
                                           fontFamily: 'Inter',
@@ -1050,9 +1116,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                         ),
                                         validator: (value) {
                                           if (!isProduct) return null;
-                                          final parsed = int.tryParse(
-                                            (value ?? '').trim(),
-                                          );
+                                          final parsed =
+                                              QuantityFormatter.parse(value);
                                           if (parsed == null || parsed < 0) {
                                             return 'Harus >= 0.';
                                           }
@@ -1081,7 +1146,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 const SizedBox(height: 12),
                                 const Center(
                                   child: Text(
-                                    'Jumlah stok awal akan dicatat dalam log inventaris.',
+                                    'Stok awal dan perubahan stok dicatat dalam log inventaris.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       fontFamily: 'Inter',
@@ -1104,7 +1169,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFFBEC9C6,
+                            ).withValues(alpha: 0.3),
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -1180,10 +1247,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.85),
                 border: const Border(
-                  top: BorderSide(
-                    color: Color(0xFFE1E3E1),
-                    width: 1,
-                  ),
+                  top: BorderSide(color: Color(0xFFE1E3E1), width: 1),
                 ),
               ),
               child: Center(
@@ -1197,8 +1261,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                       _isSubmitting
                           ? 'Menyimpan...'
                           : (_isEditMode
-                              ? 'Simpan Perubahan'
-                              : 'Simpan Barang'),
+                                ? 'Simpan Perubahan'
+                                : 'Simpan Barang'),
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 16,

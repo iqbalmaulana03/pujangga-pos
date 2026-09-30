@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../domain/entities/app_settings.dart';
@@ -24,9 +25,6 @@ class PengaturanPage extends ConsumerStatefulWidget {
 }
 
 class _PengaturanPageState extends ConsumerState<PengaturanPage> {
-  bool _autoPrintReceipt =
-      true; // Stateful dummy switch for aesthetics to match Stitch
-
   Future<void> _handleProfileSubmit(BusinessProfile profile) async {
     try {
       await ref.read(pengaturanProfilControllerProvider.notifier).save(profile);
@@ -432,8 +430,8 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
             child: TextFormField(
               controller: controller,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Jumlah Modal (Rp)',
+              decoration: InputDecoration(
+                labelText: 'Jumlah Modal (${CurrencyFormatter.symbol})',
                 hintText: 'e.g. 5000000',
               ),
               validator: (v) {
@@ -496,6 +494,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                     currencySymbol: 'Rp',
                     defaultTaxPercent: settings.defaultTaxPercent,
                     stockAllowNegative: settings.stockAllowNegative,
+                    autoPrintReceipt: settings.autoPrintReceipt,
                     receiptHeader: settings.receiptHeader,
                     receiptFooter: settings.receiptFooter,
                   ),
@@ -512,6 +511,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                     currencySymbol: '\$',
                     defaultTaxPercent: settings.defaultTaxPercent,
                     stockAllowNegative: settings.stockAllowNegative,
+                    autoPrintReceipt: settings.autoPrintReceipt,
                     receiptHeader: settings.receiptHeader,
                     receiptFooter: settings.receiptFooter,
                   ),
@@ -528,6 +528,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                     currencySymbol: 'S\$',
                     defaultTaxPercent: settings.defaultTaxPercent,
                     stockAllowNegative: settings.stockAllowNegative,
+                    autoPrintReceipt: settings.autoPrintReceipt,
                     receiptHeader: settings.receiptHeader,
                     receiptFooter: settings.receiptFooter,
                   ),
@@ -589,6 +590,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                       currencySymbol: settings.currencySymbol,
                       defaultTaxPercent: parsedTax,
                       stockAllowNegative: settings.stockAllowNegative,
+                      autoPrintReceipt: settings.autoPrintReceipt,
                       receiptHeader: settings.receiptHeader,
                       receiptFooter: settings.receiptFooter,
                     ),
@@ -930,7 +932,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         title: 'Modal Awal Usaha',
                         value: profile?.modalAwalUsaha != null
                             ? CurrencyFormatter.format(profile!.modalAwalUsaha!)
-                            : 'Rp 0',
+                            : '${CurrencyFormatter.symbol} 0',
                         onTap: () => _showModalAwalUsahaDialog(profile),
                       ),
                     ],
@@ -976,11 +978,19 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                       _buildSwitchRow(
                         icon: Icons.print,
                         title: 'Cetak Struk Otomatis',
-                        value: _autoPrintReceipt,
+                        value: settings.autoPrintReceipt,
                         onChanged: (val) {
-                          setState(() {
-                            _autoPrintReceipt = val;
-                          });
+                          _handleSettingsSubmit(
+                            AppSettings(
+                              currencyCode: settings.currencyCode,
+                              currencySymbol: settings.currencySymbol,
+                              defaultTaxPercent: settings.defaultTaxPercent,
+                              stockAllowNegative: settings.stockAllowNegative,
+                              autoPrintReceipt: val,
+                              receiptHeader: settings.receiptHeader,
+                              receiptFooter: settings.receiptFooter,
+                            ),
+                          );
                         },
                       ),
                       const Divider(
@@ -999,6 +1009,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                               currencySymbol: settings.currencySymbol,
                               defaultTaxPercent: settings.defaultTaxPercent,
                               stockAllowNegative: val,
+                              autoPrintReceipt: settings.autoPrintReceipt,
                               receiptHeader: settings.receiptHeader,
                               receiptFooter: settings.receiptFooter,
                             ),
@@ -1181,7 +1192,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                           showAboutDialog(
                             context: context,
                             applicationName: 'Pujangga-POS',
-                            applicationVersion: 'v1.2.0',
+                            applicationVersion: AppConstants.appVersion,
                             applicationLegalese:
                                 '© 2026 Advanced Agentic Coding Team.',
                           );
@@ -1199,7 +1210,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
+                          children: [
                             Text(
                               'Versi Aplikasi',
                               style: TextStyle(
@@ -1209,7 +1220,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                               ),
                             ),
                             Text(
-                              'v1.2.0',
+                              AppConstants.appVersion,
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 14,

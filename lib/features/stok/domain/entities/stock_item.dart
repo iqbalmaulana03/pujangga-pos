@@ -17,7 +17,7 @@ class StockItem {
   final String name;
   final String category;
   final double sellingPrice;
-  final int currentStock;
+  final double currentStock;
   final bool isActive;
   final DateTime createdAt;
   final double? costPrice;

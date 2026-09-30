@@ -6,6 +6,7 @@ import 'dart:io';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../domain/entities/catalog_item.dart';
 import '../controllers/katalog_controller.dart';
 
@@ -143,7 +144,15 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                 ],
                 _selectedTab == 2
                     ? _buildCategoryView(state.allItems)
-                    : _buildItemGrid(filtered, logoPath),
+                    : _buildItemGrid(
+                        filtered,
+                        logoPath,
+                        isCatalogEmpty: !state.allItems.any(
+                          (item) =>
+                              item.itemType ==
+                              (_selectedTab == 0 ? 'barang' : 'jasa'),
+                        ),
+                      ),
               ],
             ),
           );
@@ -253,19 +262,12 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
         if (isWide) {
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              headerContent,
-              searchInput,
-            ],
+            children: [headerContent, searchInput],
           );
         } else {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              headerContent,
-              const SizedBox(height: 16),
-              searchInput,
-            ],
+            children: [headerContent, const SizedBox(height: 16), searchInput],
           );
         }
       },
@@ -275,9 +277,7 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
   Widget _buildTabsArea() {
     return Container(
       decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE1E3E1), width: 1),
-        ),
+        border: Border(bottom: BorderSide(color: Color(0xFFE1E3E1), width: 1)),
       ),
       child: Row(
         children: [
@@ -301,9 +301,7 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
               .read(katalogControllerProvider.notifier)
               .updateTypeFilter('barang');
         } else if (index == 1) {
-          ref
-              .read(katalogControllerProvider.notifier)
-              .updateTypeFilter('jasa');
+          ref.read(katalogControllerProvider.notifier).updateTypeFilter('jasa');
         } else {
           ref
               .read(katalogControllerProvider.notifier)
@@ -370,8 +368,8 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                           _selectedStatus == 'semua'
                               ? 'Filter'
                               : _selectedStatus == 'aktif'
-                                  ? 'Status: Aktif'
-                                  : 'Status: Nonaktif',
+                              ? 'Status: Aktif'
+                              : 'Status: Nonaktif',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 12,
@@ -468,37 +466,57 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
     );
   }
 
-  Widget _buildItemGrid(List<CatalogItem> items, String? logoPath) {
+  Widget _buildItemGrid(
+    List<CatalogItem> items,
+    String? logoPath, {
+    required bool isCatalogEmpty,
+  }) {
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 40),
         child: Center(
           child: Column(
-            children: const [
-              Icon(
+            children: [
+              const Icon(
                 Icons.inventory_2_outlined,
                 size: 48,
                 color: Color(0xFFBEC9C6),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               Text(
-                'Tidak ada item yang cocok',
-                style: TextStyle(
+                isCatalogEmpty
+                    ? 'Katalog masih kosong'
+                    : 'Tidak ada item yang cocok',
+                style: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF3F4947),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Ubah kata kunci pencarian atau filter Anda.',
-                style: TextStyle(
+                isCatalogEmpty
+                    ? 'Tambahkan item agar siap dipakai dalam transaksi.'
+                    : 'Ubah kata kunci pencarian atau filter Anda.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
                   color: Color(0xFF3F4947),
                 ),
               ),
+              if (isCatalogEmpty) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () => context.push(AppRoutes.catalogCreate),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tambah Item'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D5C56),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -553,11 +571,7 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                 color: Color(0xFFECEEED),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.add,
-                color: Color(0xFF0D5C56),
-                size: 24,
-              ),
+              child: const Icon(Icons.add, color: Color(0xFF0D5C56), size: 24),
             ),
             const SizedBox(height: 12),
             const Text(
@@ -578,7 +592,8 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
   Widget _buildProductCard(CatalogItem item, String? logoPath) {
     String? imageUrl;
     final nameLower = item.name.toLowerCase();
-    if (nameLower.contains('coffee maker') || nameLower.contains('mesin kopi')) {
+    if (nameLower.contains('coffee maker') ||
+        nameLower.contains('mesin kopi')) {
       imageUrl =
           'https://lh3.googleusercontent.com/aida-public/AB6AXuAYRo5f6D7cezGrPWCQ8azi_JgrocwGAaPjErsSWBHHMVrIOl0sQOLFSzoukpuB0Bo24qzoV6GHmVsxkAZ2qPxY3Fh95nFpCxQJodXlhmQ48NrsJXwYGwVWmnvwhJ4OKgqbS18zhuLXuapTg6oFAMjW2h5hCf5GNRXmptpZlWzfIofgXo3iyH6n6jLWzvJLq0RWxWfpCn3Xn5eScP_2iFqZ_h10vEdal3owhpxWedXBJOXZ_vzNaRiK';
     } else if (nameLower.contains('beans') ||
@@ -623,23 +638,25 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                         height: double.infinity,
                         fit: BoxFit.cover,
                       )
-                    : (logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync())
-                        ? Image.file(
-                            File(logoPath),
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                          )
-                        : Container(
-                            color: const Color(0xFFECEEED),
-                            width: double.infinity,
-                            height: double.infinity,
-                            child: const Icon(
-                              Icons.storefront,
-                              size: 40,
-                              color: Color(0xFFBEC9C6),
-                            ),
-                          ),
+                    : (logoPath != null &&
+                          logoPath.isNotEmpty &&
+                          File(logoPath).existsSync())
+                    ? Image.file(
+                        File(logoPath),
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        color: const Color(0xFFECEEED),
+                        width: double.infinity,
+                        height: double.infinity,
+                        child: const Icon(
+                          Icons.storefront,
+                          size: 40,
+                          color: Color(0xFFBEC9C6),
+                        ),
+                      ),
                 if (item.isBarang)
                   Positioned(
                     top: 8,
@@ -656,7 +673,7 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        '${item.stockQuantity ?? 0} stok tersedia',
+                        '${QuantityFormatter.format(item.stockQuantity ?? 0)} stok tersedia',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 10,
@@ -744,7 +761,9 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                         ),
                         onSelected: (value) async {
                           if (value == 'edit') {
-                            context.push('${AppRoutes.catalog}/edit/${item.id}');
+                            context.push(
+                              '${AppRoutes.catalog}/edit/${item.id}',
+                            );
                             return;
                           }
                           await ref

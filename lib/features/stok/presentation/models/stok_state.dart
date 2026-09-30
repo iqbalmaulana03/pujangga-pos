@@ -16,7 +16,7 @@ class StokState {
   int get totalItems => allItems.length;
   int get lowStockCount => allItems.where((item) => item.isLowStock).length;
   int get inactiveCount => allItems.where((item) => !item.isActive).length;
-  int get totalUnits =>
+  double get totalUnits =>
       allItems.fold(0, (sum, item) => sum + item.currentStock);
 
   List<String> get categories {
@@ -29,14 +29,14 @@ class StokState {
       allItems.where((item) => item.isLowStock).toList()
         ..sort((a, b) => a.currentStock.compareTo(b.currentStock));
 
-  double get liveAssetValuation => 
+  double get liveAssetValuation =>
       allItems.fold(0.0, (sum, item) => sum + item.totalAssetValue);
 
-  int get deadStockCount => 
-      allItems.where((item) => item.isDeadStock).length;
+  int get deadStockCount => allItems.where((item) => item.isDeadStock).length;
 
-  double get deadStockValuation => 
-      allItems.where((item) => item.isDeadStock).fold(0.0, (sum, item) => sum + item.totalAssetValue);
+  double get deadStockValuation => allItems
+      .where((item) => item.isDeadStock)
+      .fold(0.0, (sum, item) => sum + item.totalAssetValue);
 
   StokState copyWith({
     List<StockItem>? allItems,

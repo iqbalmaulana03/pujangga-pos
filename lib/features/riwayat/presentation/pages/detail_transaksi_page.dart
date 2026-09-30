@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
 import '../controllers/riwayat_controller.dart';
 
@@ -39,11 +40,7 @@ class DetailTransaksiPage extends ConsumerWidget {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFBEC9C6),
-          ),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFBEC9C6)),
         ),
       ),
       body: receiptAsync.when(
@@ -54,14 +51,20 @@ class DetailTransaksiPage extends ConsumerWidget {
                 padding: EdgeInsets.all(24),
                 child: Text(
                   'Detail transaksi tidak ditemukan.',
-                  style: TextStyle(fontFamily: 'Inter', color: Color(0xFF3F4947)),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    color: Color(0xFF3F4947),
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
             );
           }
 
-          final formattedDate = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(receipt.createdAt);
+          final formattedDate = DateFormat(
+            'dd MMM yyyy, HH:mm',
+            'id_ID',
+          ).format(receipt.createdAt);
 
           return Stack(
             children: [
@@ -157,7 +160,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFFBEC9C6,
+                              ).withValues(alpha: 0.3),
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -169,15 +174,26 @@ class DetailTransaksiPage extends ConsumerWidget {
                           ),
                           child: Column(
                             children: [
-                              _buildInfoRow('No. Invoice', '#${receipt.invoiceNumber}'),
+                              _buildInfoRow(
+                                'No. Invoice',
+                                '#${receipt.invoiceNumber}',
+                              ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Color(0xFFF2F4F2),
+                                ),
                               ),
                               _buildInfoRow('Tanggal & Waktu', formattedDate),
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Color(0xFFF2F4F2),
+                                ),
                               ),
                               _buildInfoRow(
                                 'Metode Pembayaran',
@@ -196,7 +212,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFFBEC9C6,
+                              ).withValues(alpha: 0.3),
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -211,7 +229,11 @@ class DetailTransaksiPage extends ConsumerWidget {
                             children: [
                               Row(
                                 children: const [
-                                  Icon(Icons.shopping_basket, size: 18, color: Color(0xFF3F4947)),
+                                  Icon(
+                                    Icons.shopping_basket,
+                                    size: 18,
+                                    color: Color(0xFF3F4947),
+                                  ),
                                   SizedBox(width: 8),
                                   Text(
                                     'DETAIL BARANG',
@@ -228,12 +250,14 @@ class DetailTransaksiPage extends ConsumerWidget {
                               const SizedBox(height: 16),
                               for (final item in receipt.items) ...[
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             item.item.name,
@@ -246,7 +270,7 @@ class DetailTransaksiPage extends ConsumerWidget {
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            '${item.quantity}x ${CurrencyFormatter.format(item.item.sellingPrice)}',
+                                            '${QuantityFormatter.format(item.quantity)}x ${CurrencyFormatter.format(item.unitPrice)}',
                                             style: const TextStyle(
                                               fontFamily: 'Inter',
                                               fontSize: 12,
@@ -271,7 +295,11 @@ class DetailTransaksiPage extends ConsumerWidget {
                                 if (item != receipt.items.last)
                                   const Padding(
                                     padding: EdgeInsets.symmetric(vertical: 12),
-                                    child: Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                                    child: Divider(
+                                      height: 1,
+                                      thickness: 1,
+                                      color: Color(0xFFF2F4F2),
+                                    ),
                                   ),
                               ],
                             ],
@@ -286,7 +314,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFFBEC9C6,
+                              ).withValues(alpha: 0.3),
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -298,14 +328,25 @@ class DetailTransaksiPage extends ConsumerWidget {
                           ),
                           child: Column(
                             children: [
-                              _buildFinancialRow('Subtotal', CurrencyFormatter.format(receipt.subtotalAmount)),
+                              _buildFinancialRow(
+                                'Subtotal',
+                                CurrencyFormatter.format(
+                                  receipt.subtotalAmount,
+                                ),
+                              ),
                               if (receipt.itemDiscountAmount > 0) ...[
                                 const SizedBox(height: 8),
-                                _buildFinancialRow('Diskon Item', '-${CurrencyFormatter.format(receipt.itemDiscountAmount)}'),
+                                _buildFinancialRow(
+                                  'Diskon Item',
+                                  '-${CurrencyFormatter.format(receipt.itemDiscountAmount)}',
+                                ),
                               ],
                               if (receipt.orderDiscountAmount > 0) ...[
                                 const SizedBox(height: 8),
-                                _buildFinancialRow('Diskon Tambahan', '-${CurrencyFormatter.format(receipt.orderDiscountAmount)}'),
+                                _buildFinancialRow(
+                                  'Diskon Tambahan',
+                                  '-${CurrencyFormatter.format(receipt.orderDiscountAmount)}',
+                                ),
                               ],
                               const SizedBox(height: 8),
                               _buildFinancialRow(
@@ -314,10 +355,15 @@ class DetailTransaksiPage extends ConsumerWidget {
                               ),
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
-                                child: Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                                child: Divider(
+                                  height: 1,
+                                  thickness: 1,
+                                  color: Color(0xFFF2F4F2),
+                                ),
                               ),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
                                     'Jumlah Total',
@@ -329,7 +375,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                                     ),
                                   ),
                                   Text(
-                                    CurrencyFormatter.format(receipt.totalAmount),
+                                    CurrencyFormatter.format(
+                                      receipt.totalAmount,
+                                    ),
                                     style: const TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 22,
@@ -341,18 +389,26 @@ class DetailTransaksiPage extends ConsumerWidget {
                               ),
                               if (receipt.cashPaidAmount != null) ...[
                                 const SizedBox(height: 8),
-                                _buildFinancialRow('Jumlah Diterima', CurrencyFormatter.format(receipt.cashPaidAmount!)),
+                                _buildFinancialRow(
+                                  'Jumlah Diterima',
+                                  CurrencyFormatter.format(
+                                    receipt.cashPaidAmount!,
+                                  ),
+                                ),
                               ],
                               if (receipt.changeAmount > 0) ...[
                                 const SizedBox(height: 12),
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF0D5C56).withValues(alpha: 0.05),
+                                    color: const Color(
+                                      0xFF0D5C56,
+                                    ).withValues(alpha: 0.05),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text(
                                         'Kembalian',
@@ -364,7 +420,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                                         ),
                                       ),
                                       Text(
-                                        CurrencyFormatter.format(receipt.changeAmount),
+                                        CurrencyFormatter.format(
+                                          receipt.changeAmount,
+                                        ),
                                         style: const TextStyle(
                                           fontFamily: 'Inter',
                                           fontSize: 16,
@@ -388,16 +446,29 @@ class DetailTransaksiPage extends ConsumerWidget {
                               child: OutlinedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Mencetak struk...')),
+                                    const SnackBar(
+                                      content: Text('Mencetak struk...'),
+                                    ),
                                   );
                                 },
                                 icon: const Icon(Icons.print, size: 18),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF0D5C56),
-                                  side: const BorderSide(color: Color(0xFF0D5C56)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  side: const BorderSide(
+                                    color: Color(0xFF0D5C56),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                                label: const Text('Cetak Struk', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.bold)),
+                                label: const Text(
+                                  'Cetak Struk',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -405,16 +476,29 @@ class DetailTransaksiPage extends ConsumerWidget {
                               child: OutlinedButton.icon(
                                 onPressed: () {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Membagikan struk...')),
+                                    const SnackBar(
+                                      content: Text('Membagikan struk...'),
+                                    ),
                                   );
                                 },
                                 icon: const Icon(Icons.share, size: 18),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF0D5C56),
-                                  side: const BorderSide(color: Color(0xFF0D5C56)),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  side: const BorderSide(
+                                    color: Color(0xFF0D5C56),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
-                                label: const Text('Bagikan Struk', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.bold)),
+                                label: const Text(
+                                  'Bagikan Struk',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -468,16 +552,36 @@ class DetailTransaksiPage extends ConsumerWidget {
                                         FilledButton(
                                           onPressed: () {
                                             Navigator.pop(ctx);
-                                            ref.read(riwayatControllerProvider.notifier).voidTransaction(receipt.invoiceNumber).then((_) {
-                                              if (!context.mounted) return;
-                                              ref.invalidate(transaksiReceiptProvider(transactionId));
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('Transaksi berhasil dibatalkan.')),
-                                              );
-                                            });
+                                            ref
+                                                .read(
+                                                  riwayatControllerProvider
+                                                      .notifier,
+                                                )
+                                                .voidTransaction(
+                                                  receipt.invoiceNumber,
+                                                )
+                                                .then((_) {
+                                                  if (!context.mounted) return;
+                                                  ref.invalidate(
+                                                    transaksiReceiptProvider(
+                                                      transactionId,
+                                                    ),
+                                                  );
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        'Transaksi berhasil dibatalkan.',
+                                                      ),
+                                                    ),
+                                                  );
+                                                });
                                           },
                                           style: FilledButton.styleFrom(
-                                            backgroundColor: const Color(0xFFBA1A1A),
+                                            backgroundColor: const Color(
+                                              0xFFBA1A1A,
+                                            ),
                                             foregroundColor: Colors.white,
                                           ),
                                           child: const Text('Ya, Batalkan'),
@@ -487,7 +591,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                                   );
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: Color(0xFFBA1A1A)),
+                                  side: const BorderSide(
+                                    color: Color(0xFFBA1A1A),
+                                  ),
                                   foregroundColor: const Color(0xFFBA1A1A),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -509,7 +615,8 @@ class DetailTransaksiPage extends ConsumerWidget {
                             width: double.infinity,
                             height: 48,
                             child: FilledButton(
-                              onPressed: () => context.go(AppRoutes.transaction),
+                              onPressed: () =>
+                                  context.go(AppRoutes.transaction),
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF0D5C56),
                                 foregroundColor: Colors.white,
@@ -534,7 +641,9 @@ class DetailTransaksiPage extends ConsumerWidget {
                             child: OutlinedButton(
                               onPressed: () => context.pop(),
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFFBEC9C6)),
+                                side: const BorderSide(
+                                  color: Color(0xFFBEC9C6),
+                                ),
                                 foregroundColor: const Color(0xFF191C1C),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
@@ -550,7 +659,6 @@ class DetailTransaksiPage extends ConsumerWidget {
                               ),
                             ),
                           ),
-
                         ],
                       ),
                     ),
@@ -567,7 +675,11 @@ class DetailTransaksiPage extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded, size: 48, color: Color(0xFFBA1A1A)),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 48,
+                  color: Color(0xFFBA1A1A),
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Gagal memuat detail transaksi',
@@ -582,7 +694,10 @@ class DetailTransaksiPage extends ConsumerWidget {
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF3F4947)),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    color: Color(0xFF3F4947),
+                  ),
                 ),
               ],
             ),

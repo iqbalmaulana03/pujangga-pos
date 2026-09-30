@@ -19,7 +19,7 @@ class StockItemDbModel {
   final String name;
   final String category;
   final double sellingPrice;
-  final int currentStock;
+  final double currentStock;
   final bool isActive;
   final DateTime createdAt;
   final double? costPrice;
@@ -35,12 +35,12 @@ class StockItemDbModel {
           (map['category_name'] as String?) ??
           (map['category'] as String? ?? 'Umum'),
       sellingPrice: (map['sale_price'] as num).toDouble(),
-      currentStock: ((map['stock_qty'] as num?) ?? 0).toInt(),
+      currentStock: ((map['stock_qty'] as num?) ?? 0).toDouble(),
       isActive: (map['is_active'] as num).toInt() == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
       costPrice: (map['harga_modal'] as num?)?.toDouble(),
-      lastSoldAt: map['last_sold_at'] != null 
-          ? DateTime.parse(map['last_sold_at'] as String) 
+      lastSoldAt: map['last_sold_at'] != null
+          ? DateTime.parse(map['last_sold_at'] as String)
           : null,
       sku: map['sku'] as String?,
       unitLabel: map['unit'] as String?,

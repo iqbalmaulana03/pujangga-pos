@@ -10,7 +10,8 @@ class TambahPengeluaranPage extends ConsumerStatefulWidget {
   const TambahPengeluaranPage({super.key});
 
   @override
-  ConsumerState<TambahPengeluaranPage> createState() => _TambahPengeluaranPageState();
+  ConsumerState<TambahPengeluaranPage> createState() =>
+      _TambahPengeluaranPageState();
 }
 
 class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
@@ -20,8 +21,12 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
 
   DateTime _selectedDate = DateTime.now();
   String _selectedKategori = 'Operasional';
-  
-  final List<String> _kategoriOptions = ['Operasional', 'Bahan Baku', 'Lain-lain'];
+
+  final List<String> _kategoriOptions = [
+    'Operasional',
+    'Bahan Baku',
+    'Lain-lain',
+  ];
 
   @override
   void dispose() {
@@ -32,19 +37,20 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
 
   void _onSave() async {
     if (!_formKey.currentState!.validate()) return;
-    
-    final nominalStr = _nominalController.text.replaceAll(RegExp(r'[^0-9]'), '');
-    if (nominalStr.isEmpty) return;
-    final nominal = double.parse(nominalStr);
+
+    final nominal = _parseNominal(_nominalController.text);
+    if (nominal == null || nominal <= 0) return;
 
     final catatan = _catatanController.text.trim();
 
-    await ref.read(tambahPengeluaranControllerProvider.notifier).simpanPengeluaran(
-      nominal: nominal,
-      kategori: _selectedKategori,
-      tanggal: _selectedDate,
-      catatan: catatan.isEmpty ? null : catatan,
-    );
+    await ref
+        .read(tambahPengeluaranControllerProvider.notifier)
+        .simpanPengeluaran(
+          nominal: nominal,
+          kategori: _selectedKategori,
+          tanggal: _selectedDate,
+          catatan: catatan.isEmpty ? null : catatan,
+        );
 
     if (mounted && !ref.read(tambahPengeluaranControllerProvider).hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -52,6 +58,11 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
       );
       context.pop();
     }
+  }
+
+  double? _parseNominal(String? value) {
+    final normalized = value?.trim().replaceAll(',', '.') ?? '';
+    return double.tryParse(normalized);
   }
 
   Future<void> _selectDate() async {
@@ -63,9 +74,7 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0D5C56),
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF0D5C56)),
           ),
           child: child!,
         );
@@ -118,7 +127,10 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
             InkWell(
               onTap: _selectDate,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: const Color(0xFFBEC9C6)),
@@ -135,7 +147,11 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
                         color: Color(0xFF191C1C),
                       ),
                     ),
-                    const Icon(Icons.calendar_today, size: 20, color: Color(0xFF3F4947)),
+                    const Icon(
+                      Icons.calendar_today,
+                      size: 20,
+                      color: Color(0xFF3F4947),
+                    ),
                   ],
                 ),
               ),
@@ -169,7 +185,9 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
                     fontSize: 14,
                     color: Color(0xFF191C1C),
                   ),
-                  items: _kategoriOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  items: _kategoriOptions
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => _selectedKategori = val);
                   },
@@ -191,14 +209,16 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _nominalController,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 14,
                 color: Color(0xFF191C1C),
               ),
               decoration: InputDecoration(
-                prefixText: 'Rp ',
+                prefixText: '${CurrencyFormatter.symbol} ',
                 prefixStyle: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
@@ -219,22 +239,15 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
                   borderSide: const BorderSide(color: Color(0xFF0D5C56)),
                 ),
               ),
-              onChanged: (value) {
-                final digitsOnly = value.replaceAll(RegExp(r'[^0-9]'), '');
-                if (digitsOnly.isNotEmpty) {
-                  final formatted = CurrencyFormatter.formatNoSymbol(double.parse(digitsOnly));
-                  _nominalController.value = TextEditingValue(
-                    text: formatted,
-                    selection: TextSelection.collapsed(offset: formatted.length),
-                  );
-                }
-              },
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Nominal tidak boleh kosong';
-                final numVal = double.tryParse(value.replaceAll(RegExp(r'[^0-9]'), ''));
+                if (value == null || value.isEmpty) {
+                  return 'Nominal tidak boleh kosong';
+                }
+                final numVal = _parseNominal(value);
                 if (numVal == null || numVal <= 0) return 'Nominal tidak valid';
                 return null;
               },
+              autovalidateMode: AutovalidateMode.onUserInteraction,
             ),
             const SizedBox(height: 24),
 
@@ -300,7 +313,10 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
                   ? const SizedBox(
                       height: 24,
                       width: 24,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                   : const Text(
                       'Simpan Pengeluaran',

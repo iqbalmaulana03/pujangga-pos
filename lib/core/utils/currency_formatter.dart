@@ -3,18 +3,34 @@ import 'package:intl/intl.dart';
 class CurrencyFormatter {
   CurrencyFormatter._();
 
-  static final NumberFormat _idrFormatter = NumberFormat.currency(
-    locale: 'id_ID',
-    symbol: 'Rp',
-    decimalDigits: 0,
-  );
+  static String _currencyCode = 'IDR';
+  static String _currencySymbol = 'Rp';
 
-  static final NumberFormat _noSymbolFormatter = NumberFormat.currency(
-    locale: 'id_ID',
+  static int get _decimalDigits => _currencyCode == 'IDR' ? 0 : 2;
+  static String get symbol => _currencySymbol;
+  static String get _locale => switch (_currencyCode) {
+    'USD' => 'en_US',
+    'SGD' => 'en_SG',
+    _ => 'id_ID',
+  };
+
+  static void configure({
+    required String currencyCode,
+    required String currencySymbol,
+  }) {
+    _currencyCode = currencyCode;
+    _currencySymbol = currencySymbol;
+  }
+
+  static String format(num value) => NumberFormat.currency(
+    locale: _locale,
+    symbol: _currencySymbol,
+    decimalDigits: _decimalDigits,
+  ).format(value);
+
+  static String formatNoSymbol(num value) => NumberFormat.currency(
+    locale: _locale,
     symbol: '',
-    decimalDigits: 0,
-  );
-
-  static String format(num value) => _idrFormatter.format(value);
-  static String formatNoSymbol(num value) => _noSymbolFormatter.format(value).trim();
+    decimalDigits: _decimalDigits,
+  ).format(value).trim();
 }

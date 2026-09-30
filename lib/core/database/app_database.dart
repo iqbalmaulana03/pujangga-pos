@@ -84,6 +84,26 @@ class AppDatabase {
     if (oldVersion < 10) {
       await _migrateToVersion10(db);
     }
+    if (oldVersion < 11) {
+      await _migrateToVersion11(db);
+    }
+  }
+
+  Future<void> _migrateToVersion11(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (!existingTables.contains('app_settings')) {
+      return;
+    }
+
+    final columns = await db.rawQuery('PRAGMA table_info(app_settings)');
+    final hasAutoPrintReceipt = columns.any(
+      (column) => column['name'] == 'auto_print_receipt',
+    );
+    if (!hasAutoPrintReceipt) {
+      await db.execute(
+        'ALTER TABLE app_settings ADD COLUMN auto_print_receipt INTEGER NOT NULL DEFAULT 1',
+      );
+    }
   }
 
   Future<void> _migrateToVersion10(Database db) async {
@@ -387,6 +407,7 @@ class AppDatabase {
         receipt_footer TEXT,
         default_tax_percent REAL NOT NULL DEFAULT 0,
         stock_allow_negative INTEGER NOT NULL DEFAULT 0,
+        auto_print_receipt INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )

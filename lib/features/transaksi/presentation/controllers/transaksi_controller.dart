@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
+import '../../../laporan/presentation/controllers/laporan_controller.dart';
+import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../data/datasources/transaction_local_data_source.dart';
 import '../../data/repositories/transaction_repository_impl.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
@@ -29,8 +31,8 @@ final transaksiControllerProvider =
       TransaksiController.new,
     );
 
-final transaksiReceiptProvider =
-    FutureProvider.autoDispose.family<TransaksiReceipt?, String>((ref, invoiceNumber) {
+final transaksiReceiptProvider = FutureProvider.autoDispose
+    .family<TransaksiReceipt?, String>((ref, invoiceNumber) {
       return ref
           .watch(transactionRepositoryProvider)
           .getReceiptByInvoice(invoiceNumber);
@@ -79,12 +81,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     final updatedCart = <TransaksiCartItem>[...current.cartItems];
     if (existingIndex == -1) {
       updatedCart.add(
-        TransaksiCartItem(item: item, quantity: 1, itemDiscountAmount: 0),
+        TransaksiCartItem(item: item, quantity: 1.0, itemDiscountAmount: 0),
       );
     } else {
       final existing = updatedCart[existingIndex];
       updatedCart[existingIndex] = existing.copyWith(
-        quantity: existing.quantity + 1,
+        quantity: existing.quantity + _quantityStep(existing.item),
       );
     }
 
@@ -104,8 +106,16 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         continue;
       }
 
-      if (cartItem.quantity > 1) {
-        updatedCart.add(cartItem.copyWith(quantity: cartItem.quantity - 1));
+      final quantity = cartItem.quantity - _quantityStep(cartItem.item);
+      if (quantity > 0) {
+        final updatedItem = cartItem.copyWith(quantity: quantity);
+        updatedCart.add(
+          updatedItem.copyWith(
+            itemDiscountAmount: cartItem.itemDiscountAmount
+                .clamp(0, updatedItem.lineSubtotal)
+                .toDouble(),
+          ),
+        );
       }
     }
 
@@ -123,7 +133,13 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         return cartItem;
       }
 
-      return cartItem.copyWith(quantity: cartItem.quantity + 1);
+      final quantity = cartItem.quantity + _quantityStep(cartItem.item);
+      final updatedItem = cartItem.copyWith(quantity: quantity);
+      return updatedItem.copyWith(
+        itemDiscountAmount: cartItem.itemDiscountAmount
+            .clamp(0, updatedItem.lineSubtotal)
+            .toDouble(),
+      );
     }).toList();
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -145,7 +161,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     );
   }
 
-  void setQuantity(String itemId, int quantity) {
+  void setQuantity(String itemId, double quantity) {
     final current = _currentState;
     if (current == null) {
       return;
@@ -161,7 +177,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         return cartItem;
       }
 
-      return cartItem.copyWith(quantity: quantity);
+      final updatedItem = cartItem.copyWith(quantity: quantity);
+      return updatedItem.copyWith(
+        itemDiscountAmount: cartItem.itemDiscountAmount
+            .clamp(0, updatedItem.lineSubtotal)
+            .toDouble(),
+      );
     }).toList();
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -293,11 +314,20 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         _buildState(const TransaksiState(), catalogItems: refreshedItems),
       );
       ref.invalidate(transaksiReceiptProvider(receipt.invoiceNumber));
+      ref.invalidate(stokControllerProvider);
+      ref.invalidate(dashboardSummaryProvider);
+      ref.invalidate(salesReportSnapshotProvider);
       return receipt;
     } catch (_) {
       state = AsyncData(current.copyWith(isSubmitting: false));
       rethrow;
     }
+  }
+
+  double _quantityStep(TransaksiItem item) {
+    const fractionalUnits = {'kg', 'g', 'l', 'liter', 'ml', 'm', 'meter'};
+    final unit = item.unitLabel?.trim().toLowerCase();
+    return fractionalUnits.contains(unit) ? 0.1 : 1.0;
   }
 
   TransaksiState? get _currentState {
@@ -320,10 +350,14 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     double? calculatedTax = taxAmount;
     if (calculatedTax == null && cartItems != null) {
       final subtotal = cartItems.fold<double>(0, (t, i) => t + i.lineSubtotal);
-      final discount = cartItems.fold<double>(0, (t, i) => t + i.itemDiscountAmount);
+      final discount = cartItems.fold<double>(
+        0,
+        (t, i) => t + i.itemDiscountAmount,
+      );
       final settings = ref.read(appSettingsProvider).asData?.value;
       final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
-      calculatedTax = ((subtotal - discount) * (taxRatePercent / 100.0)).roundToDouble();
+      calculatedTax = ((subtotal - discount) * (taxRatePercent / 100.0))
+          .roundToDouble();
     }
 
     final nextState = current.copyWith(

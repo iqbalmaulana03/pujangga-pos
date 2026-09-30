@@ -34,6 +34,7 @@ class SalesReportCsvExportService {
       FROM sales_transactions st
       LEFT JOIN sales_transaction_items sti
         ON sti.transaction_id = st.id
+      WHERE st.status = 'completed'
       GROUP BY
         st.id,
         st.invoice_no,
@@ -81,14 +82,23 @@ class SalesReportCsvExportService {
     for (final row in rows) {
       buffer.writeln(
         [
-          _escapeCsv(row['invoice_no'] as String? ?? ''),
-          _escapeCsv(row['transaction_date'] as String? ?? ''),
+          _escapeCsv(row['invoice_no'] as String? ?? '', protectFormula: true),
+          _escapeCsv(
+            row['transaction_date'] as String? ?? '',
+            protectFormula: true,
+          ),
           _escapeCsv(
             ((row['total_amount'] as num?)?.toDouble() ?? 0).toStringAsFixed(2),
           ),
-          _escapeCsv(_mapDbPaymentMethodToUi(row['payment_method'] as String?)),
+          _escapeCsv(
+            _mapDbPaymentMethodToUi(row['payment_method'] as String?),
+            protectFormula: true,
+          ),
           _escapeCsv(((row['item_count'] as num?)?.toInt() ?? 0).toString()),
-          _escapeCsv(row['item_summary'] as String? ?? ''),
+          _escapeCsv(
+            row['item_summary'] as String? ?? '',
+            protectFormula: true,
+          ),
         ].join(','),
       );
     }
@@ -96,8 +106,12 @@ class SalesReportCsvExportService {
     return buffer.toString();
   }
 
-  String _escapeCsv(String value) {
-    final escaped = value.replaceAll('"', '""');
+  String _escapeCsv(String value, {bool protectFormula = false}) {
+    final safeValue =
+        protectFormula && RegExp(r'^[\u0000-\u0020]*[=+\-@]').hasMatch(value)
+        ? "'$value"
+        : value;
+    final escaped = safeValue.replaceAll('"', '""');
     return '"$escaped"';
   }
 

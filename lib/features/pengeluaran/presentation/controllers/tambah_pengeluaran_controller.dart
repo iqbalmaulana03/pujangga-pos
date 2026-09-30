@@ -29,6 +29,7 @@ class TambahPengeluaranController extends AsyncNotifier<void> {
       );
       
       ref.invalidate(salesReportSnapshotProvider);
+      ref.invalidate(dashboardSummaryProvider);
       
       state = const AsyncData(null);
     } catch (e, st) {
@@ -36,4 +37,3 @@ class TambahPengeluaranController extends AsyncNotifier<void> {
     }
   }
 }
-

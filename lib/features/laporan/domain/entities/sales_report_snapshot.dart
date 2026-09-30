@@ -9,6 +9,26 @@ class SalesTrendPoint {
   final double value;
 }
 
+class SalesCandlePoint {
+  const SalesCandlePoint({
+    required this.bucketIndex,
+    required this.label,
+    required this.open,
+    required this.high,
+    required this.low,
+    required this.close,
+    required this.transactionCount,
+  });
+
+  final int bucketIndex;
+  final String label;
+  final double open;
+  final double high;
+  final double low;
+  final double close;
+  final int transactionCount;
+}
+
 class SalesReportSnapshot {
   const SalesReportSnapshot({
     required this.period,
@@ -25,6 +45,7 @@ class SalesReportSnapshot {
     required this.catalogMarginIsComplete,
     required this.topMarginItems,
     this.totalExpenses = 0.0,
+    this.salesCandles = const [],
   });
 
   final ReportPeriod period;
@@ -36,6 +57,7 @@ class SalesReportSnapshot {
   final List<ItemSalesSummary> itemSummaries;
   final Map<String, double> paymentMethodBreakdown;
   final List<SalesTrendPoint> salesTrend;
+  final List<SalesCandlePoint> salesCandles;
   final double margin;
   final bool marginIsComplete;
   final bool catalogMarginIsComplete;

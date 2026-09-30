@@ -47,29 +47,46 @@ class CatalogLocalDataSource {
     final db = await database.database();
     final timestamp = DateTime.now().toIso8601String();
     final dbItemType = _mapUiItemTypeToDb(draft.itemType);
-    final categoryId = await _ensureCategory(
-      db,
-      categoryName: draft.category.trim(),
-      itemType: dbItemType,
-      timestamp: timestamp,
-    );
+    await db.transaction((txn) async {
+      final categoryId = await _ensureCategory(
+        txn,
+        categoryName: draft.category.trim(),
+        itemType: dbItemType,
+        timestamp: timestamp,
+      );
 
-    await db.insert('items', {
-      'category_id': categoryId,
-      'name': draft.name.trim(),
-      'item_type': dbItemType,
-      'sale_price': draft.sellingPrice,
-      'sku': _normalizedText(draft.sku),
-      'stock_qty': draft.isBarang ? (draft.stockQuantity ?? 0) : 0,
-      'unit': _normalizedText(draft.unitLabel),
-      'harga_modal': draft.isBarang ? draft.costPrice : null,
-      'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
-      'is_active': draft.isActive ? 1 : 0,
-      'wholesale_price': draft.wholesalePrice,
-      'wholesale_min_quantity': draft.wholesaleMinQuantity,
-      'notes': null,
-      'created_at': timestamp,
-      'updated_at': timestamp,
+      final stockQuantity = draft.isBarang ? (draft.stockQuantity ?? 0) : 0;
+      final itemId = await txn.insert('items', {
+        'category_id': categoryId,
+        'name': draft.name.trim(),
+        'item_type': dbItemType,
+        'sale_price': draft.sellingPrice,
+        'sku': _normalizedText(draft.sku),
+        'stock_qty': stockQuantity,
+        'unit': _normalizedText(draft.unitLabel),
+        'harga_modal': draft.isBarang ? draft.costPrice : null,
+        'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
+        'is_active': draft.isActive ? 1 : 0,
+        'wholesale_price': draft.wholesalePrice,
+        'wholesale_min_quantity': draft.wholesaleMinQuantity,
+        'notes': null,
+        'created_at': timestamp,
+        'updated_at': timestamp,
+      });
+
+      if (stockQuantity > 0) {
+        await txn.insert('stock_movements', {
+          'item_id': itemId,
+          'movement_type': 'stock_in',
+          'qty_change': stockQuantity,
+          'qty_before': 0,
+          'qty_after': stockQuantity,
+          'reference_type': 'initial_stock',
+          'reference_id': null,
+          'notes': 'Stok awal dari katalog',
+          'created_at': timestamp,
+        });
+      }
     });
   }
 
@@ -77,36 +94,94 @@ class CatalogLocalDataSource {
     final db = await database.database();
     final timestamp = DateTime.now().toIso8601String();
     final dbItemType = _mapUiItemTypeToDb(draft.itemType);
-    final categoryId = await _ensureCategory(
-      db,
-      categoryName: draft.category.trim(),
-      itemType: dbItemType,
-      timestamp: timestamp,
-    );
-    final updatedRows = await db.update(
-      'items',
-      {
-        'category_id': categoryId,
-        'name': draft.name.trim(),
-        'item_type': dbItemType,
-        'sale_price': draft.sellingPrice,
-        'sku': _normalizedText(draft.sku),
-        'stock_qty': draft.isBarang ? (draft.stockQuantity ?? 0) : 0,
-        'unit': _normalizedText(draft.unitLabel),
-        'harga_modal': draft.isBarang ? draft.costPrice : null,
-        'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
-        'is_active': draft.isActive ? 1 : 0,
-        'wholesale_price': draft.wholesalePrice,
-        'wholesale_min_quantity': draft.wholesaleMinQuantity,
-        'updated_at': timestamp,
-      },
-      where: 'id = ?',
-      whereArgs: [int.parse(itemId)],
-    );
+    await db.transaction((txn) async {
+      final id = int.parse(itemId);
+      final existingItems = await txn.query(
+        'items',
+        columns: ['item_type', 'stock_qty'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existingItems.isEmpty) {
+        throw const AppException('not_found', 'Item katalog tidak ditemukan.');
+      }
 
-    if (updatedRows == 0) {
-      throw const AppException('not_found', 'Item katalog tidak ditemukan.');
-    }
+      final existing = existingItems.first;
+      final previousType = existing['item_type'] as String;
+      final previousStock = (existing['stock_qty'] as num).toDouble();
+      if (previousType != dbItemType) {
+        final hasMovements = await txn.query(
+          'stock_movements',
+          columns: ['id'],
+          where: 'item_id = ?',
+          whereArgs: [id],
+          limit: 1,
+        );
+        final hasSales = await txn.query(
+          'sales_transaction_items',
+          columns: ['id'],
+          where: 'item_id = ?',
+          whereArgs: [id],
+          limit: 1,
+        );
+        if (previousStock != 0 ||
+            hasMovements.isNotEmpty ||
+            hasSales.isNotEmpty) {
+          throw const AppException(
+            'item_type_locked',
+            'Tipe item tidak dapat diubah karena item ini sudah memiliki histori stok atau transaksi.',
+          );
+        }
+      }
+
+      final categoryId = await _ensureCategory(
+        txn,
+        categoryName: draft.category.trim(),
+        itemType: dbItemType,
+        timestamp: timestamp,
+      );
+      final nextStock = draft.isBarang ? (draft.stockQuantity ?? 0) : 0;
+      final updatedRows = await txn.update(
+        'items',
+        {
+          'category_id': categoryId,
+          'name': draft.name.trim(),
+          'item_type': dbItemType,
+          'sale_price': draft.sellingPrice,
+          'sku': _normalizedText(draft.sku),
+          'stock_qty': nextStock,
+          'unit': _normalizedText(draft.unitLabel),
+          'harga_modal': draft.isBarang ? draft.costPrice : null,
+          'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
+          'is_active': draft.isActive ? 1 : 0,
+          'wholesale_price': draft.wholesalePrice,
+          'wholesale_min_quantity': draft.wholesaleMinQuantity,
+          'updated_at': timestamp,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (updatedRows == 0) {
+        throw const AppException('not_found', 'Item katalog tidak ditemukan.');
+      }
+
+      final stockDelta = nextStock - previousStock;
+      if (stockDelta != 0) {
+        await txn.insert('stock_movements', {
+          'item_id': id,
+          'movement_type': stockDelta > 0 ? 'stock_in' : 'stock_out',
+          'qty_change': stockDelta,
+          'qty_before': previousStock,
+          'qty_after': nextStock,
+          'reference_type': 'catalog_edit',
+          'reference_id': null,
+          'notes': 'Perubahan stok dari katalog',
+          'created_at': timestamp,
+        });
+      }
+    });
   }
 
   Future<void> updateItemStatus({

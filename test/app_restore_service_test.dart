@@ -46,6 +46,8 @@ void main() {
             'sales_transactions': const [],
             'sales_transaction_items': const [],
             'stock_movements': const [],
+            'expenses': const [],
+            'capital_history': const [],
           },
         );
 
@@ -83,6 +85,8 @@ void main() {
               'sales_transactions',
               'sales_transaction_items',
               'stock_movements',
+              'expenses',
+              'capital_history',
             ])
               table: [],
           },

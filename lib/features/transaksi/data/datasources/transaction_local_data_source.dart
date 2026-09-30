@@ -36,7 +36,19 @@ class TransactionLocalDataSource {
     return db.transaction((txn) async {
       final createdAt = DateTime.now();
       final createdAtIso = createdAt.toIso8601String();
-      final invoiceNumber = _generateInvoiceNumber(createdAt);
+      final invoiceNumber = await _generateInvoiceNumber(txn, createdAt);
+      for (final item in request.items) {
+        if (!item.quantity.isFinite ||
+            item.quantity <= 0 ||
+            !item.itemDiscountAmount.isFinite ||
+            item.itemDiscountAmount < 0 ||
+            item.itemDiscountAmount > item.lineSubtotal) {
+          throw const AppException(
+            'validation_error',
+            'Kuantitas dan diskon item tidak valid.',
+          );
+        }
+      }
       final subtotalAmount = request.items.fold<double>(
         0,
         (total, item) => total + item.lineSubtotal,
@@ -155,7 +167,7 @@ class TransactionLocalDataSource {
           'item_name_snapshot': cartItem.item.name,
           'item_type_snapshot': cartItem.item.isJasa ? 'service' : 'product',
           'unit_snapshot': cartItem.item.unitLabel,
-          'price_snapshot': cartItem.item.sellingPrice,
+          'price_snapshot': cartItem.unitPrice,
           'qty': cartItem.quantity.toDouble(),
           'line_subtotal': cartItem.lineSubtotal,
           'line_discount_amount': cartItem.itemDiscountAmount,
@@ -235,7 +247,7 @@ class TransactionLocalDataSource {
               unitLabel: row['unit_snapshot'] as String?,
               isActive: true,
             ).toEntity(),
-            quantity: ((row['qty'] as num).toDouble()).toInt(),
+            quantity: (row['qty'] as num).toDouble(),
             itemDiscountAmount: (row['line_discount_amount'] as num).toDouble(),
           ),
         )
@@ -259,8 +271,23 @@ class TransactionLocalDataSource {
     );
   }
 
-  String _generateInvoiceNumber(DateTime createdAt) {
-    return 'INV-${DateFormat('yyyyMMdd-HHmmss').format(createdAt)}';
+  Future<String> _generateInvoiceNumber(dynamic txn, DateTime createdAt) async {
+    final timestamp = DateFormat('yyyyMMdd-HHmmss').format(createdAt);
+    final baseMicros = createdAt.microsecond;
+    var sequence = 0;
+    while (true) {
+      final micros = (baseMicros + sequence) % 1000000;
+      final invoice = 'INV-$timestamp-${micros.toString().padLeft(6, '0')}';
+      final existing = await txn.query(
+        'sales_transactions',
+        columns: ['id'],
+        where: 'invoice_no = ?',
+        whereArgs: [invoice],
+        limit: 1,
+      );
+      if (existing.isEmpty) return invoice;
+      sequence++;
+    }
   }
 
   String _mapUiPaymentMethodToDb(String value) {

@@ -7,6 +7,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
@@ -120,7 +121,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Diskon Item',
-                  prefixText: 'Rp ',
+                  prefixText: '${CurrencyFormatter.symbol} ',
                   filled: true,
                   fillColor: const Color(0xFFF2F4F2),
                   border: OutlineInputBorder(
@@ -129,7 +130,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF0D5C56), width: 1.5),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0D5C56),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -151,7 +155,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   ),
                   child: const Text(
                     'Terapkan Diskon',
-                    style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -173,10 +180,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     TransaksiCartItem cartItem,
   ) async {
     final controller = TextEditingController(
-      text: cartItem.quantity.toString(),
+      text: QuantityFormatter.format(cartItem.quantity),
     );
 
-    final result = await showModalBottomSheet<int>(
+    final result = await showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
@@ -206,7 +213,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Masukkan jumlah barang secara manual.',
+                'Masukkan jumlah barang atau layanan secara manual.',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
@@ -216,7 +223,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               const SizedBox(height: 20),
               TextField(
                 controller: controller,
-                keyboardType: TextInputType.number,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 decoration: InputDecoration(
                   labelText: 'Kuantitas',
                   filled: true,
@@ -227,7 +236,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF0D5C56), width: 1.5),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0D5C56),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -237,7 +249,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 height: 48,
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(context).pop(int.tryParse(controller.text.trim()));
+                    Navigator.of(
+                      context,
+                    ).pop(QuantityFormatter.parse(controller.text));
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C56),
@@ -247,7 +261,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   ),
                   child: const Text(
                     'Simpan',
-                    style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -262,7 +279,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           .read(transaksiControllerProvider.notifier)
           .setQuantity(cartItem.item.id, result);
     } else if (result != null && result == 0) {
-      ref.read(transaksiControllerProvider.notifier).removeItem(cartItem.item.id);
+      ref
+          .read(transaksiControllerProvider.notifier)
+          .removeItem(cartItem.item.id);
     }
   }
 
@@ -317,7 +336,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Diskon Total',
-                  prefixText: 'Rp ',
+                  prefixText: '${CurrencyFormatter.symbol} ',
                   filled: true,
                   fillColor: const Color(0xFFF2F4F2),
                   border: OutlineInputBorder(
@@ -326,7 +345,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF0D5C56), width: 1.5),
+                    borderSide: const BorderSide(
+                      color: Color(0xFF0D5C56),
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),
@@ -348,7 +370,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   ),
                   child: const Text(
                     'Terapkan Diskon',
-                    style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -385,7 +410,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 final liveState = ref.watch(transaksiControllerProvider).value;
                 if (liveState == null || liveState.cartItems.isEmpty) {
                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (context.mounted && ModalRoute.of(context)?.isCurrent == true) {
+                    if (context.mounted &&
+                        ModalRoute.of(context)?.isCurrent == true) {
                       Navigator.pop(context);
                     }
                   });
@@ -428,7 +454,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 children: [
                   Expanded(
                     flex: 6,
-                    child: _buildCatalogPane(state, isMobile: false, logoPath: logoPath),
+                    child: _buildCatalogPane(
+                      state,
+                      isMobile: false,
+                      logoPath: logoPath,
+                    ),
                   ),
                   const VerticalDivider(
                     width: 1,
@@ -444,7 +474,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
             } else {
               return Scaffold(
                 backgroundColor: const Color(0xFFF8FAF8),
-                body: _buildCatalogPane(state, isMobile: true, logoPath: logoPath),
+                body: _buildCatalogPane(
+                  state,
+                  isMobile: true,
+                  logoPath: logoPath,
+                ),
                 bottomNavigationBar: state.cartItems.isNotEmpty
                     ? _buildMobileStickyBottomBar(state)
                     : null,
@@ -460,7 +494,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.warning_amber_rounded, size: 48, color: Color(0xFFBA1A1A)),
+              const Icon(
+                Icons.warning_amber_rounded,
+                size: 48,
+                color: Color(0xFFBA1A1A),
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Gagal memuat modul transaksi',
@@ -475,7 +513,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               Text(
                 error.toString(),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF3F4947)),
+                style: const TextStyle(
+                  fontFamily: 'Inter',
+                  color: Color(0xFF3F4947),
+                ),
               ),
               const SizedBox(height: 20),
               FilledButton(
@@ -492,7 +533,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     );
   }
 
-  Widget _buildCatalogPane(TransaksiState state, {required bool isMobile, required String? logoPath}) {
+  Widget _buildCatalogPane(
+    TransaksiState state, {
+    required bool isMobile,
+    required String? logoPath,
+  }) {
     return Container(
       color: const Color(0xFFF8FAF8),
       child: Column(
@@ -517,10 +562,16 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                       .updateSearch,
                   decoration: InputDecoration(
                     hintText: 'Cari barang...',
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF3F4947)),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Color(0xFF3F4947),
+                    ),
                     filled: true,
                     fillColor: const Color(0xFFF2F4F2),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -554,7 +605,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: const [
-                        Icon(Icons.inventory_2_outlined, size: 48, color: Color(0xFFBEC9C6)),
+                        Icon(
+                          Icons.inventory_2_outlined,
+                          size: 48,
+                          color: Color(0xFFBEC9C6),
+                        ),
                         SizedBox(height: 12),
                         Text(
                           'Katalog kosong atau tidak ditemukan.',
@@ -577,7 +632,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     ),
                     itemCount: state.filteredItems.length,
                     itemBuilder: (context, index) {
-                      return _buildCatalogItemCard(state.filteredItems[index], logoPath);
+                      return _buildCatalogItemCard(
+                        state.filteredItems[index],
+                        logoPath,
+                      );
                     },
                   ),
           ),
@@ -615,11 +673,14 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     String? imageUrl;
     final nameLower = item.name.toLowerCase();
     if (nameLower.contains('espresso')) {
-      imageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuC-IY8P8kbPiw7Tj6de85ViUnzT5HFgCr4XYnnLUSaTWS5KCrrwwKTwMgsopdDwXuTdwp6AdRwJlGsyYFJSuF8cIUw-CUyY8kUl-bh6ejEo2O6DsK7s26YlpY0dsf_seWFBMarOo04l12vQpi-IKD9N0BcNgzQVqHhTMcKZtQ_dHyN2VPt8evCNpA4a3OD3MO3LAI8QgjFCDBIfTBfemMW_iA2MYc_h4WDopM-3ObRLPc9nAthjEUx8';
+      imageUrl =
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuC-IY8P8kbPiw7Tj6de85ViUnzT5HFgCr4XYnnLUSaTWS5KCrrwwKTwMgsopdDwXuTdwp6AdRwJlGsyYFJSuF8cIUw-CUyY8kUl-bh6ejEo2O6DsK7s26YlpY0dsf_seWFBMarOo04l12vQpi-IKD9N0BcNgzQVqHhTMcKZtQ_dHyN2VPt8evCNpA4a3OD3MO3LAI8QgjFCDBIfTBfemMW_iA2MYc_h4WDopM-3ObRLPc9nAthjEUx8';
     } else if (nameLower.contains('matcha')) {
-      imageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuCgj_amFzOgHLhGY2wWxTyoT-7ofK0pOwT4djUezgrGDBpqMhJr_44s0-lCXbicDar4Wn4otWMTMSs-kcQIfhOzg5hQdz6T87B2ZAMjtYUe4AMsZT_Q5VD71itpaW0Kg4E0DjMFqCXhTHDoSb9Os57PjQlFGOCHR1WhKs50I-uccWPZ3jqki0LP17RMOqsJujimbY0GikVmvhhbCUKkmplEEnt3ksXnJMkkgMd6Ti3xBM9e-mG-wGIN';
+      imageUrl =
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuCgj_amFzOgHLhGY2wWxTyoT-7ofK0pOwT4djUezgrGDBpqMhJr_44s0-lCXbicDar4Wn4otWMTMSs-kcQIfhOzg5hQdz6T87B2ZAMjtYUe4AMsZT_Q5VD71itpaW0Kg4E0DjMFqCXhTHDoSb9Os57PjQlFGOCHR1WhKs50I-uccWPZ3jqki0LP17RMOqsJujimbY0GikVmvhhbCUKkmplEEnt3ksXnJMkkgMd6Ti3xBM9e-mG-wGIN';
     } else if (nameLower.contains('croissant')) {
-      imageUrl = 'https://lh3.googleusercontent.com/aida-public/AB6AXuDtw6FzoRqsgJnhCOMFExNBi-djCa-zF3rZDMdZOLFbH4bTzKIjXoBSUMo3v0dWBy7boOi0M6UuQiivP5poXcYwYgSrPPiefB9lKppiE5ND6zqXFMnqqqiywwHLiOxp62DhWEJH32LLCSAa0Pki_GcRlZsv_TtPC8ve8lo-R8H4R5Q5cQO34yMXSMHnNP2cODt_TgHWJWlbEIo2AswHm0foxdgL3BwPnTL9vuIe8qsBhlh4ZlBgX8Xf';
+      imageUrl =
+          'https://lh3.googleusercontent.com/aida-public/AB6AXuDtw6FzoRqsgJnhCOMFExNBi-djCa-zF3rZDMdZOLFbH4bTzKIjXoBSUMo3v0dWBy7boOi0M6UuQiivP5poXcYwYgSrPPiefB9lKppiE5ND6zqXFMnqqqiywwHLiOxp62DhWEJH32LLCSAa0Pki_GcRlZsv_TtPC8ve8lo-R8H4R5Q5cQO34yMXSMHnNP2cODt_TgHWJWlbEIo2AswHm0foxdgL3BwPnTL9vuIe8qsBhlh4ZlBgX8Xf';
     }
 
     return GestureDetector(
@@ -651,24 +712,26 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 children: [
                   imageUrl != null
                       ? Image.network(imageUrl, fit: BoxFit.cover)
-                      : (logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync())
-                          ? Image.file(
-                              File(logoPath),
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: const Color(0xFFECEEED),
-                              child: const Icon(
-                                Icons.storefront,
-                                size: 28,
-                                color: Color(0xFFBEC9C6),
-                              ),
-                            ),
+                      : (logoPath != null &&
+                            logoPath.isNotEmpty &&
+                            File(logoPath).existsSync())
+                      ? Image.file(File(logoPath), fit: BoxFit.cover)
+                      : Container(
+                          color: const Color(0xFFECEEED),
+                          child: const Icon(
+                            Icons.storefront,
+                            size: 28,
+                            color: Color(0xFFBEC9C6),
+                          ),
+                        ),
                   Positioned(
                     top: 6,
                     left: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(4),
@@ -790,7 +853,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     ref.read(transaksiControllerProvider.notifier).clearCart();
                   },
                   tooltip: 'Hapus Semua',
-                  icon: const Icon(Icons.delete_outline, color: Color(0xFFBA1A1A)),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFBA1A1A),
+                  ),
                 ),
               ],
             ),
@@ -807,7 +873,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 return Column(
                   children: [
                     _buildCartItemRow(cartItem),
-                    const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: Color(0xFFF2F4F2),
+                    ),
                   ],
                 );
               },
@@ -854,7 +924,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     GestureDetector(
                       onTap: () => _editItemDiscount(context, cartItem),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: cartItem.itemDiscountAmount > 0
                               ? const Color(0xFFFFDAD6)
@@ -922,15 +995,22 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   },
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    child: Icon(Icons.remove, size: 16, color: Color(0xFF3F4947)),
+                    child: Icon(
+                      Icons.remove,
+                      size: 16,
+                      color: Color(0xFF3F4947),
+                    ),
                   ),
                 ),
                 GestureDetector(
                   onTap: () => _editQuantity(context, cartItem),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 2,
+                    ),
                     child: Text(
-                      '${cartItem.quantity}',
+                      QuantityFormatter.format(cartItem.quantity),
                       style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
@@ -960,7 +1040,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     );
   }
 
-  Widget _buildCartCheckoutSummary(TransaksiState state, {required bool isBottomSheet}) {
+  Widget _buildCartCheckoutSummary(
+    TransaksiState state, {
+    required bool isBottomSheet,
+  }) {
     final isCash = state.paymentMethod == 'tunai';
 
     // Calculate dynamic helper buttons
@@ -969,7 +1052,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     if (nextFifty == pasAmount) {
       nextFifty += 50000;
     }
-    double nextHundred = ((state.totalAmount / 100000).ceil() * 100000).toDouble();
+    double nextHundred = ((state.totalAmount / 100000).ceil() * 100000)
+        .toDouble();
     if (nextHundred == pasAmount || nextHundred == nextFifty) {
       nextHundred += 100000;
     }
@@ -1008,7 +1092,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
             state.orderDiscountAmount > 0
                 ? '-${CurrencyFormatter.format(state.orderDiscountAmount)}'
                 : 'Tambah Diskon',
-            textColor: state.orderDiscountAmount > 0 ? const Color(0xFFBA1A1A) : const Color(0xFF0D5C56),
+            textColor: state.orderDiscountAmount > 0
+                ? const Color(0xFFBA1A1A)
+                : const Color(0xFF0D5C56),
             isAction: true,
             onTap: () => _editOrderDiscount(context, state.orderDiscountAmount),
           ),
@@ -1075,7 +1161,10 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: state.paymentMethod == entry.key
                             ? const Color(0xFF0D5C56)
@@ -1138,9 +1227,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               ),
               child: Row(
                 children: [
-                  const Text(
-                    'Rp',
-                    style: TextStyle(
+                  Text(
+                    CurrencyFormatter.symbol,
+                    style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -1215,7 +1304,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Rp ${nextFifty >= 1000 ? "${(nextFifty / 1000).toStringAsFixed(0)}k" : nextFifty.toStringAsFixed(0)}',
+                        '${CurrencyFormatter.symbol} ${nextFifty >= 1000 ? "${(nextFifty / 1000).toStringAsFixed(0)}k" : nextFifty.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
@@ -1237,7 +1326,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'Rp ${nextHundred >= 1000 ? "${(nextHundred / 1000).toStringAsFixed(0)}k" : nextHundred.toStringAsFixed(0)}',
+                        '${CurrencyFormatter.symbol} ${nextHundred >= 1000 ? "${(nextHundred / 1000).toStringAsFixed(0)}k" : nextHundred.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 12,
@@ -1255,9 +1344,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           SizedBox(
             height: 52,
             child: FilledButton.icon(
-              onPressed: state.isSubmitting || !state.canSubmit 
-                  ? null 
-                  : () => _submitTransaction(bottomSheetContext: isBottomSheet ? context : null),
+              onPressed: state.isSubmitting || !state.canSubmit
+                  ? null
+                  : () => _submitTransaction(
+                      bottomSheetContext: isBottomSheet ? context : null,
+                    ),
               icon: const Icon(Icons.payments_outlined, size: 20),
               label: Text(
                 state.isSubmitting ? 'Memproses...' : 'Proses Pembayaran',
@@ -1343,7 +1434,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.shopping_bag_outlined, color: Colors.white, size: 20),
+                  const Icon(
+                    Icons.shopping_bag_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     '${state.cartItems.length} item • ${CurrencyFormatter.format(state.totalAmount)}',

@@ -62,8 +62,7 @@ class ReportLocalDataSource {
     final whereSql = 'WHERE ${whereClauses.join(' AND ')}';
     final limitSql = limit == null ? '' : 'LIMIT $limit';
 
-    final rows = await db.rawQuery(
-      '''
+    final rows = await db.rawQuery('''
       SELECT
         sti.item_id,
         sti.item_name_snapshot,
@@ -76,9 +75,7 @@ class ReportLocalDataSource {
       GROUP BY sti.item_id, sti.item_name_snapshot, sti.item_type_snapshot
       ORDER BY total_sales DESC, sti.item_name_snapshot ASC
       $limitSql
-      ''',
-      whereArgs,
-    );
+      ''', whereArgs);
 
     return rows
         .map(
@@ -98,6 +95,11 @@ class ReportLocalDataSource {
   Future<DashboardSummary> getDashboardSummary({DateTime? reference}) async {
     final range = ReportPeriod.harian.resolveRange(reference);
     final revenue = await getRevenueForRange(range.start, range.endExclusive);
+    final previousDayStart = range.start.subtract(const Duration(days: 1));
+    final previousDayRevenue = await getRevenueForRange(
+      previousDayStart,
+      range.start,
+    );
     final transactionCount = await getTransactionCountForRange(
       range.start,
       range.endExclusive,
@@ -113,7 +115,7 @@ class ReportLocalDataSource {
     );
 
     final db = await database.database();
-    
+
     // Calculate total margin and completeness flag for today
     final revRows = await db.rawQuery(
       '''
@@ -135,10 +137,13 @@ class ReportLocalDataSource {
       [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
     );
 
-    final netRevenueToday = (revRows.first['net_revenue'] as num?)?.toDouble() ?? 0;
-    final totalCogsToday = (cogsRows.first['total_cogs'] as num?)?.toDouble() ?? 0;
+    final netRevenueToday =
+        (revRows.first['net_revenue'] as num?)?.toDouble() ?? 0;
+    final totalCogsToday =
+        (cogsRows.first['total_cogs'] as num?)?.toDouble() ?? 0;
     final marginToday = netRevenueToday - totalCogsToday;
-    final missingCostCount = (cogsRows.first['missing_cost_count'] as num?)?.toInt() ?? 0;
+    final missingCostCount =
+        (cogsRows.first['missing_cost_count'] as num?)?.toInt() ?? 0;
     final marginTodayIsComplete = missingCostCount == 0;
 
     final expenseRows = await db.rawQuery(
@@ -149,7 +154,8 @@ class ReportLocalDataSource {
       ''',
       [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
     );
-    final totalExpensesToday = (expenseRows.first['total_expenses'] as num?)?.toDouble() ?? 0;
+    final totalExpensesToday =
+        (expenseRows.first['total_expenses'] as num?)?.toDouble() ?? 0;
 
     return DashboardSummary(
       revenueToday: revenue,
@@ -160,6 +166,7 @@ class ReportLocalDataSource {
       marginToday: marginToday,
       marginTodayIsComplete: marginTodayIsComplete,
       totalExpensesToday: totalExpensesToday,
+      revenuePreviousDay: previousDayRevenue,
     );
   }
 
@@ -234,34 +241,132 @@ class ReportLocalDataSource {
       paymentBreakdown['Lainnya'] = 0.0;
     }
 
-    // Calculate actual sales trend data points
+    // Bucket trends at calendar boundaries so annual reports always contain
+    // one point per month, monthly reports one per day, and weekly reports
+    // one per day.
     final duration = range.endExclusive.difference(range.start);
-    final int intervalCount = period == ReportPeriod.harian ? 24 : 7;
-    final intervalMs = duration.inMilliseconds / intervalCount;
+    final intervalStarts = <DateTime>[];
+    if (period == ReportPeriod.harian) {
+      for (var hour = 0; hour < 24; hour++) {
+        intervalStarts.add(range.start.add(Duration(hours: hour)));
+      }
+    } else {
+      final useMonthlyBuckets =
+          period == ReportPeriod.tahunan ||
+          (period == ReportPeriod.kustom && duration.inDays > 180);
+      final useWeeklyBuckets =
+          period == ReportPeriod.kustom &&
+          duration.inDays > 31 &&
+          duration.inDays <= 180;
+      var cursor = range.start;
+      while (cursor.isBefore(range.endExclusive)) {
+        intervalStarts.add(cursor);
+        if (useMonthlyBuckets) {
+          cursor = DateTime(cursor.year, cursor.month + 1);
+        } else if (useWeeklyBuckets) {
+          cursor = cursor.add(const Duration(days: 7));
+        } else {
+          cursor = DateTime(cursor.year, cursor.month, cursor.day + 1);
+        }
+      }
+    }
+
+    final transactionRows = await db.rawQuery(
+      '''
+      SELECT transaction_date, total_amount
+      FROM sales_transactions
+      WHERE transaction_date >= ? AND transaction_date < ? AND status = 'completed'
+      ORDER BY transaction_date ASC, id ASC
+      ''',
+      [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
+    );
+    final transactionValuesByBucket = List.generate(
+      intervalStarts.length,
+      (_) => <double>[],
+    );
+    var bucketCursor = 0;
+    for (final row in transactionRows) {
+      final transactionDate = DateTime.parse(row['transaction_date'] as String);
+      while (bucketCursor + 1 < intervalStarts.length &&
+          !transactionDate.isBefore(intervalStarts[bucketCursor + 1])) {
+        bucketCursor++;
+      }
+      if (!transactionDate.isBefore(intervalStarts[bucketCursor])) {
+        transactionValuesByBucket[bucketCursor].add(
+          (row['total_amount'] as num).toDouble(),
+        );
+      }
+    }
+
     final List<SalesTrendPoint> trend = [];
+    final List<SalesCandlePoint> salesCandles = [];
+    for (var i = 0; i < intervalStarts.length; i++) {
+      final intervalStart = intervalStarts[i];
+      final proposedEnd = i + 1 < intervalStarts.length
+          ? intervalStarts[i + 1]
+          : range.endExclusive;
+      final intervalEnd = proposedEnd.isAfter(range.endExclusive)
+          ? range.endExclusive
+          : proposedEnd;
+      final value = await getRevenueForRange(intervalStart, intervalEnd);
 
-    for (int i = 0; i < intervalCount; i++) {
-      final intervalStart = range.start.add(Duration(milliseconds: (i * intervalMs).round()));
-      final intervalEnd = range.start.add(Duration(milliseconds: ((i + 1) * intervalMs).round()));
-      final val = await getRevenueForRange(intervalStart, intervalEnd);
-
-      String label = '';
+      String label;
       if (period == ReportPeriod.harian) {
-        final hour = intervalStart.hour.toString().padLeft(2, '0');
-        label = '$hour:00';
-      } else if (period == ReportPeriod.mingguan) {
-        const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-        label = days[intervalStart.weekday - 1];
-      } else if (period == ReportPeriod.bulanan) {
-        label = 'Tgl ${intervalStart.day}';
-      } else if (period == ReportPeriod.tahunan || duration.inDays > 60) {
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+        label = '${intervalStart.hour.toString().padLeft(2, '0')}:00';
+      } else if (period == ReportPeriod.mingguan ||
+          period == ReportPeriod.bulanan ||
+          (period == ReportPeriod.kustom && duration.inDays <= 31)) {
+        if (period == ReportPeriod.mingguan) {
+          const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+          label = days[intervalStart.weekday - 1];
+        } else {
+          label = '${intervalStart.day}/${intervalStart.month}';
+        }
+      } else if (period == ReportPeriod.tahunan ||
+          (period == ReportPeriod.kustom && duration.inDays > 180)) {
+        const months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'Mei',
+          'Jun',
+          'Jul',
+          'Ags',
+          'Sep',
+          'Okt',
+          'Nov',
+          'Des',
+        ];
         label = months[intervalStart.month - 1];
       } else {
         label = '${intervalStart.day}/${intervalStart.month}';
       }
 
-      trend.add(SalesTrendPoint(label: label, value: val));
+      trend.add(SalesTrendPoint(label: label, value: value));
+
+      final bucketTransactions = transactionValuesByBucket[i];
+      if (bucketTransactions.isNotEmpty) {
+        final high = bucketTransactions.fold<double>(
+          bucketTransactions.first,
+          (value, transaction) => transaction > value ? transaction : value,
+        );
+        final low = bucketTransactions.fold<double>(
+          bucketTransactions.first,
+          (value, transaction) => transaction < value ? transaction : value,
+        );
+        salesCandles.add(
+          SalesCandlePoint(
+            bucketIndex: i,
+            label: label,
+            open: bucketTransactions.first,
+            high: high,
+            low: low,
+            close: bucketTransactions.last,
+            transactionCount: bucketTransactions.length,
+          ),
+        );
+      }
     }
 
     // Calculate total margin and completeness flag for period
@@ -288,26 +393,25 @@ class ReportLocalDataSource {
     final netRevenue = (revRows.first['net_revenue'] as num?)?.toDouble() ?? 0;
     final totalCogs = (cogsRows.first['total_cogs'] as num?)?.toDouble() ?? 0;
     final margin = netRevenue - totalCogs;
-    final missingCostCount = (cogsRows.first['missing_cost_count'] as num?)?.toInt() ?? 0;
+    final missingCostCount =
+        (cogsRows.first['missing_cost_count'] as num?)?.toInt() ?? 0;
     final marginIsComplete = missingCostCount == 0;
 
     // Check if any active item in the catalog is missing cost data
-    final missingCatalogCostRows = await db.rawQuery(
-      '''
+    final missingCatalogCostRows = await db.rawQuery('''
       SELECT COUNT(*) AS missing_count
       FROM items
       WHERE is_active = 1 AND (
         (item_type = 'product' AND harga_modal IS NULL) OR
         (item_type = 'service' AND biaya_dasar IS NULL)
       )
-      '''
-    );
-    final hasMissingCatalogCost = (missingCatalogCostRows.first['missing_count'] as num?)?.toInt() ?? 0;
+      ''');
+    final hasMissingCatalogCost =
+        (missingCatalogCostRows.first['missing_count'] as num?)?.toInt() ?? 0;
     final catalogMarginIsComplete = hasMissingCatalogCost == 0;
 
     // Query top 5 margin items from active catalog items that have cost data
-    final topMarginRows = await db.rawQuery(
-      '''
+    final topMarginRows = await db.rawQuery('''
       SELECT 
         name,
         item_type,
@@ -319,8 +423,7 @@ class ReportLocalDataSource {
       WHERE is_active = 1 AND sale_price > 0 AND COALESCE(harga_modal, biaya_dasar) IS NOT NULL
       ORDER BY margin_pct DESC
       LIMIT 5
-      '''
-    );
+      ''');
 
     final List<MarginItemSummary> topMarginItems = topMarginRows.map((row) {
       return MarginItemSummary(
@@ -340,7 +443,8 @@ class ReportLocalDataSource {
       ''',
       [range.start.toIso8601String(), range.endExclusive.toIso8601String()],
     );
-    final totalExpenses = (expenseRows.first['total_expenses'] as num?)?.toDouble() ?? 0;
+    final totalExpenses =
+        (expenseRows.first['total_expenses'] as num?)?.toDouble() ?? 0;
 
     return SalesReportSnapshot(
       period: period,
@@ -352,6 +456,7 @@ class ReportLocalDataSource {
       itemSummaries: items,
       paymentMethodBreakdown: paymentBreakdown,
       salesTrend: trend,
+      salesCandles: salesCandles,
       margin: margin,
       marginIsComplete: marginIsComplete,
       catalogMarginIsComplete: catalogMarginIsComplete,
@@ -411,10 +516,10 @@ class ReportLocalDataSource {
       'capital_history',
       orderBy: 'created_at ASC',
     );
-    
+
     double latestCapital = 0.0;
     List<double> historicalCapitals = [];
-    
+
     if (historyRows.isNotEmpty) {
       for (final row in historyRows) {
         historicalCapitals.add((row['amount'] as num).toDouble());
@@ -426,9 +531,14 @@ class ReportLocalDataSource {
         columns: ['modal_awal_usaha'],
         limit: 1,
       );
-      latestCapital = (profileRows.isNotEmpty ? profileRows.first['modal_awal_usaha'] as num? : 0)?.toDouble() ?? 0.0;
+      latestCapital =
+          (profileRows.isNotEmpty
+                  ? profileRows.first['modal_awal_usaha'] as num?
+                  : 0)
+              ?.toDouble() ??
+          0.0;
       if (latestCapital > 0) {
-         historicalCapitals.add(latestCapital);
+        historicalCapitals.add(latestCapital);
       }
     }
 
@@ -448,14 +558,16 @@ class ReportLocalDataSource {
     final expensesRows = await db.rawQuery(
       'SELECT COALESCE(SUM(amount), 0) AS total_expenses FROM expenses',
     );
-    totalExpenses = (expensesRows.first['total_expenses'] as num?)?.toDouble() ?? 0.0;
+    totalExpenses =
+        (expensesRows.first['total_expenses'] as num?)?.toDouble() ?? 0.0;
 
     final stockRows = await db.rawQuery('''
       SELECT COALESCE(SUM(stock_qty * harga_modal), 0) AS total_stock_value
       FROM items
       WHERE item_type = 'product' AND harga_modal IS NOT NULL AND stock_qty > 0
     ''');
-    final currentStockValue = (stockRows.first['total_stock_value'] as num?)?.toDouble() ?? 0.0;
+    final currentStockValue =
+        (stockRows.first['total_stock_value'] as num?)?.toDouble() ?? 0.0;
 
     final netCapitalValue = latestCapital + totalMargin - totalExpenses;
     final currentCash = netCapitalValue - currentStockValue;

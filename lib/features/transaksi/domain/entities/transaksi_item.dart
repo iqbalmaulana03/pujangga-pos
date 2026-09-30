@@ -18,7 +18,7 @@ class TransaksiItem {
   final String itemType;
   final double sellingPrice;
   final bool isActive;
-  final int? stockQuantity;
+  final double? stockQuantity;
   final String? unitLabel;
   final double? wholesalePrice;
   final int? wholesaleMinQuantity;

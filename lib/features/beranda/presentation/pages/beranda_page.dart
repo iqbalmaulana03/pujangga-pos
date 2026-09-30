@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/quantity_formatter.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../riwayat/domain/entities/riwayat_transaksi_summary.dart';
 import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
@@ -66,7 +67,11 @@ class BerandaPage extends ConsumerWidget {
                   if (isNarrow) {
                     return Column(
                       children: [
-                        _buildRevenueCard(context, summary.revenueToday),
+                        _buildRevenueCard(
+                          context,
+                          summary.revenueToday,
+                          summary.revenuePreviousDay,
+                        ),
                         const SizedBox(height: 12),
                         _buildTransactionCard(
                           context,
@@ -89,6 +94,7 @@ class BerandaPage extends ConsumerWidget {
                           child: _buildRevenueCard(
                             context,
                             summary.revenueToday,
+                            summary.revenuePreviousDay,
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -410,7 +416,16 @@ class BerandaPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildRevenueCard(BuildContext context, double revenueToday) {
+  Widget _buildRevenueCard(
+    BuildContext context,
+    double revenueToday,
+    double? revenuePreviousDay,
+  ) {
+    final hasComparison = revenuePreviousDay != null && revenuePreviousDay > 0;
+    final changePercent = hasComparison
+        ? ((revenueToday - revenuePreviousDay) / revenuePreviousDay * 100)
+        : null;
+    final isUp = (changePercent ?? 0) >= 0;
     return Container(
       height: 140,
       padding: const EdgeInsets.all(16),
@@ -444,10 +459,7 @@ class BerandaPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.payments,
-                color: Color(0xFF0D5C56),
-              ),
+              Icon(Icons.payments, color: Color(0xFF0D5C56)),
             ],
           ),
           Column(
@@ -467,22 +479,30 @@ class BerandaPage extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Row(
-                children: const [
-                  Icon(
-                    Icons.trending_up,
-                    color: Color(0xFF0D5C56),
-                    size: 14,
-                  ),
-                  SizedBox(width: 4),
+                children: [
+                  if (hasComparison) ...[
+                    Icon(
+                      isUp ? Icons.trending_up : Icons.trending_down,
+                      color: isUp
+                          ? const Color(0xFF0D5C56)
+                          : const Color(0xFFBA1A1A),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                  ],
                   Expanded(
                     child: Text(
-                      '+12% dari kemarin',
+                      hasComparison
+                          ? '${isUp ? '+' : '-'}${changePercent!.abs().toStringAsFixed(1)}% dari kemarin'
+                          : 'Belum ada data pembanding',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0D5C56),
+                        color: hasComparison && !isUp
+                            ? const Color(0xFFBA1A1A)
+                            : const Color(0xFF0D5C56),
                       ),
                     ),
                   ),
@@ -529,10 +549,7 @@ class BerandaPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.receipt_long,
-                color: Color(0xFF0D5C56),
-              ),
+              Icon(Icons.receipt_long, color: Color(0xFF0D5C56)),
             ],
           ),
           Column(
@@ -549,7 +566,7 @@ class BerandaPage extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Jam operasional aktif',
+                'Transaksi hari ini',
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 12,
@@ -563,7 +580,13 @@ class BerandaPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildMarginCard(BuildContext context, double marginToday, double totalExpensesToday, double netProfitToday, bool isComplete) {
+  Widget _buildMarginCard(
+    BuildContext context,
+    double marginToday,
+    double totalExpensesToday,
+    double netProfitToday,
+    bool isComplete,
+  ) {
     return Container(
       height: 160,
       padding: const EdgeInsets.all(16),
@@ -597,10 +620,7 @@ class BerandaPage extends ConsumerWidget {
                   ),
                 ),
               ),
-              Icon(
-                Icons.account_balance_wallet,
-                color: Color(0xFF0D5C56),
-              ),
+              Icon(Icons.account_balance_wallet, color: Color(0xFF0D5C56)),
             ],
           ),
           Column(
@@ -609,12 +629,16 @@ class BerandaPage extends ConsumerWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  isComplete ? CurrencyFormatter.format(netProfitToday) : 'Belum Lengkap',
+                  isComplete
+                      ? CurrencyFormatter.format(netProfitToday)
+                      : 'Belum Lengkap',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: isComplete ? 28 : 22,
                     fontWeight: FontWeight.bold,
-                    color: isComplete ? const Color(0xFF191C1C) : const Color(0xFFBA1A1A),
+                    color: isComplete
+                        ? const Color(0xFF191C1C)
+                        : const Color(0xFFBA1A1A),
                   ),
                 ),
               ),
@@ -623,15 +647,34 @@ class BerandaPage extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Margin Kotor:', style: TextStyle(fontSize: 10, color: Color(0xFF3F4947))),
-                    Text(CurrencyFormatter.format(marginToday), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Margin Kotor:',
+                      style: TextStyle(fontSize: 10, color: Color(0xFF3F4947)),
+                    ),
+                    Text(
+                      CurrencyFormatter.format(marginToday),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('- Pengeluaran:', style: TextStyle(fontSize: 10, color: Color(0xFFBA1A1A))),
-                    Text(CurrencyFormatter.format(totalExpensesToday), style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFBA1A1A))),
+                    const Text(
+                      '- Pengeluaran:',
+                      style: TextStyle(fontSize: 10, color: Color(0xFFBA1A1A)),
+                    ),
+                    Text(
+                      CurrencyFormatter.format(totalExpensesToday),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFBA1A1A),
+                      ),
+                    ),
                   ],
                 ),
               ] else
@@ -750,6 +793,8 @@ class BerandaPage extends ConsumerWidget {
                                   children: [
                                     Text(
                                       'Pesanan #${transactions[i].invoiceNumber}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontFamily: 'Inter',
                                         fontSize: 14,
@@ -806,11 +851,7 @@ class BerandaPage extends ConsumerWidget {
       children: [
         Row(
           children: const [
-            Icon(
-              Icons.warning,
-              color: Color(0xFFBA1A1A),
-              size: 22,
-            ),
+            Icon(Icons.warning, color: Color(0xFFBA1A1A), size: 22),
             SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -851,9 +892,8 @@ class BerandaPage extends ConsumerWidget {
                   children: [
                     for (int i = 0; i < items.length; i++) ...[
                       GestureDetector(
-                        onTap: () => context.push(
-                          '${AppRoutes.stock}/${items[i].id}',
-                        ),
+                        onTap: () =>
+                            context.push('${AppRoutes.stock}/${items[i].id}'),
                         child: Container(
                           height: 48,
                           margin: EdgeInsets.only(
@@ -888,7 +928,7 @@ class BerandaPage extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                '${items[i].currentStock.toStringAsFixed(0)} tersisa',
+                                '${QuantityFormatter.format(items[i].currentStock)} tersisa',
                                 style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 14,

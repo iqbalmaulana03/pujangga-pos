@@ -50,11 +50,7 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
         ),
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFBEC9C6),
-          ),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFBEC9C6)),
         ),
       ),
       body: riwayatAsync.when(
@@ -63,13 +59,17 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
             return _buildFullEmptyState(context);
           }
 
-          final filteredRevenue = state.filteredTransactions.fold<double>(
+          final completedTransactions = state.filteredTransactions
+              .where((transaction) => transaction.status == 'completed')
+              .toList();
+          final filteredRevenue = completedTransactions.fold<double>(
             0,
             (total, transaction) => total + transaction.totalAmount,
           );
 
           return RefreshIndicator(
-            onRefresh: () => ref.read(riwayatControllerProvider.notifier).refresh(),
+            onRefresh: () =>
+                ref.read(riwayatControllerProvider.notifier).refresh(),
             color: const Color(0xFF0D5C56),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -92,13 +92,21 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                   ),
                   child: TextField(
                     controller: _searchController,
-                    onChanged: ref.read(riwayatControllerProvider.notifier).updateSearch,
+                    onChanged: ref
+                        .read(riwayatControllerProvider.notifier)
+                        .updateSearch,
                     decoration: InputDecoration(
                       hintText: 'Cari faktur atau barang...',
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF3F4947)),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF3F4947),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide.none,
@@ -124,36 +132,50 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                       _buildFilterChip(
                         label: 'Semua Tanggal',
                         selected: state.dateFilter == 'semua',
-                        onTap: () => ref.read(riwayatControllerProvider.notifier).updateDateFilter('semua'),
+                        onTap: () => ref
+                            .read(riwayatControllerProvider.notifier)
+                            .updateDateFilter('semua'),
                       ),
                       const SizedBox(width: 6),
                       _buildFilterChip(
                         label: 'Hari Ini',
                         selected: state.dateFilter == 'hari_ini',
-                        onTap: () => ref.read(riwayatControllerProvider.notifier).updateDateFilter('hari_ini'),
+                        onTap: () => ref
+                            .read(riwayatControllerProvider.notifier)
+                            .updateDateFilter('hari_ini'),
                       ),
                       const SizedBox(width: 6),
                       _buildFilterChip(
                         label: '7 Hari',
                         selected: state.dateFilter == '7_hari',
-                        onTap: () => ref.read(riwayatControllerProvider.notifier).updateDateFilter('7_hari'),
+                        onTap: () => ref
+                            .read(riwayatControllerProvider.notifier)
+                            .updateDateFilter('7_hari'),
                       ),
                       const SizedBox(width: 6),
                       _buildFilterChip(
                         label: '30 Hari',
                         selected: state.dateFilter == '30_hari',
-                        onTap: () => ref.read(riwayatControllerProvider.notifier).updateDateFilter('30_hari'),
+                        onTap: () => ref
+                            .read(riwayatControllerProvider.notifier)
+                            .updateDateFilter('30_hari'),
                       ),
                       const SizedBox(width: 12),
                       // Divider line
-                      Container(width: 1, height: 20, color: const Color(0xFFBEC9C6)),
+                      Container(
+                        width: 1,
+                        height: 20,
+                        color: const Color(0xFFBEC9C6),
+                      ),
                       const SizedBox(width: 12),
                       // Payment Option Chips
                       for (final paymentMethod in state.paymentOptions) ...[
                         _buildFilterChip(
                           label: _paymentLabel(paymentMethod),
                           selected: state.paymentFilter == paymentMethod,
-                          onTap: () => ref.read(riwayatControllerProvider.notifier).updatePaymentFilter(paymentMethod),
+                          onTap: () => ref
+                              .read(riwayatControllerProvider.notifier)
+                              .updatePaymentFilter(paymentMethod),
                         ),
                         const SizedBox(width: 6),
                       ],
@@ -168,7 +190,7 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                     Expanded(
                       child: _buildBentoCard(
                         title: 'Transaksi',
-                        value: '${state.filteredTransactions.length}',
+                        value: '${completedTransactions.length}',
                         icon: Icons.receipt_long,
                       ),
                     ),
@@ -205,12 +227,15 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                 if (state.allTransactions.isEmpty)
                   _buildEmptyState(
                     isFiltered: false,
-                    onCreateTransaction: () => context.push(AppRoutes.transaction),
+                    onCreateTransaction: () =>
+                        context.push(AppRoutes.transaction),
                   )
                 else if (state.filteredTransactions.isEmpty)
                   _buildEmptyState(isFiltered: true)
                 else
-                  ...state.filteredTransactions.map((tx) => _buildTransactionCard(tx)),
+                  ...state.filteredTransactions.map(
+                    (tx) => _buildTransactionCard(tx),
+                  ),
               ],
             ),
           );
@@ -222,7 +247,11 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded, size: 48, color: Color(0xFFBA1A1A)),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 48,
+                  color: Color(0xFFBA1A1A),
+                ),
                 const SizedBox(height: 16),
                 const Text(
                   'Gagal memuat riwayat transaksi',
@@ -237,12 +266,17 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                 Text(
                   error.toString(),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontFamily: 'Inter', color: Color(0xFF3F4947)),
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    color: Color(0xFF3F4947),
+                  ),
                 ),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => ref.invalidate(riwayatControllerProvider),
-                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D5C56)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0D5C56),
+                  ),
                   child: const Text('Muat Ulang'),
                 ),
               ],
@@ -325,7 +359,10 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
   }
 
   Widget _buildTransactionCard(RiwayatTransaksiSummary tx) {
-    final formattedDate = DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(tx.createdAt);
+    final formattedDate = DateFormat(
+      'dd MMM yyyy, HH:mm',
+      'id_ID',
+    ).format(tx.createdAt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -359,38 +396,39 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              '#${tx.invoiceNumber}',
-                              style: const TextStyle(
+                        Text(
+                          '#${tx.invoiceNumber}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0D5C56),
+                          ),
+                        ),
+                        if (tx.status == 'voided') ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFDAD6),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'Dibatalkan',
+                              style: TextStyle(
                                 fontFamily: 'Inter',
-                                fontSize: 13,
+                                fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF0D5C56),
+                                color: Color(0xFFBA1A1A),
                               ),
                             ),
-                            if (tx.status == 'voided') ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFDAD6),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text(
-                                  'Dibatalkan',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFBA1A1A),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Text(
                           formattedDate,
@@ -428,7 +466,11 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 10),
-                child: Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Color(0xFFF2F4F2),
+                ),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -452,7 +494,10 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                     ],
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFECEEED),
                       borderRadius: BorderRadius.circular(6),
@@ -485,14 +530,22 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFBEC9C6).withValues(alpha: 0.3)),
+        border: Border.all(
+          color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         children: [
-          const Icon(Icons.receipt_long_outlined, size: 40, color: Color(0xFFBEC9C6)),
+          const Icon(
+            Icons.receipt_long_outlined,
+            size: 40,
+            color: Color(0xFFBEC9C6),
+          ),
           const SizedBox(height: 12),
           Text(
-            isFiltered ? 'Tidak ada transaksi yang cocok' : 'Riwayat transaksi masih kosong',
+            isFiltered
+                ? 'Tidak ada transaksi yang cocok'
+                : 'Riwayat transaksi masih kosong',
             style: const TextStyle(
               fontFamily: 'Inter',
               fontSize: 15,
@@ -523,11 +576,17 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                 icon: const Icon(Icons.point_of_sale_outlined, size: 16),
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF0D5C56),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
                 label: const Text(
                   'Buat Transaksi',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -607,7 +666,10 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFBEC9C6), width: 1.5),
+                        border: Border.all(
+                          color: const Color(0xFFBEC9C6),
+                          width: 1.5,
+                        ),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.05),
@@ -619,21 +681,71 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(width: 40, height: 6, decoration: BoxDecoration(color: const Color(0xFFBEC9C6).withValues(alpha: 0.6), borderRadius: BorderRadius.circular(3))),
+                          Container(
+                            width: 40,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFFBEC9C6,
+                              ).withValues(alpha: 0.6),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
                           const SizedBox(height: 12),
-                          Container(width: 76, height: 5, decoration: BoxDecoration(color: const Color(0xFFECEEED), borderRadius: BorderRadius.circular(3))),
+                          Container(
+                            width: 76,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECEEED),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Container(width: 76, height: 5, decoration: BoxDecoration(color: const Color(0xFFECEEED), borderRadius: BorderRadius.circular(3))),
+                          Container(
+                            width: 76,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECEEED),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
                           const SizedBox(height: 8),
-                          Container(width: 50, height: 5, decoration: BoxDecoration(color: const Color(0xFFECEEED), borderRadius: BorderRadius.circular(3))),
+                          Container(
+                            width: 50,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECEEED),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
                           const Spacer(),
-                          const Divider(height: 1, thickness: 1, color: Color(0xFFBEC9C6)),
+                          const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Color(0xFFBEC9C6),
+                          ),
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(width: 20, height: 10, decoration: BoxDecoration(color: const Color(0xFF8FD3CB), borderRadius: BorderRadius.circular(2))),
-                              Container(width: 30, height: 10, decoration: BoxDecoration(color: const Color(0xFF0D5C56).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(2))),
+                              Container(
+                                width: 20,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF8FD3CB),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              Container(
+                                width: 30,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF0D5C56,
+                                  ).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -655,20 +767,20 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                             color: Colors.black.withValues(alpha: 0.1),
                             blurRadius: 6,
                             offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.receipt_long,
-                      color: Colors.white,
-                      size: 24,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.receipt_long,
+                        color: Colors.white,
+                        size: 24,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
           const SizedBox(height: 24),
           const Text(
             'Belum ada transaksi',
@@ -699,7 +811,9 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
               icon: const Icon(Icons.add_shopping_cart, size: 20),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF0D5C56),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               label: const Text(
                 'Mulai Penjualan Baru',

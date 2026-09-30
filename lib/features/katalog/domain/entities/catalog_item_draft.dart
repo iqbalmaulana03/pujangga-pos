@@ -19,7 +19,7 @@ class CatalogItemDraft {
   final double sellingPrice;
   final bool isActive;
   final String? sku;
-  final int? stockQuantity;
+  final double? stockQuantity;
   final String? unitLabel;
   final double? costPrice;
   final double? wholesalePrice;
