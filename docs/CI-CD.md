@@ -6,7 +6,7 @@ Workflow berada di `.github/workflows/android-ci-cd.yml`.
 
 - Pull request menuju `main` dan push ke `main`: Flutter `3.44.1` menjalankan `flutter analyze --fatal-infos` dan `flutter test` pada runner GitHub Actions.
 - Push ke branch rilis `release/<version>_apps`: setelah verifikasi lulus dan approval environment Production, workflow membangun AAB bertanda tangan dan mengunggahnya langsung ke track Production dengan staged rollout 10%. Artefak AAB disimpan selama 30 hari.
-- Workflow dapat dijalankan manual dengan memilih branch rilis. Job rilis tetap menunggu approval environment Production.
+- Workflow dapat dijalankan manual dengan memilih branch rilis dan aksi `publish` atau `complete_rollout`. Job yang mengubah Play Store tetap menunggu approval environment Production.
 
 Format branch: `release/<major>.<minor>.<patch>+<versionCode>_apps`, misalnya `release/1.2.2+3_apps`. Nilai versi di branch harus sama persis dengan `pubspec.yaml`; angka setelah `+` menjadi Android `versionCode`. Cek Play Console dan pastikan angkanya lebih besar daripada semua kode versi yang sudah pernah diunggah. Workflow tidak membaca Play Console untuk menentukan angka ini.
 
@@ -41,6 +41,6 @@ Format branch: `release/<major>.<minor>.<patch>+<versionCode>_apps`, misalnya `r
 1. Naikkan `version:` di `pubspec.yaml` dan pastikan kode build lebih besar daripada semua versi yang pernah diunggah ke Play Console.
 2. Merge perubahan ke `main` dan pastikan workflow `Analyze and test` berhasil.
 3. Buat branch dari commit rilis dengan nama yang sesuai versi, misalnya `release/1.2.2+3_apps`, lalu push. Workflow memverifikasi nama/version, membangun AAB, dan mengunggahnya langsung ke Production setelah approval reviewer.
-4. Pantau staged rollout 10% di Play Console. Perluas rollout atau hentikan jika ditemukan masalah.
+4. Pantau staged rollout 10% di Play Console. Untuk menyelesaikan rollout rilis yang sama ke 100%, buka **Actions → Android CI/CD → Run workflow**, pilih branch rilis yang sedang aktif, lalu pilih aksi `complete_rollout`. Verifikasi dan tes akan berjalan; setelah disetujui pada environment Production, job memeriksa bahwa versionCode branch cocok dengan satu-satunya rilis `inProgress` di track Production, lalu mengubah status rilis tersebut menjadi `completed`. Job ini tidak membangun atau mengunggah ulang AAB. Jika rilis sudah `completed`, job hanya melaporkan status tanpa perubahan. Perluas rollout hanya jika rilis yang dituju dan kondisi Play Console sudah benar; hentikan rollout jika ditemukan masalah.
 
 Job pull request dan branch biasa tidak menerima secret. Kredensial hanya digunakan oleh job pada branch `release/*_apps` yang menunggu approval Production.

@@ -6,6 +6,15 @@ on:
   push:
     branches: [main, 'release/*_apps']
   workflow_dispatch:
+    inputs:
+      action:
+        description: Action to run for this release branch
+        type: choice
+        options:
+          - publish
+          - complete_rollout
+        default: publish
+        required: true
 
 permissions:
   contents: read
@@ -51,7 +60,7 @@ jobs:
     if: >-
       startsWith(github.ref, 'refs/heads/release/') &&
       endsWith(github.ref_name, '_apps') &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'publish'))
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
@@ -185,3 +194,134 @@ jobs:
         if: ${{ always() }}
         shell: bash
         run: rm -f android/key.properties android/app/upload-keystore.jks
+
+  complete_production_rollout:
+    name: Complete Production rollout
+    needs: verify
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      inputs.action == 'complete_rollout' &&
+      startsWith(github.ref, 'refs/heads/release/') &&
+      endsWith(github.ref_name, '_apps')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: google-play-production
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+
+      - name: Validate release branch and version
+        id: release_version
+        shell: bash
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          version="${branch#release/}"
+          version="${version%_apps}"
+          build_number="${version#*+}"
+
+          if [[ "$branch" != release/*_apps || "$version" != *+* || ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[1-9][0-9]*$ ]]; then
+            echo "::error::Release branches must use release/<major>.<minor>.<patch>+<positive-build-number>_apps."
+            exit 1
+          fi
+
+          pubspec_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*/\1/p' pubspec.yaml)"
+          if [[ "$version" != "$pubspec_version" ]]; then
+            echo "::error::Release branch $branch must match pubspec.yaml version $pubspec_version."
+            exit 1
+          fi
+
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+
+      - name: Complete the matching in-progress Play release
+        shell: bash
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          VERSION_CODE: ${{ steps.release_version.outputs.build_number }}
+        run: |
+          python3 -m pip install --disable-pip-version-check 'google-api-python-client==2.187.0'
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          from google.auth.transport.requests import Request
+          from google.oauth2 import service_account
+
+          package_name = "com.pujanggapos.pujangga_pos"
+          version_code = int(os.environ["VERSION_CODE"])
+          service_account_info = json.loads(os.environ["PLAY_SERVICE_ACCOUNT_JSON"])
+          credentials = service_account.Credentials.from_service_account_info(
+              service_account_info,
+              scopes=["https://www.googleapis.com/auth/androidpublisher"],
+          )
+          credentials.refresh(Request())
+
+          api_root = "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/"
+          application = urllib.parse.quote(package_name, safe="")
+
+          def request(method, url, payload=None):
+              body = None if payload is None else json.dumps(payload).encode("utf-8")
+              headers = {"Authorization": f"Bearer {credentials.token}"}
+              if body is not None:
+                  headers["Content-Type"] = "application/json"
+              req = urllib.request.Request(url, data=body, headers=headers, method=method)
+              try:
+                  with urllib.request.urlopen(req, timeout=60) as response:
+                      content = response.read()
+                      return json.loads(content) if content else {}
+              except urllib.error.HTTPError as error:
+                  # Do not print response bodies; API errors can contain sensitive metadata.
+                  print(f"::error::Android Publisher API returned HTTP {error.code} for {method}.")
+                  sys.exit(1)
+
+          edit = request("POST", api_root + application + "/edits")
+          edit_id = edit["id"]
+          edit_url = api_root + application + "/edits/" + urllib.parse.quote(edit_id, safe="")
+
+          def discard_edit():
+              request("DELETE", edit_url)
+
+          track = request("GET", edit_url + "/tracks/production")
+          releases = track.get("releases", [])
+          matching = [
+              release for release in releases
+              if str(version_code) in [str(code) for code in release.get("versionCodes", [])]
+          ]
+
+          if len(matching) != 1:
+              discard_edit()
+              print(f"::error::Expected exactly one Production release for versionCode {version_code}; found {len(matching)}.")
+              sys.exit(1)
+
+          release = matching[0]
+          if [str(code) for code in release.get("versionCodes", [])] != [str(version_code)]:
+              discard_edit()
+              print("::error::The matching Production release contains additional version codes; refusing to change it.")
+              sys.exit(1)
+
+          if release.get("status") == "completed":
+              discard_edit()
+              print(f"Production release versionCode {version_code} is already completed (100% rollout). No change made.")
+              sys.exit(0)
+
+          if release.get("status") != "inProgress":
+              discard_edit()
+              print(f"::error::Expected an inProgress Production release for versionCode {version_code}; found {release.get('status', 'unset')}.")
+              sys.exit(1)
+
+          fraction = release.get("userFraction")
+          if not isinstance(fraction, (int, float)) or not 0 < fraction < 1:
+              discard_edit()
+              print("::error::The matching inProgress release does not have a valid staged rollout fraction; refusing to change it.")
+              sys.exit(1)
+
+          release["status"] = "completed"
+          release.pop("userFraction", None)
+          request("PUT", edit_url + "/tracks/production", track)
+          request("POST", edit_url + ":commit")
+          print(f"Production release versionCode {version_code} completed (100% rollout). No bundle was rebuilt or uploaded.")
+          PY
