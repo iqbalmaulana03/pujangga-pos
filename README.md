@@ -86,6 +86,10 @@ rtk flutter analyze
 rtk flutter test
 ```
 
+## CI/CD Android
+
+Pipeline GitHub Actions dan panduan menyiapkan rilis Google Play ada di [docs/CI-CD.md](docs/CI-CD.md).
+
 ## Catatan Fondasi Issue #1
 
 - App start menginisialisasi SQLite lalu mengecek status setup bisnis.

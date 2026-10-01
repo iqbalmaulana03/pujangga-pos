@@ -1,0 +1,187 @@
+name: Android CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, 'release/*_apps']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/main' }}
+
+jobs:
+  verify:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Analyze Dart code
+        run: flutter analyze --fatal-infos
+
+      - name: Run Flutter tests
+        run: flutter test --no-pub
+
+  release_production:
+    name: Build and publish to Production
+    needs: verify
+    if: >-
+      startsWith(github.ref, 'refs/heads/release/') &&
+      endsWith(github.ref_name, '_apps') &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment:
+      name: google-play-production
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+          channel: stable
+          cache: true
+
+      - name: Validate release branch
+        id: release_version
+        shell: bash
+        run: |
+          branch="${GITHUB_REF_NAME}"
+          version="${branch#release/}"
+          version="${version%_apps}"
+          build_name="${version%%+*}"
+          build_number="${version#*+}"
+
+          if [[ "$branch" != release/*_apps || "$version" != *+* || ! "$build_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! "$build_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Release branches must use release/<major>.<minor>.<patch>+<positive-build-number>_apps, for example release/1.2.2+3_apps."
+            exit 1
+          fi
+
+          pubspec_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*/\1/p' pubspec.yaml)"
+          if [[ "$version" != "$pubspec_version" ]]; then
+            echo "::error::Release branch $branch must match pubspec.yaml version $pubspec_version."
+            exit 1
+          fi
+
+          echo "build_name=$build_name" >> "$GITHUB_OUTPUT"
+          echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+
+      - name: Get dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Prepare Android signing and Play credentials
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          for secret_name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD PLAY_SERVICE_ACCOUNT_JSON; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "::error::Required GitHub Actions secret is missing: ${secret_name}"
+              exit 1
+            fi
+          done
+
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode > android/app/upload-keystore.jks
+          chmod 600 android/app/upload-keystore.jks
+
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+
+          def escape(value: str) -> str:
+              escaped = []
+              for char in value:
+                  codepoint = ord(char)
+                  if char == "\\":
+                      escaped.append("\\\\")
+                  elif char in (" ", ":", "=", "#", "!"):
+                      escaped.append("\\" + char)
+                  elif char == "\t":
+                      escaped.append("\\t")
+                  elif char == "\n":
+                      escaped.append("\\n")
+                  elif char == "\r":
+                      escaped.append("\\r")
+                  elif codepoint < 0x20 or codepoint > 0x7E:
+                      encoded = char.encode("utf-16-be")
+                      escaped.extend(f"\\u{int.from_bytes(encoded[index:index + 2], 'big'):04x}" for index in range(0, len(encoded), 2))
+                  else:
+                      escaped.append(char)
+              return "".join(escaped)
+
+          properties = {
+              "storePassword": os.environ["ANDROID_KEYSTORE_PASSWORD"],
+              "keyPassword": os.environ["ANDROID_KEY_PASSWORD"],
+              "keyAlias": os.environ["ANDROID_KEY_ALIAS"],
+              "storeFile": "upload-keystore.jks",
+          }
+          Path("android/key.properties").write_text(
+              "".join(f"{key}={escape(value)}\n" for key, value in properties.items()),
+              encoding="ascii",
+          )
+          PY
+          chmod 600 android/key.properties
+
+      - name: Build signed Android App Bundle
+        run: >-
+          flutter build appbundle --release
+          --build-name "${{ steps.release_version.outputs.build_name }}"
+          --build-number "${{ steps.release_version.outputs.build_number }}"
+
+      - name: Save Android App Bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pujangga-pos-${{ steps.release_version.outputs.build_name }}+${{ steps.release_version.outputs.build_number }}
+          path: build/app/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish to 10% Production rollout
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.pujanggapos.pujangga_pos
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: production
+          status: inProgress
+          userFraction: 0.1
+
+      - name: Remove signing material
+        if: ${{ always() }}
+        shell: bash
+        run: rm -f android/key.properties android/app/upload-keystore.jks
