@@ -4,8 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
-    tags: ['v*']
+    branches: [main, 'release/*_apps']
   workflow_dispatch:
 
 permissions:
@@ -50,14 +49,15 @@ jobs:
     name: Build and publish to Production
     needs: verify
     if: >-
-      startsWith(github.ref, 'refs/tags/v') &&
+      startsWith(github.ref, 'refs/heads/release/') &&
+      endsWith(github.ref_name, '_apps') &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
       name: google-play-production
     steps:
-      - name: Check out tagged source
+      - name: Check out release branch
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -73,23 +73,24 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Validate release tag
+      - name: Validate release branch
         id: release_version
         shell: bash
         run: |
-          tag="${GITHUB_REF_NAME}"
-          version="${tag#v}"
+          branch="${GITHUB_REF_NAME}"
+          version="${branch#release/}"
+          version="${version%_apps}"
           build_name="${version%%+*}"
           build_number="${version#*+}"
 
-          if [[ "$tag" != v* || "$version" != *+* || ! "$build_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! "$build_number" =~ ^[1-9][0-9]*$ ]]; then
-            echo "::error::Release tags must use v<major>.<minor>.<patch>+<positive-build-number>, for example v1.2.2+3."
+          if [[ "$branch" != release/*_apps || "$version" != *+* || ! "$build_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! "$build_number" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::Release branches must use release/<major>.<minor>.<patch>+<positive-build-number>_apps, for example release/1.2.2+3_apps."
             exit 1
           fi
 
           pubspec_version="$(sed -nE 's/^version:[[:space:]]*([^[:space:]#]+).*/\1/p' pubspec.yaml)"
           if [[ "$version" != "$pubspec_version" ]]; then
-            echo "::error::Release tag $tag must match pubspec.yaml version $pubspec_version."
+            echo "::error::Release branch $branch must match pubspec.yaml version $pubspec_version."
             exit 1
           fi
 
