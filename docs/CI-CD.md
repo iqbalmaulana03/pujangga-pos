@@ -21,7 +21,7 @@ Contoh tag: `v1.2.2+3`. Angka setelah `+` menjadi Android `versionCode`. Sebelum
    - `ANDROID_KEY_PASSWORD`: password upload key.
    - `PLAY_SERVICE_ACCOUNT_JSON`: seluruh JSON service account Google Play Developer API.
 
-   Kredensial signing yang sebelumnya disimpan di `google-play-internal` harus ditambahkan juga ke `google-play-production`. Setelah dipindahkan dan dipastikan tersedia, environment `google-play-internal` tidak lagi digunakan oleh workflow ini. Atur deployment tag rule Production agar hanya mengizinkan tag `v*`, dan wajibkan reviewer untuk menyetujui rilis.
+   Workflow hanya menggunakan environment `google-play-production`. Atur deployment tag rule Production agar hanya mengizinkan tag `v*`, dan wajibkan reviewer untuk menyetujui rilis.
 
    Gunakan file yang dirujuk `storeFile` di `android/key.properties`. Contoh mengirim secret ke GitHub melalui GitHub CLI di PowerShell tanpa mencetak isi ke terminal:
 
