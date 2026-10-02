@@ -81,7 +81,7 @@ jobs:
 
           Report only actionable defects introduced by this diff. Focus on correctness, data loss, security, crashes, and regressions. For each finding, include severity (kritis/tinggi/sedang/rendah), file path, line number in the new version, and a concise explanation. Do not report style preferences or issues that cannot be tied to changed lines. Write the review in Indonesian. If there are no findings, respond exactly: Tidak ada temuan."
 
-          codex exec --sandbox read-only --ask-for-approval never --output-last-message "$CODEX_REVIEW_FILE" "$prompt"
+          codex exec --ephemeral --sandbox read-only --output-last-message "$CODEX_REVIEW_FILE" "$prompt"
           test -s "$CODEX_REVIEW_FILE" || { echo '::error::Codex CLI did not create a non-empty review output file.'; exit 1; }
 
       - name: Post or update PR review comment
