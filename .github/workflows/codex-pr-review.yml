@@ -44,9 +44,12 @@ jobs:
             throw 'Repository variable CODEX_MODEL is not configured.'
           }
 
-      - name: Install Codex CLI
+      - name: Check Codex CLI installation
         shell: pwsh
-        run: npm install --global @openai/codex
+        run: |
+          if (-not (Get-Command codex -ErrorAction SilentlyContinue)) {
+            throw 'Codex CLI is not installed or is not available on PATH. Install it once on the runner with: npm install --global @openai/codex'
+          }
 
       - name: Review pull request
         shell: pwsh

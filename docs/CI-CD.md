@@ -41,7 +41,7 @@ Format branch: `release/<major>.<minor>.<patch>+<versionCode>_apps`, misalnya `r
 
 ## Review PR dengan Codex LB
 
-Workflow review memakai self-hosted GitHub Actions runner agar proses Codex dapat mengakses endpoint Codex LB lokal. Siapkan runner pada mesin yang menjalankan atau dapat menjangkau Codex LB, dan tambahkan label runner `codex-lb` selain label default `self-hosted`. Runner harus memiliki PowerShell 7 dan Node.js/npm. Batasi runner ini untuk repository ini; workflow hanya menerima PR dari branch di repository yang sama dan tidak berjalan untuk PR fork.
+Workflow review memakai self-hosted GitHub Actions runner agar proses Codex dapat mengakses endpoint Codex LB lokal. Siapkan runner pada mesin yang menjalankan atau dapat menjangkau Codex LB, dan tambahkan label runner `codex-lb` selain label default `self-hosted`. Runner harus memiliki PowerShell 7 dan Codex CLI terpasang serta tersedia pada `PATH`. Instal Codex CLI satu kali saat menyiapkan runner dengan `npm install --global @openai/codex`; workflow tidak mengunduhnya ulang pada setiap PR. Node.js/npm diperlukan untuk instalasi awal. Batasi runner ini untuk repository ini; workflow hanya menerima PR dari branch di repository yang sama dan tidak berjalan untuk PR fork.
 
 Di **Settings → Secrets and variables → Actions**, tambahkan:
 
