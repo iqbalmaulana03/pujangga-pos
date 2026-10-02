@@ -12,6 +12,7 @@ class StockItemDbModel {
     this.costPrice,
     this.lastSoldAt,
     this.sku,
+    this.barcode,
     this.unitLabel,
   });
 
@@ -25,6 +26,7 @@ class StockItemDbModel {
   final double? costPrice;
   final DateTime? lastSoldAt;
   final String? sku;
+  final String? barcode;
   final String? unitLabel;
 
   factory StockItemDbModel.fromMap(Map<String, Object?> map) {
@@ -43,6 +45,7 @@ class StockItemDbModel {
           ? DateTime.parse(map['last_sold_at'] as String)
           : null,
       sku: map['sku'] as String?,
+      barcode: map['barcode'] as String?,
       unitLabel: map['unit'] as String?,
     );
   }
@@ -59,6 +62,7 @@ class StockItemDbModel {
       costPrice: costPrice,
       lastSoldAt: lastSoldAt,
       sku: sku,
+      barcode: barcode,
       unitLabel: unitLabel,
     );
   }

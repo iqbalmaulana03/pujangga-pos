@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
+import '../../../../shared/widgets/barcode_scanner_page.dart';
+import '../../domain/entities/stock_adjustment_request.dart';
 import '../../domain/entities/stock_item.dart';
 import '../controllers/stok_controller.dart';
 
@@ -22,6 +24,101 @@ class _StokPageState extends ConsumerState<StokPage> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scanAndAddStock() async {
+    final barcode = await BarcodeScannerPage.scan(context);
+    if (!mounted || barcode == null) return;
+
+    final state = ref.read(stokControllerProvider).asData?.value;
+    StockItem? item;
+    for (final candidate in state?.allItems ?? const <StockItem>[]) {
+      if (candidate.barcode == barcode) {
+        item = candidate;
+        break;
+      }
+    }
+
+    if (item == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Barcode $barcode belum terdaftar di katalog.')),
+      );
+      return;
+    }
+    final selectedItem = item;
+
+    final quantityController = TextEditingController();
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final quantityRoute = DialogRoute<double>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Tambah Stok'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(selectedItem.name),
+            const SizedBox(height: 12),
+            TextField(
+              controller: quantityController,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: const InputDecoration(labelText: 'Jumlah barang'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final value = QuantityFormatter.parse(quantityController.text);
+              if (value != null && value > 0) {
+                Navigator.pop(dialogContext, value);
+              }
+            },
+            child: const Text('Tambah'),
+          ),
+        ],
+      ),
+    );
+    final quantity = await navigator.push<double>(quantityRoute);
+    // The route result is available as soon as it starts popping. Keep the
+    // TextField controller alive until the reverse transition has removed
+    // the dialog subtree and its inherited-widget dependents.
+    await quantityRoute.completed;
+    quantityController.dispose();
+    if (!mounted || quantity == null) return;
+
+    try {
+      await ref
+          .read(stokControllerProvider.notifier)
+          .submitAdjustment(
+            StockAdjustmentRequest(
+              itemId: selectedItem.id,
+              adjustmentType: 'manual_add',
+              quantity: quantity,
+              notes: 'Tambah stok melalui pemindaian barcode',
+            ),
+          );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Stok ${selectedItem.name} bertambah ${QuantityFormatter.format(quantity)}.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal menambah stok: $error')));
+    }
   }
 
   @override
@@ -151,6 +248,12 @@ class _StokPageState extends ConsumerState<StokPage> {
                             ),
                           ),
                         ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _scanAndAddStock,
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Pindai Barcode untuk Tambah Stok'),
                       ),
                       const SizedBox(height: 12),
                       SingleChildScrollView(

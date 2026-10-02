@@ -381,7 +381,8 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       final matchesSearch =
           normalizedQuery.isEmpty ||
           item.name.toLowerCase().contains(normalizedQuery) ||
-          item.category.toLowerCase().contains(normalizedQuery);
+          item.category.toLowerCase().contains(normalizedQuery) ||
+          (item.barcode?.contains(normalizedQuery) ?? false);
       return matchesFilter && matchesSearch;
     }).toList();
 

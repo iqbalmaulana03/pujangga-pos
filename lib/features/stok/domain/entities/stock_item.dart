@@ -10,6 +10,7 @@ class StockItem {
     this.costPrice,
     this.lastSoldAt,
     this.sku,
+    this.barcode,
     this.unitLabel,
   });
 
@@ -23,6 +24,7 @@ class StockItem {
   final double? costPrice;
   final DateTime? lastSoldAt;
   final String? sku;
+  final String? barcode;
   final String? unitLabel;
 
   bool get isLowStock => currentStock <= 5;

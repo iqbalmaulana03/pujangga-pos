@@ -14,6 +14,7 @@ import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
 import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
+import '../../../../shared/widgets/barcode_scanner_page.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_state.dart';
 
@@ -33,6 +34,32 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     _searchController.dispose();
     _cashController.dispose();
     super.dispose();
+  }
+
+  Future<void> _scanAndAddItem() async {
+    final barcode = await BarcodeScannerPage.scan(context);
+    if (!mounted || barcode == null) return;
+
+    final state = ref.read(transaksiControllerProvider).asData?.value;
+    TransaksiItem? item;
+    for (final candidate in state?.catalogItems ?? const <TransaksiItem>[]) {
+      if (candidate.barcode == barcode) {
+        item = candidate;
+        break;
+      }
+    }
+
+    if (item == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Barcode $barcode belum terdaftar di katalog.')),
+      );
+      return;
+    }
+
+    ref.read(transaksiControllerProvider.notifier).addItem(item);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${item.name} ditambahkan ke keranjang.')),
+    );
   }
 
   Future<void> _submitTransaction({BuildContext? bottomSheetContext}) async {
@@ -555,35 +582,52 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: ref
-                      .read(transaksiControllerProvider.notifier)
-                      .updateSearch,
-                  decoration: InputDecoration(
-                    hintText: 'Cari barang...',
-                    prefixIcon: const Icon(
-                      Icons.search,
-                      color: Color(0xFF3F4947),
-                    ),
-                    filled: true,
-                    fillColor: const Color(0xFFF2F4F2),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF0D5C56),
-                        width: 1.5,
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: ref
+                            .read(transaksiControllerProvider.notifier)
+                            .updateSearch,
+                        decoration: InputDecoration(
+                          hintText: 'Cari barang...',
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: Color(0xFF3F4947),
+                          ),
+                          filled: true,
+                          fillColor: const Color(0xFFF2F4F2),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF0D5C56),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      tooltip: 'Pindai barcode untuk transaksi',
+                      onPressed: _scanAndAddItem,
+                      icon: const Icon(Icons.qr_code_scanner),
+                      style: IconButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D5C56),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(48, 48),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Row(

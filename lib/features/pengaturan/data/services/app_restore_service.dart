@@ -109,12 +109,16 @@ class AppRestoreService {
         );
       }
 
-      if (
-        tableName == 'app_settings' &&
-        backupSchemaVersion < AppConstants.databaseVersion
-      ) {
+      if (tableName == 'app_settings' &&
+          backupSchemaVersion < AppConstants.databaseVersion) {
         for (final row in normalizedRows) {
           row.putIfAbsent('auto_print_receipt', () => 1);
+        }
+      }
+
+      if (tableName == 'items' && backupSchemaVersion < 12) {
+        for (final row in normalizedRows) {
+          row.putIfAbsent('barcode', () => null);
         }
       }
 

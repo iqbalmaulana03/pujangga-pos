@@ -9,6 +9,7 @@ class CatalogItemDbModel {
     required this.sellingPrice,
     required this.isActive,
     this.sku,
+    this.barcode,
     this.stockQuantity,
     this.unitLabel,
     this.costPrice,
@@ -23,6 +24,7 @@ class CatalogItemDbModel {
   final double sellingPrice;
   final bool isActive;
   final String? sku;
+  final String? barcode;
   final double? stockQuantity;
   final String? unitLabel;
   final double? costPrice;
@@ -42,6 +44,7 @@ class CatalogItemDbModel {
           (map['selling_price'] as num).toDouble(),
       isActive: (map['is_active'] as num).toInt() == 1,
       sku: map['sku'] as String?,
+      barcode: map['barcode'] as String?,
       stockQuantity:
           ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
               ?.toDouble(),
@@ -63,6 +66,7 @@ class CatalogItemDbModel {
       sellingPrice: sellingPrice,
       isActive: isActive,
       sku: sku,
+      barcode: barcode,
       stockQuantity: stockQuantity,
       unitLabel: unitLabel,
       costPrice: costPrice,

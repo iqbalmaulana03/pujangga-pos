@@ -6,6 +6,7 @@ class CatalogItemDraft {
     required this.sellingPrice,
     required this.isActive,
     this.sku,
+    this.barcode,
     this.stockQuantity,
     this.unitLabel,
     this.costPrice,
@@ -19,6 +20,7 @@ class CatalogItemDraft {
   final double sellingPrice;
   final bool isActive;
   final String? sku;
+  final String? barcode;
   final double? stockQuantity;
   final String? unitLabel;
   final double? costPrice;

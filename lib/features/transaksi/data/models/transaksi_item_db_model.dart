@@ -9,6 +9,7 @@ class TransaksiItemDbModel {
     required this.sellingPrice,
     required this.isActive,
     this.stockQuantity,
+    this.barcode,
     this.unitLabel,
     this.wholesalePrice,
     this.wholesaleMinQuantity,
@@ -21,6 +22,7 @@ class TransaksiItemDbModel {
   final double sellingPrice;
   final bool isActive;
   final double? stockQuantity;
+  final String? barcode;
   final String? unitLabel;
   final double? wholesalePrice;
   final int? wholesaleMinQuantity;
@@ -38,6 +40,7 @@ class TransaksiItemDbModel {
       stockQuantity:
           ((map['stock_qty'] as num?) ?? (map['stock_quantity'] as num?))
               ?.toDouble(),
+      barcode: map['barcode'] as String?,
       unitLabel: (map['unit'] as String?) ?? map['unit_label'] as String?,
       isActive: (map['is_active'] as num).toInt() == 1,
       wholesalePrice: (map['wholesale_price'] as num?)?.toDouble(),
@@ -53,6 +56,7 @@ class TransaksiItemDbModel {
       itemType: itemType == 'service' ? 'jasa' : 'barang',
       sellingPrice: sellingPrice,
       stockQuantity: stockQuantity,
+      barcode: barcode,
       unitLabel: unitLabel,
       isActive: isActive,
       wholesalePrice: wholesalePrice,
