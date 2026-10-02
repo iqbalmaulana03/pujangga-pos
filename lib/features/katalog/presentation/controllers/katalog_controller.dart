@@ -23,12 +23,10 @@ final katalogControllerProvider =
       KatalogController.new,
     );
 
-final catalogItemProvider = FutureProvider.autoDispose.family<CatalogItem?, String>((
-  ref,
-  itemId,
-) {
-  return ref.watch(catalogRepositoryProvider).getItemById(itemId);
-});
+final catalogItemProvider = FutureProvider.autoDispose
+    .family<CatalogItem?, String>((ref, itemId) {
+      return ref.watch(catalogRepositoryProvider).getItemById(itemId);
+    });
 
 class KatalogController extends AsyncNotifier<KatalogState> {
   @override
@@ -113,7 +111,8 @@ class KatalogController extends AsyncNotifier<KatalogState> {
           normalizedQuery.isEmpty ||
           item.name.toLowerCase().contains(normalizedQuery) ||
           item.category.toLowerCase().contains(normalizedQuery) ||
-          (item.sku?.toLowerCase().contains(normalizedQuery) ?? false);
+          (item.sku?.toLowerCase().contains(normalizedQuery) ?? false) ||
+          (item.barcode?.contains(normalizedQuery) ?? false);
       return matchesType && matchesStatus && matchesQuery;
     }).toList();
 

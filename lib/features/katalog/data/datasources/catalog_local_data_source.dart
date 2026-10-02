@@ -56,12 +56,15 @@ class CatalogLocalDataSource {
       );
 
       final stockQuantity = draft.isBarang ? (draft.stockQuantity ?? 0) : 0;
+      final barcode = _normalizedBarcode(draft.barcode);
+      await _ensureBarcodeAvailable(txn, barcode);
       final itemId = await txn.insert('items', {
         'category_id': categoryId,
         'name': draft.name.trim(),
         'item_type': dbItemType,
         'sale_price': draft.sellingPrice,
         'sku': _normalizedText(draft.sku),
+        'barcode': barcode,
         'stock_qty': stockQuantity,
         'unit': _normalizedText(draft.unitLabel),
         'harga_modal': draft.isBarang ? draft.costPrice : null,
@@ -141,6 +144,8 @@ class CatalogLocalDataSource {
         itemType: dbItemType,
         timestamp: timestamp,
       );
+      final barcode = _normalizedBarcode(draft.barcode);
+      await _ensureBarcodeAvailable(txn, barcode, excludingItemId: id);
       final nextStock = draft.isBarang ? (draft.stockQuantity ?? 0) : 0;
       final updatedRows = await txn.update(
         'items',
@@ -150,6 +155,7 @@ class CatalogLocalDataSource {
           'item_type': dbItemType,
           'sale_price': draft.sellingPrice,
           'sku': _normalizedText(draft.sku),
+          'barcode': barcode,
           'stock_qty': nextStock,
           'unit': _normalizedText(draft.unitLabel),
           'harga_modal': draft.isBarang ? draft.costPrice : null,
@@ -239,5 +245,35 @@ class CatalogLocalDataSource {
   String? _normalizedText(String? value) {
     final trimmed = value?.trim() ?? '';
     return trimmed.isEmpty ? null : trimmed;
+  }
+
+  String? _normalizedBarcode(String? value) {
+    final normalized = value?.replaceAll(RegExp(r'\s+'), '') ?? '';
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  Future<void> _ensureBarcodeAvailable(
+    dynamic db,
+    String? barcode, {
+    int? excludingItemId,
+  }) async {
+    if (barcode == null) return;
+    final rows = await db.query(
+      'items',
+      columns: ['id'],
+      where: excludingItemId == null
+          ? 'barcode = ?'
+          : 'barcode = ? AND id != ?',
+      whereArgs: excludingItemId == null
+          ? [barcode]
+          : [barcode, excludingItemId],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      throw const AppException(
+        'barcode_duplicate',
+        'Barcode ini sudah digunakan oleh barang lain.',
+      );
+    }
   }
 }

@@ -8,6 +8,7 @@ import '../../../../core/utils/quantity_formatter.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
+import '../../../../shared/widgets/barcode_scanner_page.dart';
 import '../../domain/entities/catalog_item_draft.dart';
 import '../controllers/katalog_controller.dart';
 
@@ -25,6 +26,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   final _nameController = TextEditingController();
   final _categoryController = TextEditingController();
   final _skuController = TextEditingController();
+  final _barcodeController = TextEditingController();
   final _unitController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController(text: '0');
@@ -45,6 +47,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
     _nameController.dispose();
     _categoryController.dispose();
     _skuController.dispose();
+    _barcodeController.dispose();
     _unitController.dispose();
     _priceController.dispose();
     _stockController.dispose();
@@ -66,6 +69,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       sellingPrice: double.parse(_priceController.text.trim()),
       isActive: _isActive,
       sku: _skuController.text.trim(),
+      barcode: _itemType == 'barang' ? _barcodeController.text.trim() : null,
       unitLabel: _unitController.text.trim(),
       stockQuantity: _itemType == 'barang'
           ? QuantityFormatter.parse(_stockController.text)!
@@ -193,6 +197,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           _nameController.text = item.name;
           _categoryController.text = item.category;
           _skuController.text = item.sku ?? '';
+          _barcodeController.text = item.barcode ?? '';
           _unitController.text = item.unitLabel ?? '';
           _priceController.text = item.sellingPrice.toStringAsFixed(0);
           _stockController.text = QuantityFormatter.format(
@@ -227,6 +232,12 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _scanBarcode() async {
+    final barcode = await BarcodeScannerPage.scan(context);
+    if (!mounted || barcode == null) return;
+    setState(() => _barcodeController.text = barcode);
   }
 
   void _adjustStock(int amount) {
@@ -780,6 +791,38 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                 ),
                               ],
                             ),
+                            if (isProduct) ...[
+                              const SizedBox(height: 16),
+                              const Text(
+                                'BARCODE (OPSIONAL)',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF3F4947),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _barcodeController,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  hintText: 'Pindai atau masukkan kode',
+                                  filled: true,
+                                  fillColor: const Color(0xFFF2F4F2),
+                                  suffixIcon: IconButton(
+                                    tooltip: 'Pindai barcode',
+                                    onPressed: _scanBarcode,
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

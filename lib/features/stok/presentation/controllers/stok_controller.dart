@@ -19,31 +19,29 @@ final stockRepositoryProvider = Provider<StockRepository>((ref) {
   );
 });
 
-final stokControllerProvider = AsyncNotifierProvider.autoDispose<StokController, StokState>(
-  StokController.new,
+final stokControllerProvider =
+    AsyncNotifierProvider.autoDispose<StokController, StokState>(
+      StokController.new,
+    );
+
+final stockItemProvider = FutureProvider.autoDispose.family<StockItem?, String>(
+  (ref, itemId) {
+    return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
+  },
 );
 
-final stockItemProvider = FutureProvider.autoDispose.family<StockItem?, String>((
-  ref,
-  itemId,
-) {
-  return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
-});
-
-final stockMovementsProvider =
-    FutureProvider.autoDispose.family<List<StockMovement>, String>((ref, itemId) {
+final stockMovementsProvider = FutureProvider.autoDispose
+    .family<List<StockMovement>, String>((ref, itemId) {
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
-final stockItemDetailProvider = FutureProvider.autoDispose.family<StockItem?, String>((
-  ref,
-  itemId,
-) {
-  return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
-});
+final stockItemDetailProvider = FutureProvider.autoDispose
+    .family<StockItem?, String>((ref, itemId) {
+      return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
+    });
 
-final stockMovementDetailProvider =
-    FutureProvider.autoDispose.family<List<StockMovement>, String>((ref, itemId) {
+final stockMovementDetailProvider = FutureProvider.autoDispose
+    .family<List<StockMovement>, String>((ref, itemId) {
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
@@ -114,7 +112,8 @@ class StokController extends AsyncNotifier<StokState> {
               normalizedQuery.isEmpty ||
               item.name.toLowerCase().contains(normalizedQuery) ||
               item.category.toLowerCase().contains(normalizedQuery) ||
-              (item.sku?.toLowerCase().contains(normalizedQuery) ?? false);
+              (item.sku?.toLowerCase().contains(normalizedQuery) ?? false) ||
+              (item.barcode?.contains(normalizedQuery) ?? false);
           return matchesCategory && matchesQuery;
         }).toList()..sort((a, b) {
           if (a.currentStock != b.currentStock) {

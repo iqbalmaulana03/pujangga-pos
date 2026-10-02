@@ -7,6 +7,7 @@ class TransaksiItem {
     required this.sellingPrice,
     required this.isActive,
     this.stockQuantity,
+    this.barcode,
     this.unitLabel,
     this.wholesalePrice,
     this.wholesaleMinQuantity,
@@ -19,6 +20,7 @@ class TransaksiItem {
   final double sellingPrice;
   final bool isActive;
   final double? stockQuantity;
+  final String? barcode;
   final String? unitLabel;
   final double? wholesalePrice;
   final int? wholesaleMinQuantity;

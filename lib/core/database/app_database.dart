@@ -87,6 +87,23 @@ class AppDatabase {
     if (oldVersion < 11) {
       await _migrateToVersion11(db);
     }
+    if (oldVersion < 12) {
+      await _migrateToVersion12(db);
+    }
+  }
+
+  Future<void> _migrateToVersion12(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (!existingTables.contains('items')) return;
+
+    final columns = await db.rawQuery('PRAGMA table_info(items)');
+    final hasBarcode = columns.any((column) => column['name'] == 'barcode');
+    if (!hasBarcode) {
+      await db.execute('ALTER TABLE items ADD COLUMN barcode TEXT');
+    }
+    await db.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL AND barcode != ''",
+    );
   }
 
   Future<void> _migrateToVersion11(Database db) async {
@@ -109,10 +126,14 @@ class AppDatabase {
   Future<void> _migrateToVersion10(Database db) async {
     final existingTables = await _getExistingTables(db);
     if (existingTables.contains('sales_transactions')) {
-      final columns = await db.rawQuery('PRAGMA table_info(sales_transactions)');
+      final columns = await db.rawQuery(
+        'PRAGMA table_info(sales_transactions)',
+      );
       final hasStatus = columns.any((c) => c['name'] == 'status');
       if (!hasStatus) {
-        await db.execute('ALTER TABLE sales_transactions ADD COLUMN status TEXT NOT NULL DEFAULT \'completed\'');
+        await db.execute(
+          'ALTER TABLE sales_transactions ADD COLUMN status TEXT NOT NULL DEFAULT \'completed\'',
+        );
       }
     }
   }
@@ -121,15 +142,21 @@ class AppDatabase {
     final existingTables = await _getExistingTables(db);
     if (existingTables.contains('items')) {
       final columns = await db.rawQuery('PRAGMA table_info(items)');
-      
-      final hasWholesalePrice = columns.any((c) => c['name'] == 'wholesale_price');
+
+      final hasWholesalePrice = columns.any(
+        (c) => c['name'] == 'wholesale_price',
+      );
       if (!hasWholesalePrice) {
         await db.execute('ALTER TABLE items ADD COLUMN wholesale_price REAL');
       }
-      
-      final hasWholesaleMin = columns.any((c) => c['name'] == 'wholesale_min_quantity');
+
+      final hasWholesaleMin = columns.any(
+        (c) => c['name'] == 'wholesale_min_quantity',
+      );
       if (!hasWholesaleMin) {
-        await db.execute('ALTER TABLE items ADD COLUMN wholesale_min_quantity INTEGER');
+        await db.execute(
+          'ALTER TABLE items ADD COLUMN wholesale_min_quantity INTEGER',
+        );
       }
     }
   }
@@ -138,7 +165,7 @@ class AppDatabase {
     final existingTables = await _getExistingTables(db);
     if (!existingTables.contains('capital_history')) {
       await _createCapitalHistoryTable(db);
-      
+
       if (existingTables.contains('business_profile')) {
         final profileRows = await db.query('business_profile', limit: 1);
         if (profileRows.isNotEmpty) {
@@ -434,6 +461,7 @@ class AppDatabase {
         category_id INTEGER,
         name TEXT NOT NULL,
         sku TEXT,
+        barcode TEXT,
         item_type TEXT NOT NULL CHECK(item_type IN ('product', 'service')),
         unit TEXT,
         sale_price REAL NOT NULL,
@@ -556,6 +584,9 @@ class AppDatabase {
     );
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_items_sku ON items(sku) WHERE sku IS NOT NULL AND sku != \'\'',
+    );
+    await db.execute(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_items_barcode ON items(barcode) WHERE barcode IS NOT NULL AND barcode != ''",
     );
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_name_item_type ON categories(name, item_type)',
