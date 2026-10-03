@@ -1,146 +1,62 @@
-# Contributing Guide
+# Panduan Kontribusi
 
-Dokumen ini menjelaskan aturan kontribusi untuk repo `amaris-barbershop-backend`.
+Terima kasih sudah membantu mengembangkan Pujangga POS. Panduan ini menjelaskan cara menyiapkan proyek, membuat perubahan yang selaras dengan produk, dan mengirimkannya untuk ditinjau.
 
-## Tujuan
+## Sebelum mulai
 
-Repository ini digunakan untuk backend sistem operasional barbershop yang mencakup:
+- Untuk perubahan besar atau fitur baru, buka issue atau diskusikan usulannya terlebih dahulu agar ruang lingkupnya jelas.
+- Periksa issue yang sudah ada sebelum mulai mengerjakan hal yang sama.
+- Jaga setiap pull request tetap fokus pada satu perubahan yang bisa ditinjau.
 
-- POS transaksi jasa dan produk
-- Booking online
-- Manajemen antrian
-- Perhitungan komisi kapster
-- Absensi kapster
-- Reporting owner dan admin
+## Siapkan proyek
 
-Karena cakupan fiturnya saling terhubung, kontribusi perlu konsisten agar perubahan mudah direview dan aman digabung.
+Pasang Flutter SDK yang memenuhi batas Dart di `pubspec.yaml`, Android SDK, dan emulator atau perangkat Android. Dari direktori proyek, jalankan:
 
-## Cara Mulai
+```bash
+flutter pub get
+flutter run
+```
 
-1. Ambil issue yang jelas scope-nya.
-2. Pastikan issue memiliki acceptance criteria.
-3. Sync branch `main`.
-4. Buat branch kerja baru.
-5. Kerjakan perubahan secukupnya untuk satu issue.
-6. Buat Pull Request ke `main`.
+## Kerjakan perubahan
 
-## Aturan Umum Kontribusi
+1. Buat branch kerja dari `main` terbaru. Gunakan nama singkat yang menjelaskan pekerjaan, misalnya `feat/stock-alert` atau `docs/contribution-guide`.
+2. Implementasikan perubahan sesuai ruang lingkup issue. Hindari memasukkan refactor atau fitur lain yang tidak terkait.
+3. Tambahkan atau perbarui test saat mengubah behavior aplikasi.
+4. Perbarui dokumentasi jika perubahan memengaruhi setup, alur pengguna, atau cara kerja fitur.
 
-- Jangan commit langsung ke `main`
-- Semua perubahan masuk melalui Pull Request
-- Satu branch untuk satu issue utama
-- Hindari mencampur refactor besar dengan fitur baru dalam satu PR
-- Jika ada perubahan API contract, jelaskan impact-nya di PR
-- Jika ada perubahan schema database, sertakan migration yang relevan
+## Panduan untuk perubahan UI
 
-## Struktur Branch
+Sebelum mengubah UI, baca dokumen berikut:
 
-Gunakan jenis branch berikut:
+- [STITCH-FINAL-SCREENS.md](STITCH-FINAL-SCREENS.md) untuk layar dan keputusan desain yang dikunci.
+- [USER-FLOW-Pujangga-POS.md](USER-FLOW-Pujangga-POS.md) untuk alur pengguna.
+- [PRD-Pujangga-POS.md](PRD-Pujangga-POS.md) untuk ruang lingkup dan kebutuhan produk.
 
-- `feature/*` untuk fitur baru
-- `fix/*` untuk bug fix
-- `chore/*` untuk setup, tooling, dan maintenance
-- `docs/*` untuk dokumentasi
-- `refactor/*` untuk perubahan struktur internal tanpa ubah behavior utama
+> Pujangga POS menggunakan navigasi utama lima tab: Beranda, Katalog, Transaksi, Stok, dan Laporan. Riwayat Transaksi dan Pengaturan berada di luar tab utama. Jika keterbatasan implementasi mengharuskan perubahan dari desain canonical, jelaskan alasannya di pull request.
 
-Format branch:
+## Penyimpanan lokal
 
-- `<jenis-branch>/<nomor-issue>-<slug-task>`
+Data aplikasi disimpan di SQLite pada perangkat. Jika mengubah schema atau model data, pertahankan data pengguna yang sudah tersimpan dan sertakan migrasi database bila diperlukan. Jelaskan dampak perubahan data pada pull request.
 
-Contoh:
+## Periksa perubahan
 
-- `feature/6-pos-transaction-api`
-- `feature/8-attendance-api`
-- `docs/11-contribution-guide`
-- `fix/7-commission-rounding`
+Jalankan pemeriksaan yang relevan sebelum mengirim pull request:
 
-Lihat detail tambahan pada [docs/BRANCH_STRATEGY.md](./docs/BRANCH_STRATEGY.md).
+```bash
+flutter analyze --fatal-infos
+flutter test
+```
 
-## Format Commit Message
+GitHub Actions juga menjalankan analisis dan test pada pull request menuju `main`. Jika pemeriksaan tidak dapat dijalankan, sebutkan alasannya dan pemeriksaan yang sudah dilakukan.
 
-Gunakan format:
+## Kirim pull request
 
-- `<prefix>[<nomor-issue>]: <deskripsi-singkat>`
+Targetkan pull request ke `main`. Sertakan:
 
-Contoh:
+- Ringkasan perubahan dan alasan perubahan.
+- Referensi issue terkait, jika ada.
+- Langkah verifikasi serta hasilnya.
+- Dampak pada UI, penyimpanan lokal, atau dokumentasi jika relevan.
+- Screenshot atau rekaman singkat untuk perubahan UI.
 
-- `feat[6]: add POS transaction create endpoint`
-- `fix[7]: correct commission calculation for service items`
-- `docs[11]: add backend contribution guide`
-- `chore[1]: setup project foundation`
-
-Prefix yang dipakai:
-
-- `feat`
-- `fix`
-- `docs`
-- `chore`
-- `refactor`
-- `test`
-
-## Pull Request Checklist
-
-Sebelum membuat PR, pastikan:
-
-- Branch berasal dari `main` terbaru
-- Scope PR fokus pada satu issue utama
-- Perubahan sudah dites secara lokal sesuai konteks
-- Migration sudah dicek jika ada perubahan database
-- Environment variable baru sudah ditambahkan ke `.env.example` jika perlu
-- Dokumentasi diperbarui jika ada perubahan behavior atau workflow
-
-## Isi Pull Request
-
-PR minimal harus menjelaskan:
-
-- Ringkasan perubahan
-- Issue yang dikerjakan
-- Perubahan schema atau contract API jika ada
-- Langkah verifikasi
-- Risiko atau area yang perlu perhatian reviewer
-
-Contoh referensi issue di PR:
-
-- `Closes #6`
-- `Refs #8`
-
-## Review Policy
-
-- Minimal satu reviewer
-- Reviewer fokus pada behavior, integrasi, dan risiko regresi
-- PR kecil lebih diutamakan daripada PR besar
-- Jika PR terlalu besar, pecah menjadi beberapa issue dan branch
-
-## Database dan Migration
-
-Jika perubahan menyentuh data model:
-
-- Sertakan migration
-- Pastikan naming migration jelas
-- Hindari perubahan schema yang tidak terkait issue
-- Jelaskan impact data pada deskripsi PR
-
-## API Contract
-
-Jika endpoint baru atau response berubah:
-
-- Jelaskan request/response utama di PR
-- Sebutkan apakah frontend atau integrasi lain perlu penyesuaian
-- Jaga konsistensi naming field dan status code
-
-## Dokumentasi
-
-Kontributor diharapkan memperbarui dokumentasi jika:
-
-- menambah modul baru,
-- mengubah workflow kontribusi,
-- mengubah strategi branch,
-- atau mengubah setup project.
-
-## Merge Policy
-
-Disarankan menggunakan `Squash and merge` agar history `main` tetap ringkas dan mudah ditelusuri ke issue terkait.
-
-## Catatan
-
-Jika repository nanti sudah memiliki CI, aktifkan branch protection dan status checks sebagai syarat merge. Checklist-nya tersedia di [docs/BRANCH_PROTECTION_CHECKLIST.md](./docs/BRANCH_PROTECTION_CHECKLIST.md).
+Tinjau kembali diff sebelum mengirim: pastikan perubahan tetap dalam ruang lingkup, tidak menyertakan file lokal atau rahasia, dan dokumentasi sesuai dengan behavior yang diubah.
