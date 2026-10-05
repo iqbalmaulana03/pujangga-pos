@@ -6,15 +6,6 @@ on:
   push:
     branches: [main, 'release/*_apps']
   workflow_dispatch:
-    inputs:
-      action:
-        description: Action to run for this release branch
-        type: choice
-        options:
-          - publish
-          - complete_rollout
-        default: publish
-        required: true
 
 permissions:
   contents: read
@@ -60,7 +51,8 @@ jobs:
     if: >-
       startsWith(github.ref, 'refs/heads/release/') &&
       endsWith(github.ref_name, '_apps') &&
-      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.action == 'publish'))
+      github.event_name == 'push' &&
+      github.event.created == true
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
@@ -197,10 +189,13 @@ jobs:
 
   complete_production_rollout:
     name: Complete Production rollout
-    needs: verify
+    needs: [verify, release_production]
     if: >-
-      github.event_name == 'workflow_dispatch' &&
-      inputs.action == 'complete_rollout' &&
+      always() &&
+      needs.verify.result == 'success' &&
+      ((github.event_name == 'push' &&
+      (github.event.created != true || needs.release_production.result == 'success')) ||
+      github.event_name == 'workflow_dispatch') &&
       startsWith(github.ref, 'refs/heads/release/') &&
       endsWith(github.ref_name, '_apps')
     runs-on: ubuntu-latest
@@ -274,8 +269,33 @@ jobs:
                       content = response.read()
                       return json.loads(content) if content else {}
               except urllib.error.HTTPError as error:
-                  # Do not print response bodies; API errors can contain sensitive metadata.
-                  print(f"::error::Android Publisher API returned HTTP {error.code} for {method}.")
+                  # Log only the structured diagnostic fields, never the full response body.
+                  try:
+                      response_payload = json.loads(error.read().decode("utf-8"))
+                      response_error = response_payload.get("error", {}) if isinstance(response_payload, dict) else {}
+                  except (UnicodeDecodeError, json.JSONDecodeError):
+                      response_error = {}
+                  if not isinstance(response_error, dict):
+                      response_error = {}
+                  reasons = response_error.get("errors", [])
+                  if not isinstance(reasons, list):
+                      reasons = []
+                  reasons = sorted({
+                      item["reason"] for item in reasons
+                      if isinstance(item, dict) and isinstance(item.get("reason"), str)
+                  })
+                  status = response_error.get("status")
+                  message = response_error.get("message")
+                  details = []
+                  if isinstance(status, str):
+                      details.append(f"status={status}")
+                  if reasons:
+                      details.append(f"reasons={','.join(reasons)}")
+                  if isinstance(message, str):
+                      message = message.replace("\r", " ").replace("\n", " ")[:500]
+                      details.append(f"message={message}")
+                  suffix = f" ({'; '.join(details)})" if details else " (no structured error details returned)"
+                  print(f"::error::Android Publisher API returned HTTP {error.code} for {method}{suffix}.")
                   sys.exit(1)
 
           edit = request("POST", api_root + application + "/edits")
