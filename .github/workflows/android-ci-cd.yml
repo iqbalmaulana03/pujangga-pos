@@ -339,6 +339,12 @@ jobs:
               print("::error::The matching inProgress release does not have a valid staged rollout fraction; refusing to change it.")
               sys.exit(1)
 
+          # The Production track accepts only one completed release. Remove the
+          # previous completed release from this track update before promoting the staged release.
+          track["releases"] = [
+              current for current in releases
+              if current is release or current.get("status") != "completed"
+          ]
           release["status"] = "completed"
           release.pop("userFraction", None)
           request("PUT", edit_url + "/tracks/production", track)
