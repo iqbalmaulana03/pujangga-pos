@@ -14,6 +14,11 @@ class TransaksiReceipt {
     required this.items,
     this.status = 'completed',
     this.cashPaidAmount,
+    this.employeeName,
+    this.compensationType,
+    this.commissionPercent,
+    this.commissionScope = 'all',
+    this.commissionAmount = 0,
   });
 
   final String invoiceNumber;
@@ -28,4 +33,14 @@ class TransaksiReceipt {
   final String status;
   final double? cashPaidAmount;
   final List<TransaksiCartItem> items;
+  final String? employeeName;
+  final String? compensationType;
+  final double? commissionPercent;
+  final String commissionScope;
+  String get commissionScopeLabel => switch (commissionScope) {
+    'service' => 'Jasa saja',
+    'product' => 'Barang saja',
+    _ => 'Barang dan jasa',
+  };
+  final double commissionAmount;
 }

@@ -12,6 +12,7 @@ import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
 import '../../../stok/presentation/controllers/stok_controller.dart';
+import '../../../karyawan/presentation/controllers/employee_controller.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
 import '../../../../shared/widgets/barcode_scanner_page.dart';
@@ -1146,6 +1147,51 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
             'Pajak (${(ref.watch(appSettingsProvider).asData?.value.defaultTaxPercent ?? 0.0).toStringAsFixed(0)}%)',
             CurrencyFormatter.format(state.taxAmount),
           ),
+          const SizedBox(height: 12),
+          Consumer(
+            builder: (context, employeeRef, _) => employeeRef
+                .watch(activeEmployeesProvider)
+                .when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, _) => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Karyawan gagal dimuat.',
+                      style: TextStyle(color: Color(0xFFBA1A1A)),
+                    ),
+                  ),
+                  data: (employees) => DropdownButtonFormField<int?>(
+                    isExpanded: true,
+                    initialValue: state.employeeId,
+                    decoration: const InputDecoration(
+                      labelText: 'Karyawan (opsional)',
+                      border: OutlineInputBorder(),
+                      isDense: true,
+                    ),
+                    items: [
+                      const DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text('Tanpa karyawan'),
+                      ),
+                      ...employees.map(
+                        (employee) => DropdownMenuItem<int?>(
+                          value: employee.id,
+                          child: Text(
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            employee.isCommission
+                                ? '${employee.name} · ${employee.commissionScopeLabel}'
+                                : employee.name,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) => employeeRef
+                        .read(transaksiControllerProvider.notifier)
+                        .updateEmployee(value),
+                  ),
+                ),
+          ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1476,25 +1522,32 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.shopping_bag_outlined,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${state.cartItems.length} item • ${CurrencyFormatter.format(state.totalAmount)}',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.shopping_bag_outlined,
                       color: Colors.white,
+                      size: 20,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${state.cartItems.length} item • ${CurrencyFormatter.format(state.totalAmount)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Row(
                 children: const [
                   Text(

@@ -54,6 +54,7 @@ class RiwayatLocalDataSource {
       if (currentStatus == 'voided') return;
 
       final now = DateTime.now().toIso8601String();
+      await txn.delete('expenses', where: 'source_type = ? AND source_id = ?', whereArgs: ['commission', transactionId]);
 
       await txn.update(
         'sales_transactions',

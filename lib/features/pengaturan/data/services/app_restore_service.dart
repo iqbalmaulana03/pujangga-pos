@@ -58,7 +58,7 @@ class AppRestoreService {
     if (databaseInfo is! Map<String, dynamic> ||
         databaseInfo['name'] != AppConstants.databaseName ||
         backupSchemaVersion == null ||
-        backupSchemaVersion < AppConstants.databaseVersion - 1 ||
+        backupSchemaVersion < 12 ||
         backupSchemaVersion > AppConstants.databaseVersion) {
       throw const AppException(
         'backup_incompatible',
@@ -86,6 +86,11 @@ class AppRestoreService {
 
     for (final tableName in AppBackupService.backupTables) {
       final tableRows = tablesData[tableName];
+      if (tableName == 'employees' && tableRows == null) {
+        tables[tableName] = const [];
+        recordCounts[tableName] = 0;
+        continue;
+      }
       if (tableRows is! List) {
         throw AppException(
           'backup_invalid',
@@ -122,6 +127,40 @@ class AppRestoreService {
         }
       }
 
+      if (backupSchemaVersion < 14) {
+        for (final row in normalizedRows) {
+          if (tableName == 'employees') {
+            row.putIfAbsent('commission_scope', () => 'all');
+          } else if (tableName == 'sales_transactions') {
+            row.putIfAbsent('commission_scope_snapshot', () => 'all');
+          }
+        }
+      }
+      if (backupSchemaVersion < 13) {
+        final defaults = switch (tableName) {
+          'sales_transactions' => <String, Object?>{
+            'employee_id': null,
+            'employee_name_snapshot': null,
+            'compensation_type_snapshot': null,
+            'commission_percent_snapshot': null,
+            'monthly_salary_snapshot': null,
+            'commission_amount': 0,
+          },
+          'expenses' => <String, Object?>{
+            'source_type': null,
+            'source_id': null,
+            'employee_id': null,
+            'period_key': null,
+          },
+          _ => <String, Object?>{},
+        };
+        for (final row in normalizedRows) {
+          for (final entry in defaults.entries) {
+            row.putIfAbsent(entry.key, () => entry.value);
+          }
+        }
+      }
+
       tables[tableName] = normalizedRows;
       recordCounts[tableName] = normalizedRows.length;
     }
@@ -134,6 +173,9 @@ class AppRestoreService {
     }
     for (final tableName in AppBackupService.backupTables) {
       final expected = tableCountsData[tableName];
+      if (tableName == 'employees' && expected == null) {
+        continue;
+      }
       if (expected is! num || expected.toInt() != recordCounts[tableName]) {
         throw AppException(
           'backup_invalid',

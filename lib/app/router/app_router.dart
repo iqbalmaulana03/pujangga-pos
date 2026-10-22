@@ -14,6 +14,8 @@ import '../../features/stok/presentation/pages/stok_page.dart';
 import '../../features/transaksi/presentation/pages/transaksi_berhasil_page.dart';
 import '../../features/transaksi/presentation/pages/transaksi_page.dart';
 import '../../features/pengeluaran/presentation/pages/tambah_pengeluaran_page.dart';
+import '../../features/pengeluaran/presentation/pages/pengeluaran_page.dart';
+import '../../features/karyawan/presentation/pages/karyawan_page.dart';
 import '../../shared/widgets/main_navigation_shell.dart';
 
 class AppRoutes {
@@ -28,6 +30,8 @@ class AppRoutes {
   static const reports = '/reports';
   static const settings = '/settings';
   static const addExpense = '/add-expense';
+  static const expenses = '/expenses';
+  static const employees = '/employees';
 }
 
 GoRouter buildAppRouter({required bool hasBusinessProfile}) {
@@ -174,6 +178,28 @@ GoRouter buildAppRouter({required bool hasBusinessProfile}) {
           state: state,
           child: const TambahPengeluaranPage(),
           direction: SlideDirection.bottomToTop,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.expenses,
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: PengeluaranPage(
+            today: state.uri.queryParameters['period'] == 'today',
+            start: DateTime.tryParse(state.uri.queryParameters['start'] ?? ''),
+            end: DateTime.tryParse(state.uri.queryParameters['end'] ?? ''),
+          ),
+          direction: SlideDirection.rightToLeft,
+        ),
+      ),
+      GoRoute(
+        path: AppRoutes.employees,
+        pageBuilder: (context, state) => buildPageWithTransition<void>(
+          context: context,
+          state: state,
+          child: const KaryawanPage(),
+          direction: SlideDirection.rightToLeft,
         ),
       ),
     ],

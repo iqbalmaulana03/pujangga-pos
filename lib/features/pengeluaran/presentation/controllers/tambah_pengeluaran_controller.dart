@@ -17,6 +17,7 @@ class TambahPengeluaranController extends AsyncNotifier<void> {
     required String kategori,
     required DateTime tanggal,
     String? catatan,
+    int? employeeId,
   }) async {
     state = const AsyncLoading();
     try {
@@ -26,10 +27,15 @@ class TambahPengeluaranController extends AsyncNotifier<void> {
         category: kategori,
         date: tanggal,
         notes: catatan,
+        employeeId: employeeId,
       );
       
       ref.invalidate(salesReportSnapshotProvider);
       ref.invalidate(dashboardSummaryProvider);
+      ref.invalidate(salesReportSnapshotByPeriodProvider);
+      ref.invalidate(employeeReportProvider);
+      ref.invalidate(expenseEntriesProvider);
+      ref.invalidate(capitalMetricsProvider);
       
       state = const AsyncData(null);
     } catch (e, st) {

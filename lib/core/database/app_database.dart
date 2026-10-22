@@ -61,6 +61,7 @@ class AppDatabase {
     await _createStockMovementsTable(db);
     await _createExpensesTable(db);
     await _createCapitalHistoryTable(db);
+    await _createEmployeesTable(db);
     await _createIndexes(db);
     await _seedDefaultSettings(db);
   }
@@ -90,6 +91,70 @@ class AppDatabase {
     if (oldVersion < 12) {
       await _migrateToVersion12(db);
     }
+    if (oldVersion < 13) {
+      await _migrateToVersion13(db);
+    }
+    if (oldVersion < 14) {
+      await _migrateToVersion14(db);
+    }
+  }
+
+  Future<void> _migrateToVersion14(Database db) async {
+    for (final entry in {
+      'employees': 'commission_scope',
+      'sales_transactions': 'commission_scope_snapshot',
+    }.entries) {
+      final columns = await db.rawQuery('PRAGMA table_info(${entry.key})');
+      if (!columns.any((column) => column['name'] == entry.value)) {
+        await db.execute(
+          "ALTER TABLE ${entry.key} ADD COLUMN ${entry.value} TEXT NOT NULL DEFAULT 'all' CHECK(${entry.value} IN ('all', 'service', 'product'))",
+        );
+      }
+    }
+  }
+
+  Future<void> _migrateToVersion13(Database db) async {
+    final existingTables = await _getExistingTables(db);
+    if (!existingTables.contains('employees')) {
+      await _createEmployeesTable(db);
+    }
+    if (existingTables.contains('sales_transactions')) {
+      final columns = await db.rawQuery(
+        'PRAGMA table_info(sales_transactions)',
+      );
+      final additions = <String, String>{
+        'employee_id': 'INTEGER',
+        'employee_name_snapshot': 'TEXT',
+        'compensation_type_snapshot': 'TEXT',
+        'commission_percent_snapshot': 'REAL',
+        'monthly_salary_snapshot': 'REAL',
+        'commission_amount': 'REAL NOT NULL DEFAULT 0',
+      };
+      for (final entry in additions.entries) {
+        if (!columns.any((column) => column['name'] == entry.key)) {
+          await db.execute(
+            'ALTER TABLE sales_transactions ADD COLUMN ${entry.key} ${entry.value}',
+          );
+        }
+      }
+    }
+    if (existingTables.contains('expenses')) {
+      final columns = await db.rawQuery('PRAGMA table_info(expenses)');
+      final additions = <String, String>{
+        'source_type': 'TEXT',
+        'source_id': 'INTEGER',
+        'employee_id': 'INTEGER',
+        'period_key': 'TEXT',
+      };
+      for (final entry in additions.entries) {
+        if (!columns.any((column) => column['name'] == entry.key)) {
+          await db.execute(
+            'ALTER TABLE expenses ADD COLUMN ${entry.key} ${entry.value}',
+          );
+        }
+      }
+    }
+    await _createEmployeeIndexes(db);
   }
 
   Future<void> _migrateToVersion12(Database db) async {
@@ -494,6 +559,13 @@ class AppDatabase {
         change_amount REAL NOT NULL DEFAULT 0,
         customer_name TEXT,
         notes TEXT,
+        employee_id INTEGER,
+        employee_name_snapshot TEXT,
+        compensation_type_snapshot TEXT,
+        commission_percent_snapshot REAL,
+        commission_scope_snapshot TEXT NOT NULL DEFAULT 'all' CHECK(commission_scope_snapshot IN ('all', 'service', 'product')),
+        monthly_salary_snapshot REAL,
+        commission_amount REAL NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'completed',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
@@ -551,6 +623,10 @@ class AppDatabase {
         expense_date TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+        ,source_type TEXT
+        ,source_id INTEGER
+        ,employee_id INTEGER
+        ,period_key TEXT
       )
     ''');
   }
@@ -566,10 +642,45 @@ class AppDatabase {
     ''');
   }
 
+  Future<void> _createEmployeesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE employees (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        compensation_type TEXT NOT NULL CHECK(compensation_type IN ('commission', 'monthly_salary')),
+        commission_percent REAL,
+        commission_scope TEXT NOT NULL DEFAULT 'all' CHECK(commission_scope IN ('all', 'service', 'product')),
+        monthly_salary REAL,
+        effective_from TEXT NOT NULL,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+  }
+
   Future<void> _createIndexes(Database db) async {
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_transactions_invoice_no ON sales_transactions(invoice_no)',
     );
+    await _createEmployeeIndexes(db);
+    await _createOperationalIndexes(db);
+  }
+
+  Future<void> _createEmployeeIndexes(Database db) async {
+    await db.execute(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_source ON expenses(source_type, source_id, period_key) WHERE source_type IS NOT NULL',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_sales_transactions_employee ON sales_transactions(employee_id)',
+    );
+    await db.execute(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_expenses_commission ON expenses(source_id) WHERE source_type = \'commission\'',
+    );
+  }
+
+  Future<void> _createOperationalIndexes(Database db) async {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_sales_transactions_transaction_date ON sales_transactions(transaction_date)',
     );

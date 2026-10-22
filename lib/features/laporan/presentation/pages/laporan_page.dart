@@ -14,6 +14,8 @@ import '../../domain/entities/sales_report_snapshot.dart';
 import '../../domain/entities/margin_item_summary.dart';
 import '../controllers/laporan_controller.dart';
 import '../widgets/capital_growth_section.dart';
+import '../../../../shared/widgets/profit_breakdown.dart';
+import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 class LaporanPage extends ConsumerWidget {
   const LaporanPage({super.key});
@@ -22,6 +24,8 @@ class LaporanPage extends ConsumerWidget {
     ref.invalidate(salesReportSnapshotByPeriodProvider(period));
     ref.invalidate(salesReportSnapshotProvider);
     ref.invalidate(capitalMetricsProvider);
+    ref.invalidate(employeeReportProvider);
+    ref.invalidate(expenseEntriesProvider);
     await ref.read(salesReportSnapshotByPeriodProvider(period).future);
     await ref.read(capitalMetricsProvider.future);
   }
@@ -43,6 +47,8 @@ class LaporanPage extends ConsumerWidget {
               children: [
                 // Custom Segmented Period Selector
                 _buildPeriodSelector(context, ref, selectedPeriod),
+                const SizedBox(height: 16),
+                _buildEmployeeSection(ref, snapshot),
                 const SizedBox(height: 16),
 
                 // Total Revenue Card
@@ -174,14 +180,15 @@ class LaporanPage extends ConsumerWidget {
                                   fontFamily: 'Inter',
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color: snapshot.marginIsComplete
+                                  color:
+                                      snapshot.marginIsComplete &&
+                                          snapshot.netProfit >= 0
                                       ? const Color(0xFF0D5C56)
                                       : const Color(0xFFBA1A1A),
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              if (snapshot.marginIsComplete &&
-                                  snapshot.revenue > 0)
+                              if (snapshot.netMarginPercent != null)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 6,
@@ -192,7 +199,7 @@ class LaporanPage extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    '${(snapshot.netProfit / snapshot.revenue * 100).toStringAsFixed(0)}%',
+                                    '${snapshot.netMarginPercent!.toStringAsFixed(0)}%',
                                     style: const TextStyle(
                                       fontFamily: 'Inter',
                                       fontSize: 10,
@@ -204,50 +211,16 @@ class LaporanPage extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          if (snapshot.marginIsComplete) ...[
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  'Margin Kotor:',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Color(0xFF3F4947),
-                                  ),
-                                ),
-                                Text(
-                                  CurrencyFormatter.format(snapshot.margin),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
+                          ProfitBreakdown(
+                            grossMargin: snapshot.margin,
+                            expenses: snapshot.totalExpenses,
+                            commissionExpenses: snapshot.commissionExpenses,
+                            isComplete: snapshot.marginIsComplete,
+                            onExpensesTap: () => context.push(
+                              '${AppRoutes.expenses}?start=${snapshot.start.toIso8601String()}&end=${snapshot.endExclusive.toIso8601String()}',
                             ),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Text(
-                                  '- Pengeluaran:',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Color(0xFFBA1A1A),
-                                  ),
-                                ),
-                                Text(
-                                  CurrencyFormatter.format(
-                                    snapshot.totalExpenses,
-                                  ),
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFFBA1A1A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                          ],
+                          ),
+                          const SizedBox(height: 4),
                           Text(
                             _formatRange(snapshot),
                             style: const TextStyle(
@@ -574,6 +547,60 @@ class LaporanPage extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmployeeSection(WidgetRef ref, SalesReportSnapshot snapshot) {
+    final report = ref.watch(
+      employeeReportProvider((snapshot.start, snapshot.endExclusive)),
+    );
+    return report.when(
+      loading: () => const SizedBox.shrink(),
+      error: (error, _) => const Text('Laporan karyawan gagal dimuat.'),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Kinerja Karyawan',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF191C1C),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(item.employeeName)),
+                      Text(
+                        '${item.transactionCount} transaksi - ${CurrencyFormatter.format(item.expense)} biaya',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Color(0xFF3F4947),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

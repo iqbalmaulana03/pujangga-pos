@@ -13,6 +13,7 @@ class TransaksiState {
     this.taxAmount = 0,
     this.cashPaidAmount,
     this.isSubmitting = false,
+    this.employeeId,
   });
 
   final List<TransaksiItem> catalogItems;
@@ -25,6 +26,7 @@ class TransaksiState {
   final double taxAmount;
   final double? cashPaidAmount;
   final bool isSubmitting;
+  final int? employeeId;
 
   double get subtotalAmount =>
       cartItems.fold(0, (total, item) => total + item.lineSubtotal);
@@ -65,6 +67,8 @@ class TransaksiState {
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
     bool? isSubmitting,
+    int? employeeId,
+    bool resetEmployeeId = false,
   }) {
     return TransaksiState(
       catalogItems: catalogItems ?? this.catalogItems,
@@ -79,6 +83,7 @@ class TransaksiState {
           ? null
           : cashPaidAmount ?? this.cashPaidAmount,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      employeeId: resetEmployeeId ? null : employeeId ?? this.employeeId,
     );
   }
 }

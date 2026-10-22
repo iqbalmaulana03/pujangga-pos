@@ -928,6 +928,20 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                   child: Column(
                     children: [
                       _buildRowAction(
+                        icon: Icons.groups,
+                        title: 'Karyawan',
+                        subtitle: 'Atur komisi transaksi dan gaji bulanan',
+                        onTap: () => context.push(AppRoutes.employees),
+                      ),
+                        const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                        _buildRowAction(
+                          icon: Icons.receipt_long_outlined,
+                          title: 'Pengeluaran',
+                          subtitle: 'Biaya operasional, komisi, dan gaji',
+                          onTap: () => context.push(AppRoutes.expenses),
+                        ),
+                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      _buildRowAction(
                         icon: Icons.account_balance_wallet,
                         title: 'Modal Awal Usaha',
                         value: profile?.modalAwalUsaha != null

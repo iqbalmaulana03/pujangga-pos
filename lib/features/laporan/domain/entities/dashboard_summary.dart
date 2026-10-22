@@ -7,6 +7,7 @@ class DashboardSummary {
     required this.topPaymentMethod,
     required this.marginToday,
     required this.marginTodayIsComplete,
+    this.commissionExpensesToday = 0.0,
     this.totalExpensesToday = 0.0,
     this.revenuePreviousDay,
   });
@@ -18,6 +19,7 @@ class DashboardSummary {
   final String? topPaymentMethod;
   final double marginToday;
   final bool marginTodayIsComplete;
+  final double commissionExpensesToday;
   final double totalExpensesToday;
   final double? revenuePreviousDay;
 

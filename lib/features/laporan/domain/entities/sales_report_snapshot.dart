@@ -44,14 +44,17 @@ class SalesReportSnapshot {
     required this.marginIsComplete,
     required this.catalogMarginIsComplete,
     required this.topMarginItems,
+    this.commissionExpenses = 0.0,
     this.totalExpenses = 0.0,
     this.salesCandles = const [],
+    this.revenueBeforeTax,
   });
 
   final ReportPeriod period;
   final DateTime start;
   final DateTime endExclusive;
   final double revenue;
+  final double? revenueBeforeTax;
   final int transactionCount;
   final String? topPaymentMethod;
   final List<ItemSalesSummary> itemSummaries;
@@ -62,10 +65,15 @@ class SalesReportSnapshot {
   final bool marginIsComplete;
   final bool catalogMarginIsComplete;
   final List<MarginItemSummary> topMarginItems;
+  final double commissionExpenses;
   final double totalExpenses;
 
   bool get hasTransactions => transactionCount > 0;
   double get netProfit => margin - totalExpenses;
+  double? get netMarginPercent {
+    final base = revenueBeforeTax ?? revenue;
+    return marginIsComplete && base > 0 ? netProfit / base * 100 : null;
+  }
 
   double get averageTransactionValue {
     if (transactionCount == 0) {
