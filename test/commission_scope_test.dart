@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
+import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/features/karyawan/data/repositories/employee_repository.dart';
 import 'package:pujangga_pos/features/laporan/data/datasources/report_local_data_source.dart';
 import 'package:pujangga_pos/features/laporan/domain/entities/report_period.dart';
@@ -77,6 +78,50 @@ void main() {
     return (await EmployeeRepository(
       database: database,
     ).getEmployees()).single.id;
+  }
+
+  for (final inactive in [false, true]) {
+    test(
+      'rejects ${inactive ? 'inactive' : 'missing'} employee without a partial sale',
+      () async {
+        final db = await database.database();
+        final line = await item('product', 40000);
+        final id = await employee('all');
+        if (inactive) {
+          await EmployeeRepository(database: database).save(
+            id: id,
+            name: 'Karyawan',
+            isActive: false,
+            compensationType: 'commission',
+            commissionPercent: 10,
+            effectiveFrom: DateTime.now(),
+          );
+        }
+        await expectLater(
+          TransactionLocalDataSource(database: database).saveTransaction(
+            TransaksiSubmitRequest(
+              items: [line],
+              employeeId: inactive ? id : 999999,
+              orderDiscountAmount: 0,
+              taxAmount: 0,
+              paymentMethod: 'qris',
+            ),
+          ),
+          throwsA(
+            isA<AppException>().having(
+              (e) => e.code,
+              'code',
+              'employee_unavailable',
+            ),
+          ),
+        );
+        expect(await db.query('sales_transactions'), isEmpty);
+        expect(await db.query('sales_transaction_items'), isEmpty);
+        expect(await db.query('expenses'), isEmpty);
+        expect(await db.query('stock_movements'), isEmpty);
+        expect((await db.query('items')).single['stock_qty'], 100);
+      },
+    );
   }
 
   for (final (scope, expected) in [

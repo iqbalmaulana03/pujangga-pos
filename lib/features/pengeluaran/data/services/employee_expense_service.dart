@@ -5,9 +5,13 @@ import '../../../../core/database/employee_compensation_history.dart';
 
 /// Keeps scheduled employee costs consistent across all financial views.
 class EmployeeExpenseService {
-  const EmployeeExpenseService({required this.database});
+  const EmployeeExpenseService({
+    required this.database,
+    this.now = DateTime.now,
+  });
 
   final AppDatabase database;
+  final DateTime Function() now;
 
   Future<void> ensureMonthlySalaries(DateTime start, DateTime end) async {
     final db = await database.database();
@@ -23,9 +27,9 @@ class EmployeeExpenseService {
     final employees = await db.rawQuery(
       'SELECT DISTINCT employee_id FROM ${EmployeeCompensationHistory.table}',
     );
-    final now = DateTime.now();
+    final currentTime = now();
     var cursor = DateTime(start.year, start.month);
-    while (cursor.isBefore(end) && !cursor.isAfter(now)) {
+    while (cursor.isBefore(end) && !cursor.isAfter(currentTime)) {
       final period =
           '${cursor.year.toString().padLeft(4, '0')}-${cursor.month.toString().padLeft(2, '0')}';
       for (final employee in employees) {
@@ -42,7 +46,7 @@ class EmployeeExpenseService {
         final date = cursor.isBefore(effective) ? effective : cursor;
         if (!date.isBefore(DateTime(cursor.year, cursor.month + 1)) ||
             !date.isBefore(end) ||
-            date.isAfter(now)) {
+            date.isAfter(currentTime)) {
           continue;
         }
         await db.insert('expenses', {
@@ -50,8 +54,8 @@ class EmployeeExpenseService {
           'category': 'Gaji Karyawan',
           'notes': 'Gaji ${periodData['employee_name']} - $period',
           'expense_date': date.toIso8601String(),
-          'created_at': now.toIso8601String(),
-          'updated_at': now.toIso8601String(),
+          'created_at': currentTime.toIso8601String(),
+          'updated_at': currentTime.toIso8601String(),
           'source_type': 'monthly_salary',
           'source_id': employeeId,
           'employee_id': employeeId,

@@ -9,8 +9,9 @@ final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
 });
 
 class EmployeeRepository {
-  const EmployeeRepository({required this.database});
+  const EmployeeRepository({required this.database, this.now = DateTime.now});
   final AppDatabase database;
+  final DateTime Function() now;
 
   Future<List<Employee>> getEmployees({bool activeOnly = false}) async {
     final db = await database.database();
@@ -65,8 +66,8 @@ class EmployeeRepository {
       throw ArgumentError('Gaji harus berupa nominal positif.');
     }
     final db = await database.database();
-    final changedAt = DateTime.now();
-    final now = changedAt.toIso8601String();
+    final changedAt = now();
+    final timestamp = changedAt.toIso8601String();
     final values = <String, Object?>{
       'name': name.trim(),
       'is_active': isActive ? 1 : 0,
@@ -80,11 +81,11 @@ class EmployeeRepository {
           : null,
       'effective_from': effectiveFrom.toIso8601String(),
       'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
-      'updated_at': now,
+      'updated_at': timestamp,
     };
     await db.transaction((txn) async {
       if (id == null) {
-        values['created_at'] = now;
+        values['created_at'] = timestamp;
         final employeeId = await txn.insert('employees', values);
         await txn.insert(
           EmployeeCompensationHistory.table,

@@ -163,7 +163,12 @@ class TransactionLocalDataSource {
           whereArgs: [request.employeeId],
           limit: 1,
         );
-        if (employeeRows.isNotEmpty) {
+        if (employeeRows.isEmpty) {
+          throw const AppException(
+            'employee_unavailable',
+            'Karyawan terpilih sudah tidak aktif atau tidak tersedia. Pilih ulang karyawan sebelum menyimpan transaksi.',
+          );
+        } else {
           final employee = employeeRows.first;
           final type = employee['compensation_type'] as String;
           final percent = (employee['commission_percent'] as num?)?.toDouble();
