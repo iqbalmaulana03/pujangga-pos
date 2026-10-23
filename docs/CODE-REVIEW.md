@@ -49,7 +49,7 @@ Dari direktori Git yang ingin ditinjau, jalankan salah satu cara berikut:
 
 ```bash
 # Review perubahan branch terhadap main.
-/home/pujangga/.local/bin/codex-coderabbit review --agent --base main
+/home/pujangga/.local/bin/codex-coderabbit review --base main
 
 # Buka Codex dengan provider codex-lb dan plugin CodeRabbit.
 /home/pujangga/.local/bin/codex-coderabbit codex
