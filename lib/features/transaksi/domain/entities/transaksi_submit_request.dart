@@ -6,6 +6,7 @@ class TransaksiSubmitRequest {
     required this.orderDiscountAmount,
     required this.taxAmount,
     required this.paymentMethod,
+    this.employeeId,
     this.cashPaidAmount,
   });
 
@@ -13,5 +14,6 @@ class TransaksiSubmitRequest {
   final double orderDiscountAmount;
   final double taxAmount;
   final String paymentMethod;
+  final int? employeeId;
   final double? cashPaidAmount;
 }

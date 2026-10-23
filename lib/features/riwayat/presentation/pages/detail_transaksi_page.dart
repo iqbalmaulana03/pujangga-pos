@@ -187,6 +187,34 @@ class DetailTransaksiPage extends ConsumerWidget {
                                 ),
                               ),
                               _buildInfoRow('Tanggal & Waktu', formattedDate),
+                              if (receipt.employeeName != null) ...[
+                                const SizedBox(height: 12),
+                                _buildInfoRow(
+                                  'Karyawan',
+                                  receipt.employeeName!,
+                                ),
+                                if (receipt.compensationType ==
+                                    'commission') ...[
+                                  const SizedBox(height: 12),
+                                  _buildInfoRow(
+                                    'Bagi hasil (${receipt.commissionPercent ?? 0}%)',
+                                    CurrencyFormatter.format(
+                                      receipt.commissionAmount,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _buildInfoRow(
+                                    'Cakupan komisi',
+                                    receipt.commissionScopeLabel,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    receipt.status == 'voided'
+                                        ? 'Pengeluaran komisi dibatalkan.'
+                                        : 'Dicatat sebagai pengeluaran komisi karyawan.',
+                                  ),
+                                ],
+                              ],
                               const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 12),
                                 child: Divider(

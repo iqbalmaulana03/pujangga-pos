@@ -36,6 +36,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
 
   String _itemType = 'barang';
   bool _isActive = true;
+  bool _serviceHasNoBaseCost = false;
   bool _enableWholesale = false;
   bool _isSubmitting = false;
   bool _didHydrate = false;
@@ -74,7 +75,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       stockQuantity: _itemType == 'barang'
           ? QuantityFormatter.parse(_stockController.text)!
           : null,
-      costPrice: double.tryParse(_costController.text.trim()),
+      costPrice: _itemType == 'jasa' && _serviceHasNoBaseCost
+          ? 0
+          : double.tryParse(_costController.text.trim()),
       wholesalePrice: _enableWholesale
           ? double.tryParse(_wholesalePriceController.text.trim())
           : null,
@@ -137,6 +140,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       ref.invalidate(katalogControllerProvider);
       ref.invalidate(transaksiControllerProvider);
       ref.invalidate(stokControllerProvider);
+      ref.invalidate(dashboardSummaryProvider);
+      ref.invalidate(salesReportSnapshotByPeriodProvider);
+      ref.invalidate(salesReportSnapshotProvider);
+      ref.invalidate(capitalMetricsProvider);
       if (_isEditMode) {
         ref.invalidate(stockItemProvider(widget.itemId!));
         ref.invalidate(stockItemDetailProvider(widget.itemId!));
@@ -213,6 +220,8 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
               ? '${item.wholesaleMinQuantity}'
               : '';
           _itemType = item.itemType;
+          _serviceHasNoBaseCost =
+              item.itemType == 'jasa' && item.costPrice == 0;
           _isActive = item.isActive;
           _enableWholesale = item.wholesalePrice != null;
           _didHydrate = true;
@@ -635,7 +644,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                             Text(
                               isProduct
                                   ? 'HARGA MODAL'
-                                  : 'BIAYA DASAR (OPSIONAL)',
+                                  : 'BIAYA LANGSUNG PER LAYANAN',
                               style: const TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 12,
@@ -645,8 +654,39 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                               ),
                             ),
                             const SizedBox(height: 8),
+                            if (!isProduct)
+                              Material(
+                                color: Colors.transparent,
+                                child: CheckboxListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Tanpa biaya dasar — Rp0'),
+                                  subtitle: const Text(
+                                    'Pilih jika layanan tidak memakai bahan atau biaya langsung.',
+                                  ),
+                                  value: _serviceHasNoBaseCost,
+                                  onChanged: (value) => setState(
+                                    () =>
+                                        _serviceHasNoBaseCost = value ?? false,
+                                  ),
+                                ),
+                              ),
                             TextFormField(
                               controller: _costController,
+                              enabled: isProduct || !_serviceHasNoBaseCost,
+                              validator: (value) {
+                                if (!isProduct && _serviceHasNoBaseCost) {
+                                  return null;
+                                }
+                                if (value == null || value.trim().isEmpty) {
+                                  return null;
+                                }
+                                final cost = double.tryParse(value.trim());
+                                return cost == null ||
+                                        !cost.isFinite ||
+                                        cost < 0
+                                    ? 'Biaya harus berupa angka nol atau positif.'
+                                    : null;
+                              },
                               keyboardType: TextInputType.number,
                               style: const TextStyle(
                                 fontFamily: 'Inter',
@@ -688,8 +728,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              'Digunakan untuk perhitungan margin',
+                            Text(
+                              isProduct
+                                  ? 'Kosong berarti modal belum diketahui; margin belum lengkap.'
+                                  : 'Kosong berarti biaya belum diketahui. Komisi dicatat terpisah sebagai pengeluaran.',
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 11,

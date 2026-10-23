@@ -57,6 +57,16 @@ class TransactionLocalDataSource {
         0,
         (total, item) => total + item.itemDiscountAmount,
       );
+      if (!request.orderDiscountAmount.isFinite ||
+          request.orderDiscountAmount < 0 ||
+          request.orderDiscountAmount > subtotalAmount - itemDiscountAmount ||
+          !request.taxAmount.isFinite ||
+          request.taxAmount < 0) {
+        throw const AppException(
+          'validation_error',
+          'Diskon total atau pajak tidak valid.',
+        );
+      }
       final totalAmount =
           subtotalAmount -
           itemDiscountAmount -
@@ -146,6 +156,73 @@ class TransactionLocalDataSource {
         'updated_at': createdAtIso,
       });
 
+      if (request.employeeId != null) {
+        final employeeRows = await txn.query(
+          'employees',
+          where: 'id = ? AND is_active = 1',
+          whereArgs: [request.employeeId],
+          limit: 1,
+        );
+        if (employeeRows.isEmpty) {
+          throw const AppException(
+            'employee_unavailable',
+            'Karyawan terpilih sudah tidak aktif atau tidak tersedia. Pilih ulang karyawan sebelum menyimpan transaksi.',
+          );
+        } else {
+          final employee = employeeRows.first;
+          final type = employee['compensation_type'] as String;
+          final percent = (employee['commission_percent'] as num?)?.toDouble();
+          final salary = (employee['monthly_salary'] as num?)?.toDouble();
+          final scope = employee['commission_scope'] as String? ?? 'all';
+          final netSales = subtotalAmount - itemDiscountAmount;
+          final eligibleSales = request.items
+              .where(
+                (line) =>
+                    scope == 'all' ||
+                    (scope == 'service' && line.item.isJasa) ||
+                    (scope == 'product' && line.item.isBarang),
+              )
+              .fold<double>(0, (sum, line) => sum + line.lineTotal);
+          // Allocate the order discount proportionally, before tax.
+          final commissionBase = netSales > 0
+              ? eligibleSales * (1 - request.orderDiscountAmount / netSales)
+              : 0.0;
+          final commission = type == 'commission'
+              ? (commissionBase * (percent ?? 0) / 100)
+                    .clamp(0, double.infinity)
+                    .toDouble()
+              : 0.0;
+          await txn.update(
+            'sales_transactions',
+            {
+              'employee_id': request.employeeId,
+              'employee_name_snapshot': employee['name'],
+              'compensation_type_snapshot': type,
+              'commission_percent_snapshot': percent,
+              'commission_scope_snapshot': scope,
+              'monthly_salary_snapshot': salary,
+              'commission_amount': commission,
+            },
+            where: 'id = ?',
+            whereArgs: [transactionId],
+          );
+          if (commission > 0) {
+            await txn.insert('expenses', {
+              'amount': commission,
+              'category': 'Komisi Karyawan',
+              'notes': 'Komisi ${employee['name']} - $invoiceNumber',
+              'expense_date': createdAtIso,
+              'created_at': createdAtIso,
+              'updated_at': createdAtIso,
+              'source_type': 'commission',
+              'source_id': transactionId,
+              'employee_id': request.employeeId,
+              'period_key': null,
+            });
+          }
+        }
+      }
+
       for (final cartItem in request.items) {
         final itemRows = await txn.query(
           'items',
@@ -186,7 +263,19 @@ class TransactionLocalDataSource {
         );
       }
 
+      final saved = (await txn.query(
+        'sales_transactions',
+        where: 'id = ?',
+        whereArgs: [transactionId],
+        limit: 1,
+      )).single;
       return TransaksiReceipt(
+        employeeName: saved['employee_name_snapshot'] as String?,
+        compensationType: saved['compensation_type_snapshot'] as String?,
+        commissionPercent: (saved['commission_percent_snapshot'] as num?)
+            ?.toDouble(),
+        commissionScope: saved['commission_scope_snapshot'] as String? ?? 'all',
+        commissionAmount: (saved['commission_amount'] as num?)?.toDouble() ?? 0,
         invoiceNumber: invoiceNumber,
         createdAt: createdAt,
         paymentMethod: request.paymentMethod,
@@ -267,6 +356,14 @@ class TransactionLocalDataSource {
       changeAmount: (transaction['change_amount'] as num).toDouble(),
       cashPaidAmount: (transaction['paid_amount'] as num?)?.toDouble(),
       status: transaction['status'] as String? ?? 'completed',
+      employeeName: transaction['employee_name_snapshot'] as String?,
+      compensationType: transaction['compensation_type_snapshot'] as String?,
+      commissionPercent: (transaction['commission_percent_snapshot'] as num?)
+          ?.toDouble(),
+      commissionScope:
+          transaction['commission_scope_snapshot'] as String? ?? 'all',
+      commissionAmount:
+          (transaction['commission_amount'] as num?)?.toDouble() ?? 0,
       items: items,
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/services/app_startup_service.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
@@ -91,6 +92,9 @@ class RiwayatController extends AsyncNotifier<RiwayatState> {
 
     ref.invalidate(dashboardSummaryProvider);
     ref.invalidate(salesReportSnapshotProvider);
+    ref.invalidate(salesReportSnapshotByPeriodProvider);
+    ref.invalidate(employeeReportProvider);
+    ref.invalidate(expenseEntriesProvider);
     ref.invalidate(capitalMetricsProvider);
     ref.invalidate(stokControllerProvider);
   }

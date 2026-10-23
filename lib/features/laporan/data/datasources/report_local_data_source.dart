@@ -1,15 +1,75 @@
 import '../../../../core/database/app_database.dart';
+import '../../../pengeluaran/data/services/employee_expense_service.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/item_sales_summary.dart';
 import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
 import '../../domain/entities/margin_item_summary.dart';
 import '../../domain/entities/capital_metrics.dart';
+import '../../domain/entities/employee_report_summary.dart';
 
 class ReportLocalDataSource {
   const ReportLocalDataSource({required this.database});
 
   final AppDatabase database;
+
+  Future<List<EmployeeReportSummary>> getEmployeeReport({
+    required DateTime start,
+    required DateTime end,
+  }) async {
+    final db = await database.database();
+    final rows = await db.rawQuery(
+      '''
+      SELECT employee_id, MAX(COALESCE(employee_name_snapshot, '')) AS employee_name,
+        COALESCE(SUM(subtotal_amount - discount_amount), 0) AS revenue,
+        COUNT(*) AS transaction_count, COALESCE(SUM(commission_amount), 0) AS compensation
+      FROM sales_transactions
+      WHERE transaction_date >= ? AND transaction_date < ? AND status = 'completed' AND employee_id IS NOT NULL
+      GROUP BY employee_id
+    ''',
+      [start.toIso8601String(), end.toIso8601String()],
+    );
+    final result = <EmployeeReportSummary>[];
+    for (final row in rows) {
+      final id = (row['employee_id'] as num).toInt();
+      final expenses = await db.rawQuery(
+        'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE employee_id = ? AND expense_date >= ? AND expense_date < ?',
+        [id, start.toIso8601String(), end.toIso8601String()],
+      );
+      final expense = (expenses.first['total'] as num?)?.toDouble() ?? 0;
+      result.add(
+        EmployeeReportSummary(
+          employeeId: id,
+          employeeName: row['employee_name'] as String,
+          revenue: (row['revenue'] as num).toDouble(),
+          transactionCount: (row['transaction_count'] as num).toInt(),
+          compensation: expense,
+          expense: expense,
+        ),
+      );
+    }
+    final employees = await db.query('employees');
+    for (final employee in employees) {
+      final id = (employee['id'] as num).toInt();
+      if (result.any((item) => item.employeeId == id)) continue;
+      final expenses = await db.rawQuery(
+        'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE employee_id = ? AND expense_date >= ? AND expense_date < ?',
+        [id, start.toIso8601String(), end.toIso8601String()],
+      );
+      final amount = (expenses.first['total'] as num).toDouble();
+      result.add(
+        EmployeeReportSummary(
+          employeeId: id,
+          employeeName: employee['name'] as String,
+          revenue: 0,
+          transactionCount: 0,
+          compensation: amount,
+          expense: amount,
+        ),
+      );
+    }
+    return result;
+  }
 
   Future<double> getRevenueForRange(DateTime start, DateTime end) async {
     final db = await database.database();
@@ -94,6 +154,9 @@ class ReportLocalDataSource {
 
   Future<DashboardSummary> getDashboardSummary({DateTime? reference}) async {
     final range = ReportPeriod.harian.resolveRange(reference);
+    await EmployeeExpenseService(
+      database: database,
+    ).ensureMonthlySalaries(range.start, range.endExclusive);
     final revenue = await getRevenueForRange(range.start, range.endExclusive);
     final previousDayStart = range.start.subtract(const Duration(days: 1));
     final previousDayRevenue = await getRevenueForRange(
@@ -148,7 +211,8 @@ class ReportLocalDataSource {
 
     final expenseRows = await db.rawQuery(
       '''
-      SELECT COALESCE(SUM(amount), 0) AS total_expenses
+      SELECT COALESCE(SUM(amount), 0) AS total_expenses,
+        COALESCE(SUM(CASE WHEN source_type = 'commission' THEN amount ELSE 0 END), 0) AS commission_expenses
       FROM expenses
       WHERE expense_date >= ? AND expense_date < ?
       ''',
@@ -166,6 +230,8 @@ class ReportLocalDataSource {
       marginToday: marginToday,
       marginTodayIsComplete: marginTodayIsComplete,
       totalExpensesToday: totalExpensesToday,
+      commissionExpensesToday:
+          (expenseRows.first['commission_expenses'] as num?)?.toDouble() ?? 0,
       revenuePreviousDay: previousDayRevenue,
     );
   }
@@ -176,6 +242,9 @@ class ReportLocalDataSource {
     ReportRange? customRange,
   }) async {
     final range = customRange ?? period.resolveRange(reference);
+    await EmployeeExpenseService(
+      database: database,
+    ).ensureMonthlySalaries(range.start, range.endExclusive);
     final revenue = await getRevenueForRange(range.start, range.endExclusive);
     final transactionCount = await getTransactionCountForRange(
       range.start,
@@ -417,10 +486,10 @@ class ReportLocalDataSource {
         item_type,
         sale_price,
         unit,
-        COALESCE(harga_modal, biaya_dasar) AS cost_val,
-        ((sale_price - COALESCE(harga_modal, biaya_dasar)) / sale_price * 100) AS margin_pct
+        (CASE WHEN item_type = 'product' THEN harga_modal ELSE biaya_dasar END) AS cost_val,
+        ((sale_price - (CASE WHEN item_type = 'product' THEN harga_modal ELSE biaya_dasar END)) / sale_price * 100) AS margin_pct
       FROM items
-      WHERE is_active = 1 AND sale_price > 0 AND COALESCE(harga_modal, biaya_dasar) IS NOT NULL
+      WHERE is_active = 1 AND sale_price > 0 AND (CASE WHEN item_type = 'product' THEN harga_modal ELSE biaya_dasar END) IS NOT NULL
       ORDER BY margin_pct DESC
       LIMIT 5
       ''');
@@ -437,7 +506,8 @@ class ReportLocalDataSource {
 
     final expenseRows = await db.rawQuery(
       '''
-      SELECT COALESCE(SUM(amount), 0) AS total_expenses
+      SELECT COALESCE(SUM(amount), 0) AS total_expenses,
+        COALESCE(SUM(CASE WHEN source_type = 'commission' THEN amount ELSE 0 END), 0) AS commission_expenses
       FROM expenses
       WHERE expense_date >= ? AND expense_date < ?
       ''',
@@ -458,10 +528,13 @@ class ReportLocalDataSource {
       salesTrend: trend,
       salesCandles: salesCandles,
       margin: margin,
+      revenueBeforeTax: netRevenue,
       marginIsComplete: marginIsComplete,
       catalogMarginIsComplete: catalogMarginIsComplete,
       topMarginItems: topMarginItems,
       totalExpenses: totalExpenses,
+      commissionExpenses:
+          (expenseRows.first['commission_expenses'] as num?)?.toDouble() ?? 0,
     );
   }
 

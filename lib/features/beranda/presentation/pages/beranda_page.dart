@@ -6,6 +6,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
+import '../../../../shared/widgets/profit_breakdown.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../riwayat/domain/entities/riwayat_transaksi_summary.dart';
 import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
@@ -82,6 +83,7 @@ class BerandaPage extends ConsumerWidget {
                           context,
                           summary.marginToday,
                           summary.totalExpensesToday,
+                          summary.commissionExpensesToday,
                           summary.netProfitToday,
                           summary.marginTodayIsComplete,
                         ),
@@ -110,6 +112,7 @@ class BerandaPage extends ConsumerWidget {
                             context,
                             summary.marginToday,
                             summary.totalExpensesToday,
+                            summary.commissionExpensesToday,
                             summary.netProfitToday,
                             summary.marginTodayIsComplete,
                           ),
@@ -299,7 +302,7 @@ class BerandaPage extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => context.push(AppRoutes.addExpense),
+                      onTap: () => context.push(AppRoutes.expenses),
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -584,11 +587,12 @@ class BerandaPage extends ConsumerWidget {
     BuildContext context,
     double marginToday,
     double totalExpensesToday,
+    double commissionExpensesToday,
     double netProfitToday,
     bool isComplete,
   ) {
     return Container(
-      height: 160,
+      constraints: const BoxConstraints(minHeight: 184),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -636,56 +640,22 @@ class BerandaPage extends ConsumerWidget {
                     fontFamily: 'Inter',
                     fontSize: isComplete ? 28 : 22,
                     fontWeight: FontWeight.bold,
-                    color: isComplete
+                    color: isComplete && netProfitToday >= 0
                         ? const Color(0xFF191C1C)
                         : const Color(0xFFBA1A1A),
                   ),
                 ),
               ),
               const SizedBox(height: 8),
-              if (isComplete) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Margin Kotor:',
-                      style: TextStyle(fontSize: 10, color: Color(0xFF3F4947)),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(marginToday),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      '- Pengeluaran:',
-                      style: TextStyle(fontSize: 10, color: Color(0xFFBA1A1A)),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(totalExpensesToday),
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFBA1A1A),
-                      ),
-                    ),
-                  ],
-                ),
-              ] else
-                const Text(
-                  'Isi harga modal produk',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    color: Color(0xFF3F4947),
-                  ),
-                ),
+              ProfitBreakdown(
+                grossMargin: marginToday,
+                expenses: totalExpensesToday,
+                commissionExpenses: commissionExpensesToday,
+                isComplete: isComplete,
+                expenseLabel: 'Pengeluaran hari ini',
+                onExpensesTap: () =>
+                    context.push('${AppRoutes.expenses}?period=today'),
+              ),
             ],
           ),
         ],

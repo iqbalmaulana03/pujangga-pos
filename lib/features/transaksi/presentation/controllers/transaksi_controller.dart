@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
@@ -258,6 +259,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     );
   }
 
+  void updateEmployee(int? employeeId) {
+    final current = _currentState;
+    if (current == null) return;
+    state = AsyncData(current.copyWith(employeeId: employeeId, resetEmployeeId: employeeId == null));
+  }
+
   void updateCashPaid(double? value) {
     final current = _currentState;
     if (current == null) {
@@ -304,6 +311,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
               cashPaidAmount: current.paymentMethod == 'tunai'
                   ? current.cashPaidAmount
                   : null,
+              employeeId: current.employeeId,
             ),
           );
 
@@ -317,6 +325,10 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       ref.invalidate(stokControllerProvider);
       ref.invalidate(dashboardSummaryProvider);
       ref.invalidate(salesReportSnapshotProvider);
+      ref.invalidate(salesReportSnapshotByPeriodProvider);
+      ref.invalidate(employeeReportProvider);
+      ref.invalidate(expenseEntriesProvider);
+      ref.invalidate(capitalMetricsProvider);
       return receipt;
     } catch (_) {
       state = AsyncData(current.copyWith(isSubmitting: false));

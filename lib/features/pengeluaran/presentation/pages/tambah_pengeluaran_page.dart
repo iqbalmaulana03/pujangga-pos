@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
+import '../../data/repositories/expense_repository.dart';
 import '../controllers/tambah_pengeluaran_controller.dart';
+import '../../../karyawan/presentation/controllers/employee_controller.dart';
 
 class TambahPengeluaranPage extends ConsumerStatefulWidget {
   const TambahPengeluaranPage({super.key});
@@ -21,10 +23,12 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
 
   DateTime _selectedDate = DateTime.now();
   String _selectedKategori = 'Operasional';
+  int? _employeeId;
 
   final List<String> _kategoriOptions = [
     'Operasional',
     'Bahan Baku',
+    'Gaji Karyawan',
     'Lain-lain',
   ];
 
@@ -50,8 +54,21 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
           kategori: _selectedKategori,
           tanggal: _selectedDate,
           catatan: catatan.isEmpty ? null : catatan,
+          employeeId: _employeeId,
         );
 
+    if (mounted && ref.read(tambahPengeluaranControllerProvider).hasError) {
+      final error = ref.read(tambahPengeluaranControllerProvider).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is StateError
+                ? error.message.toString()
+                : 'Pengeluaran gagal disimpan. Silakan coba lagi.',
+          ),
+        ),
+      );
+    }
     if (mounted && !ref.read(tambahPengeluaranControllerProvider).hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Pengeluaran berhasil disimpan')),
@@ -63,6 +80,30 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
   double? _parseNominal(String? value) {
     final normalized = value?.trim().replaceAll(',', '.') ?? '';
     return double.tryParse(normalized);
+  }
+
+  Future<void> _loadMonthlySalary() async {
+    final id = _employeeId;
+    final date = _selectedDate;
+    _nominalController.clear();
+    if (id == null || _selectedKategori != 'Gaji Karyawan') return;
+    bool isCurrentSelection() =>
+        mounted &&
+        _employeeId == id &&
+        _selectedDate == date &&
+        _selectedKategori == 'Gaji Karyawan';
+    try {
+      final salary = await ref.read(
+        employeeSalaryForMonthProvider((id, date)).future,
+      );
+      if (!mounted || !isCurrentSelection()) return;
+      _nominalController.text = salary?.toStringAsFixed(0) ?? '';
+    } catch (_) {
+      if (!mounted || !isCurrentSelection()) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gaji untuk periode ini gagal dimuat.')),
+      );
+    }
   }
 
   Future<void> _selectDate() async {
@@ -84,6 +125,7 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
       setState(() {
         _selectedDate = picked;
       });
+      if (_selectedKategori == 'Gaji Karyawan') await _loadMonthlySalary();
     }
   }
 
@@ -189,7 +231,13 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
                   onChanged: (val) {
-                    if (val != null) setState(() => _selectedKategori = val);
+                    if (val != null) {
+                      setState(() {
+                        _selectedKategori = val;
+                        _employeeId = null;
+                        _nominalController.clear();
+                      });
+                    }
                   },
                 ),
               ),
@@ -197,6 +245,49 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
             const SizedBox(height: 24),
 
             // Nominal
+            if (_selectedKategori == 'Gaji Karyawan') ...[
+              ref
+                  .watch(activeEmployeesProvider)
+                  .when(
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, _) => const Text('Karyawan gagal dimuat.'),
+                    data: (employees) {
+                      final salaried = employees
+                          .where((e) => !e.isCommission)
+                          .toList();
+                      return DropdownButtonFormField<int>(
+                        initialValue: _employeeId,
+                        decoration: const InputDecoration(
+                          labelText: 'Karyawan',
+                          border: OutlineInputBorder(),
+                        ),
+                        hint: Text(
+                          salaried.isEmpty
+                              ? 'Belum ada karyawan bergaji bulanan'
+                              : 'Pilih karyawan',
+                        ),
+                        items: salaried
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e.id,
+                                child: Text(e.name),
+                              ),
+                            )
+                            .toList(),
+                        validator: (value) => value == null
+                            ? 'Pilih karyawan bergaji bulanan'
+                            : null,
+                        onChanged: isLoading
+                            ? null
+                            : (id) {
+                                setState(() => _employeeId = id);
+                                _loadMonthlySalary();
+                              },
+                      );
+                    },
+                  ),
+              const SizedBox(height: 24),
+            ],
             const Text(
               'Nominal',
               style: TextStyle(
@@ -209,6 +300,7 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _nominalController,
+              readOnly: _selectedKategori == 'Gaji Karyawan',
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),

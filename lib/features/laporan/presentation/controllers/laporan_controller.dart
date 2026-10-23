@@ -7,6 +7,7 @@ import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/report_period.dart';
 import '../../domain/entities/sales_report_snapshot.dart';
 import '../../domain/entities/capital_metrics.dart';
+import '../../domain/entities/employee_report_summary.dart';
 import '../../domain/repositories/report_repository.dart';
 
 final reportLocalDataSourceProvider = Provider<ReportLocalDataSource>((ref) {
@@ -19,7 +20,9 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
   );
 });
 
-final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((ref) {
+final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((
+  ref,
+) {
   return ref.watch(reportRepositoryProvider).getDashboardSummary();
 });
 
@@ -33,22 +36,32 @@ final customReportRangeProvider =
       CustomReportRangeController.new,
     );
 
-final salesReportSnapshotByPeriodProvider =
-    FutureProvider.autoDispose.family<SalesReportSnapshot, ReportPeriod>((ref, period) {
+final salesReportSnapshotByPeriodProvider = FutureProvider.autoDispose
+    .family<SalesReportSnapshot, ReportPeriod>((ref, period) {
       final customRange = ref.watch(customReportRangeProvider);
       return ref
           .watch(reportRepositoryProvider)
           .getSalesReportSnapshot(period: period, customRange: customRange);
     });
 
-final salesReportSnapshotProvider = FutureProvider.autoDispose<SalesReportSnapshot>((ref) {
-  final period = ref.watch(selectedReportPeriodProvider);
-  return ref.watch(salesReportSnapshotByPeriodProvider(period).future);
-});
+final salesReportSnapshotProvider =
+    FutureProvider.autoDispose<SalesReportSnapshot>((ref) {
+      final period = ref.watch(selectedReportPeriodProvider);
+      return ref.watch(salesReportSnapshotByPeriodProvider(period).future);
+    });
 
-final capitalMetricsProvider = FutureProvider.autoDispose<CapitalMetrics>((ref) {
+final capitalMetricsProvider = FutureProvider.autoDispose<CapitalMetrics>((
+  ref,
+) {
   return ref.watch(reportRepositoryProvider).getCapitalMetrics();
 });
+
+final employeeReportProvider = FutureProvider.autoDispose
+    .family<List<EmployeeReportSummary>, (DateTime, DateTime)>((ref, range) {
+      return ref
+          .watch(reportLocalDataSourceProvider)
+          .getEmployeeReport(start: range.$1, end: range.$2);
+    });
 
 class SelectedReportPeriodController extends Notifier<ReportPeriod> {
   @override
