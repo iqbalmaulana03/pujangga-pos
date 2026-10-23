@@ -78,6 +78,8 @@ void main() {
             'stock_movements': const [],
             'expenses': const [],
             'capital_history': const [],
+            'employees': const [],
+            'employee_compensation_periods': const [],
           },
         );
 

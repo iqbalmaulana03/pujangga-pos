@@ -3,6 +3,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 import '../constants/app_constants.dart';
+import 'employee_compensation_history.dart';
 
 class AppDatabase {
   AppDatabase({Logger? logger}) : _logger = logger ?? Logger('AppDatabase');
@@ -62,6 +63,7 @@ class AppDatabase {
     await _createExpensesTable(db);
     await _createCapitalHistoryTable(db);
     await _createEmployeesTable(db);
+    await EmployeeCompensationHistory.createTable(db);
     await _createIndexes(db);
     await _seedDefaultSettings(db);
   }
@@ -96,6 +98,10 @@ class AppDatabase {
     }
     if (oldVersion < 14) {
       await _migrateToVersion14(db);
+    }
+    if (oldVersion < 15) {
+      await EmployeeCompensationHistory.createTable(db);
+      await EmployeeCompensationHistory.seedMissing(db);
     }
   }
 

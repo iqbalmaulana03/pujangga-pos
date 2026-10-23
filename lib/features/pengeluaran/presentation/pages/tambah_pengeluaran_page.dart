@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
+import '../../data/repositories/expense_repository.dart';
 import '../controllers/tambah_pengeluaran_controller.dart';
 import '../../../karyawan/presentation/controllers/employee_controller.dart';
 
@@ -58,9 +59,15 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
 
     if (mounted && ref.read(tambahPengeluaranControllerProvider).hasError) {
       final error = ref.read(tambahPengeluaranControllerProvider).error;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(error is StateError ? error.message.toString() : 'Pengeluaran gagal disimpan. Silakan coba lagi.'),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error is StateError
+                ? error.message.toString()
+                : 'Pengeluaran gagal disimpan. Silakan coba lagi.',
+          ),
+        ),
+      );
     }
     if (mounted && !ref.read(tambahPengeluaranControllerProvider).hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,6 +80,30 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
   double? _parseNominal(String? value) {
     final normalized = value?.trim().replaceAll(',', '.') ?? '';
     return double.tryParse(normalized);
+  }
+
+  Future<void> _loadMonthlySalary() async {
+    final id = _employeeId;
+    final date = _selectedDate;
+    _nominalController.clear();
+    if (id == null || _selectedKategori != 'Gaji Karyawan') return;
+    bool isCurrentSelection() =>
+        mounted &&
+        _employeeId == id &&
+        _selectedDate == date &&
+        _selectedKategori == 'Gaji Karyawan';
+    try {
+      final salary = await ref.read(
+        employeeSalaryForMonthProvider((id, date)).future,
+      );
+      if (!mounted || !isCurrentSelection()) return;
+      _nominalController.text = salary?.toStringAsFixed(0) ?? '';
+    } catch (_) {
+      if (!mounted || !isCurrentSelection()) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gaji untuk periode ini gagal dimuat.')),
+      );
+    }
   }
 
   Future<void> _selectDate() async {
@@ -94,6 +125,7 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
       setState(() {
         _selectedDate = picked;
       });
+      if (_selectedKategori == 'Gaji Karyawan') await _loadMonthlySalary();
     }
   }
 
@@ -214,25 +246,46 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
 
             // Nominal
             if (_selectedKategori == 'Gaji Karyawan') ...[
-              ref.watch(activeEmployeesProvider).when(
-                loading: () => const LinearProgressIndicator(),
-                error: (_, _) => const Text('Karyawan gagal dimuat.'),
-                data: (employees) {
-                  final salaried = employees.where((e) => !e.isCommission).toList();
-                  return DropdownButtonFormField<int>(
-                    initialValue: _employeeId,
-                    decoration: const InputDecoration(labelText: 'Karyawan', border: OutlineInputBorder()),
-                    hint: Text(salaried.isEmpty ? 'Belum ada karyawan bergaji bulanan' : 'Pilih karyawan'),
-                    items: salaried.map((e) => DropdownMenuItem(value: e.id, child: Text(e.name))).toList(),
-                    validator: (value) => value == null ? 'Pilih karyawan bergaji bulanan' : null,
-                    onChanged: isLoading ? null : (id) => setState(() {
-                      _employeeId = id;
-                      final employee = salaried.firstWhere((e) => e.id == id);
-                      _nominalController.text = employee.monthlySalary!.toStringAsFixed(0);
-                    }),
-                  );
-                },
-              ),
+              ref
+                  .watch(activeEmployeesProvider)
+                  .when(
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, _) => const Text('Karyawan gagal dimuat.'),
+                    data: (employees) {
+                      final salaried = employees
+                          .where((e) => !e.isCommission)
+                          .toList();
+                      return DropdownButtonFormField<int>(
+                        initialValue: _employeeId,
+                        decoration: const InputDecoration(
+                          labelText: 'Karyawan',
+                          border: OutlineInputBorder(),
+                        ),
+                        hint: Text(
+                          salaried.isEmpty
+                              ? 'Belum ada karyawan bergaji bulanan'
+                              : 'Pilih karyawan',
+                        ),
+                        items: salaried
+                            .map(
+                              (e) => DropdownMenuItem(
+                                value: e.id,
+                                child: Text(e.name),
+                              ),
+                            )
+                            .toList(),
+                        validator: (value) => value == null
+                            ? 'Pilih karyawan bergaji bulanan'
+                            : null,
+                        onChanged: isLoading
+                            ? null
+                            : (id) {
+                                setState(() => _employeeId = id);
+                                _loadMonthlySalary();
+                              },
+                      );
+                    },
+                  ),
               const SizedBox(height: 24),
             ],
             const Text(

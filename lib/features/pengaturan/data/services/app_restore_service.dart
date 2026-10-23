@@ -5,6 +5,7 @@ import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'app_backup_payload_builder.dart';
@@ -86,6 +87,12 @@ class AppRestoreService {
 
     for (final tableName in AppBackupService.backupTables) {
       final tableRows = tablesData[tableName];
+      if (tableName == EmployeeCompensationHistory.table &&
+          backupSchemaVersion < 15) {
+        tables[tableName] = [];
+        recordCounts[tableName] = 0;
+        continue;
+      }
       if (tableName == 'employees' && tableRows == null) {
         tables[tableName] = const [];
         recordCounts[tableName] = 0;
@@ -173,6 +180,10 @@ class AppRestoreService {
     }
     for (final tableName in AppBackupService.backupTables) {
       final expected = tableCountsData[tableName];
+      if (tableName == EmployeeCompensationHistory.table &&
+          backupSchemaVersion < 15) {
+        continue;
+      }
       if (tableName == 'employees' && expected == null) {
         continue;
       }
@@ -184,6 +195,20 @@ class AppRestoreService {
       }
     }
 
+    if (backupSchemaVersion < 15) {
+      tables[EmployeeCompensationHistory.table] = [
+        for (final employee in tables['employees']!)
+          {
+            'id': employee['id'],
+            ...EmployeeCompensationHistory.snapshot(
+              employee,
+              validFrom: employee['effective_from'] as String,
+            ),
+          },
+      ];
+      recordCounts[EmployeeCompensationHistory.table] =
+          tables[EmployeeCompensationHistory.table]!.length;
+    }
     await _validateTables(await database.database(), tables);
 
     return AppBackupRestoreCandidate(

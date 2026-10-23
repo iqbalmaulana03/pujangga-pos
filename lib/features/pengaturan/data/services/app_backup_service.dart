@@ -35,6 +35,7 @@ class AppBackupService {
     'expenses',
     'capital_history',
     'employees',
+    'employee_compensation_periods',
   ];
 
   Future<AppBackupFile> createBackup() async {

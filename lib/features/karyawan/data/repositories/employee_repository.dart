@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../domain/entities/employee.dart';
 
@@ -64,7 +65,8 @@ class EmployeeRepository {
       throw ArgumentError('Gaji harus berupa nominal positif.');
     }
     final db = await database.database();
-    final now = DateTime.now().toIso8601String();
+    final changedAt = DateTime.now();
+    final now = changedAt.toIso8601String();
     final values = <String, Object?>{
       'name': name.trim(),
       'is_active': isActive ? 1 : 0,
@@ -80,12 +82,42 @@ class EmployeeRepository {
       'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
       'updated_at': now,
     };
-    if (id == null) {
-      values['created_at'] = now;
-      await db.insert('employees', values);
-    } else {
-      await db.update('employees', values, where: 'id = ?', whereArgs: [id]);
-    }
+    await db.transaction((txn) async {
+      if (id == null) {
+        values['created_at'] = now;
+        final employeeId = await txn.insert('employees', values);
+        await txn.insert(
+          EmployeeCompensationHistory.table,
+          EmployeeCompensationHistory.snapshot({
+            ...values,
+            'id': employeeId,
+          }, validFrom: effectiveFrom.toIso8601String()),
+        );
+      } else {
+        final existing = await txn.query(
+          'employees',
+          where: 'id = ?',
+          whereArgs: [id],
+          limit: 1,
+        );
+        if (existing.isEmpty) throw StateError('Karyawan tidak ditemukan.');
+        await EmployeeCompensationHistory.seedMissing(txn);
+        final previous = existing.single;
+        if ([
+          'name',
+          'is_active',
+          'compensation_type',
+          'monthly_salary',
+          'effective_from',
+        ].any((key) => previous[key] != values[key])) {
+          await EmployeeCompensationHistory.recordChange(txn, {
+            ...values,
+            'id': id,
+          }, changedAt);
+        }
+        await txn.update('employees', values, where: 'id = ?', whereArgs: [id]);
+      }
+    });
   }
 
   Employee _fromRow(Map<String, Object?> row) => Employee(

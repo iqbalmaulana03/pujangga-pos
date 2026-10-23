@@ -1160,36 +1160,62 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                       style: TextStyle(color: Color(0xFFBA1A1A)),
                     ),
                   ),
-                  data: (employees) => DropdownButtonFormField<int?>(
-                    isExpanded: true,
-                    initialValue: state.employeeId,
-                    decoration: const InputDecoration(
-                      labelText: 'Karyawan (opsional)',
-                      border: OutlineInputBorder(),
-                      isDense: true,
-                    ),
-                    items: [
-                      const DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text('Tanpa karyawan'),
+                  data: (employees) {
+                    final selectedId =
+                        employees.any(
+                          (employee) => employee.id == state.employeeId,
+                        )
+                        ? state.employeeId
+                        : null;
+                    if (selectedId != state.employeeId) {
+                      final staleId = state.employeeId;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!context.mounted) return;
+                        // Do not clear a newer selection made in the meantime.
+                        if (employeeRef
+                                .read(transaksiControllerProvider)
+                                .asData
+                                ?.value
+                                .employeeId ==
+                            staleId) {
+                          employeeRef
+                              .read(transaksiControllerProvider.notifier)
+                              .updateEmployee(null);
+                        }
+                      });
+                    }
+                    return DropdownButtonFormField<int?>(
+                      key: ValueKey(selectedId),
+                      isExpanded: true,
+                      initialValue: selectedId,
+                      decoration: const InputDecoration(
+                        labelText: 'Karyawan (opsional)',
+                        border: OutlineInputBorder(),
+                        isDense: true,
                       ),
-                      ...employees.map(
-                        (employee) => DropdownMenuItem<int?>(
-                          value: employee.id,
-                          child: Text(
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            employee.isCommission
-                                ? '${employee.name} · ${employee.commissionScopeLabel}'
-                                : employee.name,
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('Tanpa karyawan'),
+                        ),
+                        ...employees.map(
+                          (employee) => DropdownMenuItem<int?>(
+                            value: employee.id,
+                            child: Text(
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              employee.isCommission
+                                  ? '${employee.name} · ${employee.commissionScopeLabel}'
+                                  : employee.name,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                    onChanged: (value) => employeeRef
-                        .read(transaksiControllerProvider.notifier)
-                        .updateEmployee(value),
-                  ),
+                      ],
+                      onChanged: (value) => employeeRef
+                          .read(transaksiControllerProvider.notifier)
+                          .updateEmployee(value),
+                    );
+                  },
                 ),
           ),
           const SizedBox(height: 8),

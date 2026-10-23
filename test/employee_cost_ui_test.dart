@@ -6,6 +6,7 @@ import 'package:pujangga_pos/features/karyawan/domain/entities/employee.dart';
 import 'package:pujangga_pos/features/karyawan/presentation/controllers/employee_controller.dart';
 import 'package:pujangga_pos/features/karyawan/presentation/pages/karyawan_page.dart';
 import 'package:pujangga_pos/features/pengeluaran/presentation/pages/tambah_pengeluaran_page.dart';
+import 'package:pujangga_pos/features/pengeluaran/data/repositories/expense_repository.dart';
 import 'package:pujangga_pos/shared/widgets/profit_breakdown.dart';
 
 void main() {
@@ -64,6 +65,9 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
+            employeeSalaryForMonthProvider.overrideWith(
+              (ref, selection) async => 3000000,
+            ),
             activeEmployeesProvider.overrideWith(
               (ref) async => [
                 Employee(

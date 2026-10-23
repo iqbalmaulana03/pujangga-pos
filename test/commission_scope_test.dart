@@ -196,6 +196,7 @@ void main() {
           cashPaidAmount: 100000,
         ),
       );
+      await db.execute('DROP TABLE employee_compensation_periods');
       await db.execute('ALTER TABLE employees DROP COLUMN commission_scope');
       await db.execute(
         'ALTER TABLE sales_transactions DROP COLUMN commission_scope_snapshot',
@@ -204,7 +205,7 @@ void main() {
       await db.close();
       database = AppDatabase();
       final upgraded = await database.database();
-      expect(await upgraded.getVersion(), 14);
+      expect(await upgraded.getVersion(), 15);
       expect(
         (await EmployeeRepository(
           database: database,
