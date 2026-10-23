@@ -33,6 +33,8 @@ Pada 22 Oktober 2026, E2E dilakukan di Android menggunakan paket aplikasi terpis
 | Penjualan jasa | Tidak ada pergerakan stok |
 | Pembukaan pertama keranjang | Pilihan karyawan muncul setelah provider selesai dimuat |
 
-34 test regresi lulus sebelum pemindahan branch. Basis `main` terbaru hanya berbeda pada workflow CI dari basis pengujian; kode fitur dipindahkan tanpa perubahan selain label versi lengkap. Test menggunakan SQLite sementara atau provider widget yang dioverride. Bukti ini tidak menyatakan pengujian telah diulang pada commit PR.
+E2E di atas dan 34 test regresi dilakukan sebelum perubahan lanjutan pada commit `99435cd`. Commit tersebut menambahkan schema 15, `employee_compensation_periods`, dan normalisasi/reset pilihan karyawan. Hasil E2E tersebut bukan verifikasi perilaku setelah perubahan ini; E2E belum diulang pada commit tersebut.
+
+Pada commit `99435cd`, [CI Analyze and test](https://github.com/iqbalmaulana03/pujangga-pos/actions/runs/39978478600) berhasil menjalankan analisis Dart dan suite test Flutter. `test/commission_scope_test.dart` mencakup migrasi dari schema 13 ke 15 sambil mempertahankan snapshot transaksi. `test/employee_cost_ui_test.dart` mencakup pengisian nominal gaji melalui provider yang dioverride; test tersebut tidak membuktikan normalisasi/reset pilihan karyawan. `test/transaction_employee_loading_test.dart` mencakup pemuatan pilihan karyawan pada pembukaan pertama keranjang, bukan reset setelah submit atau penghapusan ID karyawan nonaktif. Suite yang ada juga belum secara khusus menguji seluruh siklus perubahan gaji, skema, dan status aktif lintas bulan. Test SQLite menggunakan database sementara; test widget terkait menggunakan provider yang dioverride. Keberhasilan CI ini tidak memperluas cakupan skenario yang diuji.
 
 ![Laporan bulanan dari data E2E sintetis](verification/service-monthly-report.png)
