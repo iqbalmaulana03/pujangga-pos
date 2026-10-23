@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Indonesian is not a supported language enum; request it through instructions.
+tone_instructions: >-
+  Tulis ringkasan, komentar review, dan balasan dalam Bahasa Indonesia yang jelas.
+  Pertahankan nama simbol, path file, dan potongan kode sesuai sumbernya.
+reviews:
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - "^main$"
+      - "^release/.*$"
