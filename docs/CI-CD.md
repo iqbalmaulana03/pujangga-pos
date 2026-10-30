@@ -4,13 +4,15 @@ Workflow berada di `.github/workflows/android-ci-cd.yml`.
 
 ## Otomatisasi
 
-- Pull request menuju `main` dan push ke `main`: Flutter `3.44.1` menjalankan `flutter analyze --fatal-infos` dan `flutter test` pada runner GitHub Actions.
+- Pull request menuju `main` dan push ke `main`: Flutter `3.47.9` menjalankan `flutter analyze --fatal-infos` dan `flutter test` pada runner GitHub Actions.
 - Push ke branch rilis `release/<version>_apps`: setelah verifikasi lulus dan approval environment Production, workflow membangun AAB bertanda tangan dan mengunggahnya langsung ke track Production dengan staged rollout 10%. Artefak AAB disimpan selama 30 hari.
 - Workflow dapat dijalankan manual dengan memilih branch rilis dan aksi `publish` atau `complete_rollout`. Job yang mengubah Play Store tetap menunggu approval environment Production.
 
 Format branch: `release/<major>.<minor>.<patch>+<versionCode>_apps`, misalnya `release/1.2.2+3_apps`. Nilai versi di branch harus sama persis dengan `pubspec.yaml`; angka setelah `+` menjadi Android `versionCode`. Cek Play Console dan pastikan angkanya lebih besar daripada semua kode versi yang sudah pernah diunggah. Workflow tidak membaca Play Console untuk menentukan angka ini.
 
 ## Persiapan satu kali
+
+Gunakan Flutter `3.47.9` untuk pengembangan dan build agar sesuai dengan kedua job CI. Minimum Flutter `3.47.8` dan Dart `3.13.7` memperbaiki [GHSA-frr6-h895-5pxp](https://github.com/dart-lang/sdk/security/advisories/GHSA-frr6-h895-5pxp), terkait sertifikat eMudhra yang dikompromikan. Aplikasi Android harus dibangun ulang dan didistribusikan agar pengguna menerima perbaikannya; memperbarui SDK saja tidak memperbaiki aplikasi yang sudah terpasang.
 
 1. Pastikan file keystore yang dirujuk oleh `storeFile` di `android/key.properties` adalah upload key yang sama dengan yang dipakai untuk aplikasi Play Store. Jangan membuat keystore baru untuk menggantikannya. Jika memakai Play App Signing, CI perlu upload key, bukan app signing key milik Google.
 2. Pada GitHub repository, buka **Settings → Environments** dan siapkan environment `google-play-production`. Tambahkan secrets berikut ke environment tersebut:

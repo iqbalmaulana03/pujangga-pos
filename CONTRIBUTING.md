@@ -10,7 +10,7 @@ Terima kasih sudah membantu mengembangkan Pujangga POS. Panduan ini menjelaskan 
 
 ## Siapkan proyek
 
-Pasang Flutter SDK yang memenuhi batas Dart di `pubspec.yaml`, Android SDK, dan emulator atau perangkat Android. Dari direktori proyek, jalankan:
+Pasang Flutter **3.47.9** agar sesuai dengan CI, Android SDK, dan emulator atau perangkat Android. Gunakan Dart bawaan Flutter; batas minimum proyek adalah Flutter **3.47.8** dan Dart **3.13.7** untuk perbaikan keamanan GHSA-frr6-h895-5pxp. Dari direktori proyek, jalankan:
 
 ```bash
 flutter pub get

@@ -26,7 +26,7 @@ Navigasi utama memiliki lima bagian: **Beranda**, **Katalog**, **Transaksi**, **
 
 ## Menjalankan aplikasi
 
-Siapkan Flutter SDK yang memenuhi batas Dart di `pubspec.yaml`, Android SDK, dan emulator Android atau perangkat yang tersambung. Pastikan `flutter doctor` tidak melaporkan kebutuhan Android yang belum terpenuhi.
+Gunakan Flutter **3.47.9** agar sama dengan CI, Android SDK, dan emulator Android atau perangkat yang tersambung. Batas minimum proyek adalah Flutter **3.47.8** dan Dart **3.13.7**, yang menyertakan perbaikan keamanan [GHSA-frr6-h895-5pxp](https://github.com/dart-lang/sdk/security/advisories/GHSA-frr6-h895-5pxp). Dart mengikuti versi bawaan Flutter. Pastikan `flutter doctor` tidak melaporkan kebutuhan Android yang belum terpenuhi.
 
 ```bash
 flutter pub get
