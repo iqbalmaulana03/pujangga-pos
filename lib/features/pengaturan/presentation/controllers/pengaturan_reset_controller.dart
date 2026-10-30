@@ -1,3 +1,5 @@
+import '../../../../core/services/business_logo_service.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
@@ -9,6 +11,7 @@ final appResetServiceProvider = Provider<AppResetService>((ref) {
   return AppResetService(
     database: ref.watch(appDatabaseProvider),
     logger: ref.watch(appLoggerProvider),
+    logoService: ref.watch(businessLogoServiceProvider),
   );
 });
 

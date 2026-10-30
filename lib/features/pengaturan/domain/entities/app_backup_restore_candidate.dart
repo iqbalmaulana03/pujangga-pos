@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 class AppBackupRestoreCandidate {
   const AppBackupRestoreCandidate({
     required this.filePath,
@@ -6,6 +8,8 @@ class AppBackupRestoreCandidate {
     required this.schemaVersion,
     required this.recordCounts,
     required this.tables,
+    this.businessLogoBytes,
+    this.warnings = const [],
   });
 
   final String filePath;
@@ -14,6 +18,8 @@ class AppBackupRestoreCandidate {
   final int schemaVersion;
   final Map<String, int> recordCounts;
   final Map<String, List<Map<String, Object?>>> tables;
+  final Uint8List? businessLogoBytes;
+  final List<String> warnings;
 
   int get totalRecords =>
       recordCounts.values.fold(0, (sum, count) => sum + count);

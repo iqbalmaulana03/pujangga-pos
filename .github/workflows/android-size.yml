@@ -1,0 +1,70 @@
+name: Android size measurement (no publishing)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Check launcher budget and resolve locked dependencies
+        run: |
+          python3 tools/launcher_icons.py
+          flutter pub get --enforce-lockfile
+      - name: Prepare disposable signing key for measurement only
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [[ ! -f "$HOME/.android/debug.keystore" ]]; then
+            keytool -genkeypair -noprompt \
+              -keystore "$HOME/.android/debug.keystore" \
+              -alias androiddebugkey -storepass android -keypass android \
+              -dname 'CN=Android Debug,O=Android,C=US' \
+              -keyalg RSA -keysize 2048 -validity 10000
+          fi
+          printf 'storeFile=%s\nstorePassword=android\nkeyAlias=androiddebugkey\nkeyPassword=android\n' \
+            "$HOME/.android/debug.keystore" > android/key.properties
+      - name: Build release bundle without Play credentials
+        run: flutter build appbundle --release --no-pub
+      - name: Measure representative ARM64 Android 13 download
+        shell: bash
+        run: |
+          mkdir -p build/android-size
+          curl --fail --location --retry 3 \
+            https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar \
+            --output build/android-size/bundletool.jar
+          echo 'a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29  build/android-size/bundletool.jar' | sha256sum --check
+          flutter --version --machine > build/android-size/flutter-version.json
+          python3 tools/android_size_report.py \
+            --bundle build/app/outputs/bundle/release/app-release.aab \
+            --bundletool build/android-size/bundletool.jar \
+            --device-spec tools/android-size-device.json \
+            --flutter-version-file build/android-size/flutter-version.json \
+            --output build/android-size/device.json
+      - name: Save bundle, selected APKs, and measurements
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-size-${{ github.sha }}
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/android-size/*.json
+            build/android-size/*.apks
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove temporary signing configuration
+        if: always()
+        run: rm -f android/key.properties

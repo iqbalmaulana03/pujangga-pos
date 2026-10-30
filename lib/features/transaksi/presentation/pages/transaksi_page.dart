@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'dart:io';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
+import '../../../../shared/widgets/business_logo.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
@@ -92,9 +92,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
       final message = error is AppException
           ? error.message
           : 'Transaksi gagal disimpan. Coba lagi.';
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -171,9 +170,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 height: 48,
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).pop(double.tryParse(controller.text.trim()) ?? 0);
+                    Navigator.of(context)
+                        .pop(double.tryParse(controller.text.trim()) ?? 0);
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C56),
@@ -277,9 +275,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 height: 48,
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).pop(QuantityFormatter.parse(controller.text));
+                    Navigator.of(context)
+                        .pop(QuantityFormatter.parse(controller.text));
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C56),
@@ -386,9 +383,8 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 height: 48,
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(
-                      context,
-                    ).pop(double.tryParse(controller.text.trim()) ?? 0);
+                    Navigator.of(context)
+                        .pop(double.tryParse(controller.text.trim()) ?? 0);
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C56),
@@ -715,19 +711,6 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
   }
 
   Widget _buildCatalogItemCard(TransaksiItem item, String? logoPath) {
-    String? imageUrl;
-    final nameLower = item.name.toLowerCase();
-    if (nameLower.contains('espresso')) {
-      imageUrl =
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuC-IY8P8kbPiw7Tj6de85ViUnzT5HFgCr4XYnnLUSaTWS5KCrrwwKTwMgsopdDwXuTdwp6AdRwJlGsyYFJSuF8cIUw-CUyY8kUl-bh6ejEo2O6DsK7s26YlpY0dsf_seWFBMarOo04l12vQpi-IKD9N0BcNgzQVqHhTMcKZtQ_dHyN2VPt8evCNpA4a3OD3MO3LAI8QgjFCDBIfTBfemMW_iA2MYc_h4WDopM-3ObRLPc9nAthjEUx8';
-    } else if (nameLower.contains('matcha')) {
-      imageUrl =
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuCgj_amFzOgHLhGY2wWxTyoT-7ofK0pOwT4djUezgrGDBpqMhJr_44s0-lCXbicDar4Wn4otWMTMSs-kcQIfhOzg5hQdz6T87B2ZAMjtYUe4AMsZT_Q5VD71itpaW0Kg4E0DjMFqCXhTHDoSb9Os57PjQlFGOCHR1WhKs50I-uccWPZ3jqki0LP17RMOqsJujimbY0GikVmvhhbCUKkmplEEnt3ksXnJMkkgMd6Ti3xBM9e-mG-wGIN';
-    } else if (nameLower.contains('croissant')) {
-      imageUrl =
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuDtw6FzoRqsgJnhCOMFExNBi-djCa-zF3rZDMdZOLFbH4bTzKIjXoBSUMo3v0dWBy7boOi0M6UuQiivP5poXcYwYgSrPPiefB9lKppiE5ND6zqXFMnqqqiywwHLiOxp62DhWEJH32LLCSAa0Pki_GcRlZsv_TtPC8ve8lo-R8H4R5Q5cQO34yMXSMHnNP2cODt_TgHWJWlbEIo2AswHm0foxdgL3BwPnTL9vuIe8qsBhlh4ZlBgX8Xf';
-    }
-
     return GestureDetector(
       onTap: () {
         ref.read(transaksiControllerProvider.notifier).addItem(item);
@@ -755,20 +738,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  imageUrl != null
-                      ? Image.network(imageUrl, fit: BoxFit.cover)
-                      : (logoPath != null &&
-                            logoPath.isNotEmpty &&
-                            File(logoPath).existsSync())
-                      ? Image.file(File(logoPath), fit: BoxFit.cover)
-                      : Container(
-                          color: const Color(0xFFECEEED),
-                          child: const Icon(
-                            Icons.storefront,
-                            size: 28,
-                            color: Color(0xFFBEC9C6),
-                          ),
-                        ),
+                  BusinessLogo(path: logoPath),
                   Positioned(
                     top: 6,
                     left: 6,

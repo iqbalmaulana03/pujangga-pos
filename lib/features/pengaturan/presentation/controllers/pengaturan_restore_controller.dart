@@ -1,3 +1,5 @@
+import '../../../../core/services/business_logo_service.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
@@ -18,6 +20,7 @@ final appRestoreServiceProvider = Provider<AppRestoreService>((ref) {
   return AppRestoreService(
     database: ref.watch(appDatabaseProvider),
     logger: ref.watch(appLoggerProvider),
+    logoService: ref.watch(businessLogoServiceProvider),
   );
 });
 
@@ -58,7 +61,7 @@ class PengaturanRestoreController
   Future<void> restoreBackup(AppBackupRestoreCandidate candidate) async {
     state = const AsyncLoading();
 
-    state = await AsyncValue.guard(() async {
+    try {
       await ref.read(appRestoreServiceProvider).restoreBackup(candidate);
 
       ref.invalidate(appStartupProvider);
@@ -66,7 +69,11 @@ class PengaturanRestoreController
       ref.invalidate(appSettingsProvider);
       ref.invalidate(pengaturanBackupControllerProvider);
       ref.invalidate(pengaturanResetControllerProvider);
-      return candidate;
-    });
+
+      state = AsyncData(candidate);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
   }
 }

@@ -1,9 +1,12 @@
+import '../../../../shared/widgets/logo_picker.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../domain/entities/business_profile.dart';
 
-typedef BusinessProfileSubmit =
-    Future<void> Function(BusinessProfile businessProfile);
+typedef BusinessProfileSubmit = Future<void> Function(
+  BusinessProfile businessProfile,
+);
 
 class BusinessProfileForm extends StatefulWidget {
   const BusinessProfileForm({
@@ -42,7 +45,8 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
   late final TextEditingController _addressController;
   late final TextEditingController _contactNumberController;
   late final TextEditingController _ownerNameController;
-  late final TextEditingController _logoPathController;
+  String? _logoPath;
+  bool _logoBusy = false;
 
   @override
   void initState() {
@@ -62,9 +66,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
     _ownerNameController = TextEditingController(
       text: widget.initialProfile?.ownerName ?? '',
     );
-    _logoPathController = TextEditingController(
-      text: widget.initialProfile?.logoPath ?? '',
-    );
+    _logoPath = widget.initialProfile?.logoPath;
   }
 
   @override
@@ -79,7 +81,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
       _contactNumberController.text =
           widget.initialProfile?.contactNumber ?? '';
       _ownerNameController.text = widget.initialProfile?.ownerName ?? '';
-      _logoPathController.text = widget.initialProfile?.logoPath ?? '';
+      _logoPath = widget.initialProfile?.logoPath;
     }
   }
 
@@ -90,7 +92,6 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
     _addressController.dispose();
     _contactNumberController.dispose();
     _ownerNameController.dispose();
-    _logoPathController.dispose();
     super.dispose();
   }
 
@@ -106,7 +107,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
         address: _normalizeOptional(_addressController.text),
         contactNumber: _normalizeOptional(_contactNumberController.text),
         ownerName: _normalizeOptional(_ownerNameController.text),
-        logoPath: _normalizeOptional(_logoPathController.text),
+        logoPath: _logoPath,
       ),
     );
   }
@@ -134,9 +135,8 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
           ],
           Text(
             widget.title,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
           Text(widget.description),
@@ -149,9 +149,8 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
                 children: [
                   Text(
                     'Informasi Utama',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
                   Text(
@@ -223,14 +222,12 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
                 children: [
                   Text(
                     'Lengkapi Jika Perlu',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    widget.optionalSectionHelperText ??
-                        'Field ini opsional dan bisa diperbarui lagi dari menu Pengaturan.',
+                    widget.optionalSectionHelperText ?? 'Field ini opsional dan bisa diperbarui lagi dari menu Pengaturan.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 18),
@@ -263,12 +260,11 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
                     maxLines: 3,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _logoPathController,
-                    decoration: const InputDecoration(
-                      labelText: 'Referensi logo lokal',
-                      hintText: 'Contoh: /storage/emulated/0/Pictures/logo.png',
-                    ),
+                  LogoPicker(
+                    path: _logoPath,
+                    enabled: !widget.loading,
+                    onChanged: (path) => setState(() => _logoPath = path),
+                    onBusyChanged: (value) => setState(() => _logoBusy = value),
                   ),
                 ],
               ),
@@ -278,7 +274,7 @@ class _BusinessProfileFormState extends State<BusinessProfileForm> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: widget.loading ? null : _handleSubmit,
+              onPressed: widget.loading || _logoBusy ? null : _handleSubmit,
               icon: const Icon(Icons.arrow_forward_rounded),
               label: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),

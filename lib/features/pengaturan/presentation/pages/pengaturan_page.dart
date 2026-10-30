@@ -1,9 +1,12 @@
+import '../../../setup_usaha/presentation/widgets/business_profile_dialog.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
@@ -25,7 +28,7 @@ class PengaturanPage extends ConsumerStatefulWidget {
 }
 
 class _PengaturanPageState extends ConsumerState<PengaturanPage> {
-  Future<void> _handleProfileSubmit(BusinessProfile profile) async {
+  Future<bool> _handleProfileSubmit(BusinessProfile profile) async {
     try {
       await ref.read(pengaturanProfilControllerProvider.notifier).save(profile);
       ref.invalidate(businessProfileProvider);
@@ -34,12 +37,20 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
           const SnackBar(content: Text('Profil usaha berhasil diperbarui.')),
         );
       }
+      return true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memperbarui profil: ${e.toString()}')),
+          SnackBar(
+            content: Text(
+              e is AppException
+                  ? e.message
+                  : 'Profil belum tersimpan. Coba lagi.',
+            ),
+          ),
         );
       }
+      return false;
     }
   }
 
@@ -114,7 +125,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Cadangan data berhasil dibuat: ${backup.fileName} (${backup.totalRecords} record).',
+            'Cadangan data berhasil dibuat: ${backup.fileName} (${backup.totalRecords} record). ${backup.warnings.join(' ')}',
           ),
         ),
       );
@@ -254,7 +265,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Data dari ${candidate.fileName} berhasil dipulihkan ke aplikasi.',
+            'Data dari ${candidate.fileName} berhasil dipulihkan ke aplikasi. ${candidate.warnings.join(' ')}',
           ),
         ),
       );
@@ -270,135 +281,11 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   }
 
   void _showEditProfileDialog(BusinessProfile? profile) {
-    final nameCtrl = TextEditingController(text: profile?.businessName ?? '');
-    final typeCtrl = TextEditingController(text: profile?.businessType ?? '');
-    final ownerCtrl = TextEditingController(text: profile?.ownerName ?? '');
-    final phoneCtrl = TextEditingController(text: profile?.contactNumber ?? '');
-    final addrCtrl = TextEditingController(text: profile?.address ?? '');
-    final logoCtrl = TextEditingController(text: profile?.logoPath ?? '');
-
-    final formKey = GlobalKey<FormState>();
-
-    showDialog(
+    showDialog<void>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Edit Profil Usaha',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0D5C56),
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Usaha *',
-                      border: UnderlineInputBorder(),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Nama usaha wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: typeCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Kategori / Jenis Usaha *',
-                      border: UnderlineInputBorder(),
-                    ),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Jenis usaha wajib diisi'
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: ownerCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama Pemilik (Opsional)',
-                      border: UnderlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: phoneCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
-                      labelText: 'Nomor Kontak (Opsional)',
-                      border: UnderlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: addrCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Alamat (Opsional)',
-                      border: UnderlineInputBorder(),
-                    ),
-                    maxLines: 2,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: logoCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Path Logo Lokal (Opsional)',
-                      border: UnderlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Batal',
-                style: TextStyle(color: Color(0xFF3F4947)),
-              ),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (formKey.currentState!.validate()) {
-                  final newProfile = BusinessProfile(
-                    businessName: nameCtrl.text.trim(),
-                    businessType: typeCtrl.text.trim(),
-                    ownerName: ownerCtrl.text.trim().isEmpty
-                        ? null
-                        : ownerCtrl.text.trim(),
-                    contactNumber: phoneCtrl.text.trim().isEmpty
-                        ? null
-                        : phoneCtrl.text.trim(),
-                    address: addrCtrl.text.trim().isEmpty
-                        ? null
-                        : addrCtrl.text.trim(),
-                    logoPath: logoCtrl.text.trim().isEmpty
-                        ? null
-                        : logoCtrl.text.trim(),
-                    modalAwalUsaha: profile?.modalAwalUsaha,
-                  );
-                  Navigator.pop(context);
-                  _handleProfileSubmit(newProfile);
-                }
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0D5C56),
-              ),
-              child: const Text('Simpan'),
-            ),
-          ],
-        );
-      },
+      barrierDismissible: false,
+      builder: (_) =>
+          BusinessProfileDialog(profile: profile, onSave: _handleProfileSubmit),
     );
   }
 
@@ -933,14 +820,22 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         subtitle: 'Atur komisi transaksi dan gaji bulanan',
                         onTap: () => context.push(AppRoutes.employees),
                       ),
-                        const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
-                        _buildRowAction(
-                          icon: Icons.receipt_long_outlined,
-                          title: 'Pengeluaran',
-                          subtitle: 'Biaya operasional, komisi, dan gaji',
-                          onTap: () => context.push(AppRoutes.expenses),
-                        ),
-                      const Divider(height: 1, thickness: 1, color: Color(0xFFF2F4F2)),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
+                      _buildRowAction(
+                        icon: Icons.receipt_long_outlined,
+                        title: 'Pengeluaran',
+                        subtitle: 'Biaya operasional, komisi, dan gaji',
+                        onTap: () => context.push(AppRoutes.expenses),
+                      ),
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFF2F4F2),
+                      ),
                       _buildRowAction(
                         icon: Icons.account_balance_wallet,
                         title: 'Modal Awal Usaha',
@@ -1157,8 +1052,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                         iconColor: const Color(0xFFBA1A1A),
                         title: 'Reset Data Aplikasi',
                         titleColor: const Color(0xFFBA1A1A),
-                        subtitle:
-                            'Hapus seluruh data lokal dan kembalikan aplikasi ke kondisi awal.',
+                        subtitle: 'Hapus seluruh data lokal dan kembalikan aplikasi ke kondisi awal.',
                         onTap: _showResetConfirmDialog,
                       ),
                     ],

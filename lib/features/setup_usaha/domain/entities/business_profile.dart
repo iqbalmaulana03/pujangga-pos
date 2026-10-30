@@ -1,3 +1,5 @@
+const _unchangedLogo = Object();
+
 class BusinessProfile {
   const BusinessProfile({
     required this.businessName,
@@ -23,7 +25,7 @@ class BusinessProfile {
     String? address,
     String? contactNumber,
     String? ownerName,
-    String? logoPath,
+    Object? logoPath = _unchangedLogo,
     double? modalAwalUsaha,
   }) {
     return BusinessProfile(
@@ -32,7 +34,9 @@ class BusinessProfile {
       address: address ?? this.address,
       contactNumber: contactNumber ?? this.contactNumber,
       ownerName: ownerName ?? this.ownerName,
-      logoPath: logoPath ?? this.logoPath,
+      logoPath: identical(logoPath, _unchangedLogo)
+          ? this.logoPath
+          : logoPath as String?,
       modalAwalUsaha: modalAwalUsaha ?? this.modalAwalUsaha,
     );
   }

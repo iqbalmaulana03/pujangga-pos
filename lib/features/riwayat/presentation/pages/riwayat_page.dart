@@ -71,171 +71,201 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
             onRefresh: () =>
                 ref.read(riwayatControllerProvider.notifier).refresh(),
             color: const Color(0xFF0D5C56),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              children: [
-                // Search Bar Section
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Search Bar Section
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFBEC9C6)
+                                      .withValues(alpha: 0.3),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: TextField(
+                                controller: _searchController,
+                                onChanged: ref
+                                    .read(riwayatControllerProvider.notifier)
+                                    .updateSearch,
+                                decoration: InputDecoration(
+                                  hintText: 'Cari faktur atau barang...',
+                                  prefixIcon: const Icon(
+                                    Icons.search,
+                                    color: Color(0xFF3F4947),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF0D5C56),
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Filters Chips Horizontal Scroll
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  // Date Filter Chips
+                                  _buildFilterChip(
+                                    label: 'Semua Tanggal',
+                                    selected: state.dateFilter == 'semua',
+                                    onTap: () => ref
+                                        .read(
+                                          riwayatControllerProvider.notifier,
+                                        )
+                                        .updateDateFilter('semua'),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildFilterChip(
+                                    label: 'Hari Ini',
+                                    selected: state.dateFilter == 'hari_ini',
+                                    onTap: () => ref
+                                        .read(
+                                          riwayatControllerProvider.notifier,
+                                        )
+                                        .updateDateFilter('hari_ini'),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildFilterChip(
+                                    label: '7 Hari',
+                                    selected: state.dateFilter == '7_hari',
+                                    onTap: () => ref
+                                        .read(
+                                          riwayatControllerProvider.notifier,
+                                        )
+                                        .updateDateFilter('7_hari'),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  _buildFilterChip(
+                                    label: '30 Hari',
+                                    selected: state.dateFilter == '30_hari',
+                                    onTap: () => ref
+                                        .read(
+                                          riwayatControllerProvider.notifier,
+                                        )
+                                        .updateDateFilter('30_hari'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Divider line
+                                  Container(
+                                    width: 1,
+                                    height: 20,
+                                    color: const Color(0xFFBEC9C6),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Payment Option Chips
+                                  for (final paymentMethod
+                                      in state.paymentOptions) ...[
+                                    _buildFilterChip(
+                                      label: _paymentLabel(paymentMethod),
+                                      selected:
+                                          state.paymentFilter == paymentMethod,
+                                      onTap: () => ref
+                                          .read(
+                                            riwayatControllerProvider.notifier,
+                                          )
+                                          .updatePaymentFilter(paymentMethod),
+                                    ),
+                                    const SizedBox(width: 6),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Metrics Summary Card Bento
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildBentoCard(
+                                    title: 'Transaksi',
+                                    value: '${completedTransactions.length}',
+                                    icon: Icons.receipt_long,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildBentoCard(
+                                    title: 'Omzet',
+                                    value: CurrencyFormatter.format(
+                                      filteredRevenue,
+                                    ),
+                                    icon: Icons.payments,
+                                    valueColor: const Color(0xFF0D5C56),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Transaction list section header
+                            Row(
+                              children: const [
+                                Text(
+                                  'TRANSAKSI TERBARU',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF3F4947),
+                                    letterSpacing: 0.8,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+
+                            if (state.allTransactions.isEmpty)
+                              _buildEmptyState(
+                                isFiltered: false,
+                                onCreateTransaction: () =>
+                                    context.push(AppRoutes.transaction),
+                              )
+                            else if (state.filteredTransactions.isEmpty)
+                              _buildEmptyState(isFiltered: true),
+                          ],
+                        ),
+                      ),
+                      SliverList.builder(
+                        itemCount: state.filteredTransactions.length,
+                        itemBuilder: (context, index) => _buildTransactionCard(
+                          state.filteredTransactions[index],
+                        ),
                       ),
                     ],
                   ),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: ref
-                        .read(riwayatControllerProvider.notifier)
-                        .updateSearch,
-                    decoration: InputDecoration(
-                      hintText: 'Cari faktur atau barang...',
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: Color(0xFF3F4947),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF0D5C56),
-                          width: 1.5,
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
-                const SizedBox(height: 12),
-
-                // Filters Chips Horizontal Scroll
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      // Date Filter Chips
-                      _buildFilterChip(
-                        label: 'Semua Tanggal',
-                        selected: state.dateFilter == 'semua',
-                        onTap: () => ref
-                            .read(riwayatControllerProvider.notifier)
-                            .updateDateFilter('semua'),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildFilterChip(
-                        label: 'Hari Ini',
-                        selected: state.dateFilter == 'hari_ini',
-                        onTap: () => ref
-                            .read(riwayatControllerProvider.notifier)
-                            .updateDateFilter('hari_ini'),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildFilterChip(
-                        label: '7 Hari',
-                        selected: state.dateFilter == '7_hari',
-                        onTap: () => ref
-                            .read(riwayatControllerProvider.notifier)
-                            .updateDateFilter('7_hari'),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildFilterChip(
-                        label: '30 Hari',
-                        selected: state.dateFilter == '30_hari',
-                        onTap: () => ref
-                            .read(riwayatControllerProvider.notifier)
-                            .updateDateFilter('30_hari'),
-                      ),
-                      const SizedBox(width: 12),
-                      // Divider line
-                      Container(
-                        width: 1,
-                        height: 20,
-                        color: const Color(0xFFBEC9C6),
-                      ),
-                      const SizedBox(width: 12),
-                      // Payment Option Chips
-                      for (final paymentMethod in state.paymentOptions) ...[
-                        _buildFilterChip(
-                          label: _paymentLabel(paymentMethod),
-                          selected: state.paymentFilter == paymentMethod,
-                          onTap: () => ref
-                              .read(riwayatControllerProvider.notifier)
-                              .updatePaymentFilter(paymentMethod),
-                        ),
-                        const SizedBox(width: 6),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Metrics Summary Card Bento
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildBentoCard(
-                        title: 'Transaksi',
-                        value: '${completedTransactions.length}',
-                        icon: Icons.receipt_long,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildBentoCard(
-                        title: 'Omzet',
-                        value: CurrencyFormatter.format(filteredRevenue),
-                        icon: Icons.payments,
-                        valueColor: const Color(0xFF0D5C56),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Transaction list section header
-                Row(
-                  children: const [
-                    Text(
-                      'TRANSAKSI TERBARU',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF3F4947),
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                if (state.allTransactions.isEmpty)
-                  _buildEmptyState(
-                    isFiltered: false,
-                    onCreateTransaction: () =>
-                        context.push(AppRoutes.transaction),
-                  )
-                else if (state.filteredTransactions.isEmpty)
-                  _buildEmptyState(isFiltered: true)
-                else
-                  ...state.filteredTransactions.map(
-                    (tx) => _buildTransactionCard(tx),
-                  ),
               ],
             ),
           );
@@ -685,9 +715,8 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                             width: 40,
                             height: 6,
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFBEC9C6,
-                              ).withValues(alpha: 0.6),
+                              color: const Color(0xFFBEC9C6)
+                                  .withValues(alpha: 0.6),
                               borderRadius: BorderRadius.circular(3),
                             ),
                           ),
@@ -740,9 +769,8 @@ class _RiwayatPageState extends ConsumerState<RiwayatPage> {
                                 width: 30,
                                 height: 10,
                                 decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF0D5C56,
-                                  ).withValues(alpha: 0.2),
+                                  color: const Color(0xFF0D5C56)
+                                      .withValues(alpha: 0.2),
                                   borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
