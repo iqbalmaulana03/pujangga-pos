@@ -29,10 +29,14 @@ Store yang diukur langsung.
 | --- | ---: | ---: | ---: |
 | AAB unggahan | 83.693.372 | 67.426.511 | 16.266.861 |
 | Total APK terpilih untuk perangkat | 45.763.957 | 29.498.741 | 16.265.216 |
-| Estimasi download minimum/maksimum | 29.469.367 | 13.201.845 | 16.267.522 (55,20%) |
+| Estimasi download minimum | 29.469.367 | 13.201.845 | 16.267.522 (55,20%) |
+| Estimasi download maksimum | 29.469.367 | 13.201.845 | 16.267.522 (55,20%) |
 | Lima PNG ikon di dalam AAB, sebelum kompresi ZIP | 16.321.915 | 59.854 | 16.262.061 |
 
-Target estimasi download <35.000.000 byte tercapai. Lima PNG di source berjumlah
+Minimum dan maksimum identik untuk profil ini. Target <35.000.000 byte dinilai
+dengan nilai **maksimum** optimasi, 13.201.845 byte, sehingga tercapai pada build
+pengukuran ini. AAB final setelah optimasi RAM/perbaikan logo belum diukur ulang.
+Lima PNG di source berjumlah
 65.318 byte, di bawah batas CI 250.000 byte; AAPT menghasilkan ukuran paket yang
 sedikit berbeda. Dimensi sekarang mdpi 48, hdpi 72, xhdpi 96, xxhdpi 144,
 xxxhdpi 192 piksel. Artwork, proporsi, dan warna dipertahankan tanpa crop atau
@@ -41,8 +45,12 @@ tidak ikut dalam AAB.
 
 Pemeriksaan SHA-256 terhadap **30 entri library native, DEX, dan aset runtime**
 menunjukkan semuanya identik pada kedua AAB, termasuk scanner native serta
-model ML Kit. Tidak ada pengurangan fitur atau perubahan source aplikasi,
-dependensi, skema database, minimum SDK, ataupun dukungan ABI.
+model ML Kit. Kesimpulan hash hanya berlaku pada 30 entri yang diperiksa;
+ini bukan pembuktian bahwa seluruh source, dependensi, atau perilaku identik.
+Kedua build pengukuran berasal dari `df08f4b` dengan hash lockfile identik,
+bukan perbandingan checkout rilis `0e7cb8f` terhadap `df08f4b`. Kedua revision
+tersebut memang memiliki perbedaan versi aplikasi dan metadata dependensi,
+tetapi artefak rilis historis dibahas terpisah di bawah dan bukan baseline.
 
 ## Artefak dan keterulangan
 
@@ -55,6 +63,9 @@ Artefak lokal berada di `build/size-audit/` dalam worktree dan diabaikan Git:
 
 `before.json` dan `after.json` mencatat source/status checkout, hash lockfile,
 metadata SDK, checksum artefak, APK terpilih, profil, dan estimasi download.
+Ringkasan metadata asli kedua laporan tersedia di
+[ANDROID-SIZE-MEASUREMENTS.json](ANDROID-SIZE-MEASUREMENTS.json), termasuk
+revision, status checkout, hash lockfile, checksum AAB, dan nilai min/max.
 File `.apks` berisi hasil bundletool yang ditandatangani dengan key debug untuk
 pengukuran; bukan paket untuk dipasang di atas aplikasi Play.
 
@@ -69,9 +80,16 @@ optimasi karena SDK dan source berbeda dari `main` terbaru.
 ## Pemeriksaan
 
 - `flutter analyze --fatal-infos --no-pub`: lulus tanpa temuan.
-- `flutter test --no-pub --reporter expanded`: **70 tes lulus**. Sebelum tes,
-  lima suite SQLite diverifikasi menggunakan factory FFI dan direktori
-  sementara lokal; tes UI memakai mock/provider uji. Database HP tidak digunakan.
+- Pada tahap awal audit ukuran, `flutter test --no-pub --reporter expanded`
+  menjalankan seluruh suite saat itu: **70 tes lulus**, bukan subset suite akhir.
+  Pada head PR `f649818`, pemeriksaan seluruh suite diulang setelah penambahan
+  tes RAM/logo: **93 tes lulus**. Suite SQLite menggunakan factory FFI dan
+  direktori sementara khusus; tes UI memakai mock/provider uji.
+  Database HP tidak digunakan.
+- Revisi review menambahkan tiga regresi lifecycle scanner (`null`, resumed,
+  paused): seluruh **96 tes lulus**, analisis Flutter bersih, dan kedua YAML
+  workflow valid. Root arsip AAB serta pin SHA action diverifikasi lokal;
+  job publikasi tidak dijalankan untuk pengujian ini.
 - Build AAB release baseline dan optimasi: lulus.
 - Regenerasi ikon dua kali: SHA-256 seluruh PNG identik.
 - Guard CI: menerima PNG baru; menolak ikon lama, dimensi salah, budget

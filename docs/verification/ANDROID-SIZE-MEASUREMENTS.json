@@ -1,0 +1,30 @@
+{
+  "before": {
+    "source_revision": "df08f4bf7aa22ea0cc68ca44266f6f5a09f8c765",
+    "source_status": "M .github/workflows/android-ci-cd.yml\n?? .github/workflows/android-size.yml\n?? docs/ANDROID-SIZE.md\n?? tools/",
+    "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+    "bundle": {
+      "name": "baseline.aab",
+      "bytes": 83693372,
+      "sha256": "dfbbd7090de4f37e52a895273674185cc440439dafb658b39c9c630d427c6224"
+    },
+    "estimated_download_bytes": {
+      "min": 29469367,
+      "max": 29469367
+    }
+  },
+  "after": {
+    "source_revision": "df08f4bf7aa22ea0cc68ca44266f6f5a09f8c765",
+    "source_status": "M .github/workflows/android-ci-cd.yml\n M android/app/src/main/res/mipmap-hdpi/ic_launcher.png\n M android/app/src/main/res/mipmap-mdpi/ic_launcher.png\n M android/app/src/main/res/mipmap-xhdpi/ic_launcher.png\n M android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png\n M android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png\n?? .github/workflows/android-size.yml\n?? docs/ANDROID-SIZE.md\n?? tools/",
+    "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+    "bundle": {
+      "name": "optimized.aab",
+      "bytes": 67426511,
+      "sha256": "c19955f91e96f664375214e3d70e5734fb34fd24b26fd0addffa13050168e5fc"
+    },
+    "estimated_download_bytes": {
+      "min": 13201845,
+      "max": 13201845
+    }
+  }
+}

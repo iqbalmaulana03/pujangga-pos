@@ -54,9 +54,11 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
+        final lifecycleState = WidgetsBinding.instance.lifecycleState;
         unawaited(
           _session.setActive(
-            WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed,
+            lifecycleState == null ||
+                lifecycleState == AppLifecycleState.resumed,
           ),
         );
       }

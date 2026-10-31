@@ -18,14 +18,24 @@ Gunakan SDK Flutter yang dipin pada workflow CI (saat ini 3.47.9), lockfile yang
 sama, signing/configuration yang sama, dan bundletool 1.18.3 untuk kedua build.
 SHA-256 bundletool resmi:
 `a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29`.
-Simpan baseline sebelum mengubah resource. Jalankan ulang langkah berikut untuk
-hasil optimasi dengan nama output berbeda:
+Simpan baseline sebelum mengubah resource. Buat device spec sekali sebelum
+kedua pengukuran, lalu gunakan file yang sama agar profil tetap identik:
+
+```sh
+mkdir -p build
+java -jar /path/to/bundletool-all-1.18.3.jar get-device-spec --output=build/device.json
+```
+
+Jalankan langkah berikut untuk setiap build; gunakan `before.json` untuk
+baseline dan `after.json` untuk hasil optimasi. Simpan kedua laporan beserta
+file `.apks` hasilnya sebelum membersihkan build. Jika menjalankan `flutter clean`,
+salin device spec terlebih dahulu ke luar `build` dan pulihkan file yang sama:
 
 ```sh
 flutter pub get --enforce-lockfile
+mkdir -p build
 flutter --version --machine > build/flutter-version.json
 flutter build appbundle --release --no-pub
-java -jar /path/to/bundletool-all-1.18.3.jar get-device-spec --output=build/device.json
 python tools/android_size_report.py \
   --bundle build/app/outputs/bundle/release/app-release.aab \
   --bundletool /path/to/bundletool-all-1.18.3.jar \
