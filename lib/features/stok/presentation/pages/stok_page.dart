@@ -115,9 +115,8 @@ class _StokPageState extends ConsumerState<StokPage> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menambah stok: $error')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Gagal menambah stok: $error')));
     }
   }
 
@@ -137,245 +136,277 @@ class _StokPageState extends ConsumerState<StokPage> {
             onRefresh: () =>
                 ref.read(stokControllerProvider.notifier).refresh(),
             color: const Color(0xFF0D5C56),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              children: [
-                // Top Metrics Cards Bento
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildMetricCard(
-                        title: 'Barang Dipantau',
-                        value: '${state.totalItems}',
-                        valueColor: const Color(0xFF0D5C56),
-                        icon: Icons.inventory_2_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildMetricCard(
-                        title: 'Stok Menipis',
-                        value: '${state.lowStockCount}',
-                        valueColor: const Color(0xFF9C4F1A),
-                        icon: Icons.warning_amber_rounded,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildMetricCard(
-                        title: 'Stok Habis',
-                        value: '$outOfStockCount',
-                        valueColor: const Color(0xFFBA1A1A),
-                        icon: Icons.error_outline_rounded,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildMetricCard(
-                        title: 'Nilai Aset Stok',
-                        value: CurrencyFormatter.format(
-                          state.liveAssetValuation,
-                        ),
-                        valueColor: const Color(0xFF0D5C56),
-                        icon: Icons.account_balance_wallet_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildMetricCard(
-                        title: 'Stok Mati (Dead Stock)',
-                        value: CurrencyFormatter.format(
-                          state.deadStockValuation,
-                        ),
-                        valueColor: const Color(0xFFBA1A1A),
-                        icon: Icons.money_off_outlined,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Search & Category Filter Section Card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFBEC9C6).withValues(alpha: 0.3),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      TextField(
-                        controller: _searchController,
-                        onChanged: ref
-                            .read(stokControllerProvider.notifier)
-                            .updateSearch,
-                        decoration: InputDecoration(
-                          hintText: 'Cari nama barang, kategori, atau SKU...',
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: Color(0xFF3F4947),
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF2F4F2),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF0D5C56),
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _scanAndAddStock,
-                        icon: const Icon(Icons.qr_code_scanner),
-                        label: const Text('Pindai Barcode untuk Tambah Stok'),
-                      ),
-                      const SizedBox(height: 12),
-                      SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            for (final category in state.categories) ...[
-                              GestureDetector(
-                                onTap: () {
-                                  ref
-                                      .read(stokControllerProvider.notifier)
-                                      .updateCategoryFilter(category);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: state.categoryFilter == category
-                                        ? const Color(0xFF0D5C56)
-                                        : const Color(0xFFECEEED),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: Text(
-                                    category == 'semua'
-                                        ? 'Semua Kategori'
-                                        : category,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 12,
-                                      fontWeight:
-                                          state.categoryFilter == category
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                      color: state.categoryFilter == category
-                                          ? Colors.white
-                                          : const Color(0xFF3F4947),
-                                    ),
+                            // Top Metrics Cards Bento
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    title: 'Barang Dipantau',
+                                    value: '${state.totalItems}',
+                                    valueColor: const Color(0xFF0D5C56),
+                                    icon: Icons.inventory_2_outlined,
                                   ),
                                 ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    title: 'Stok Menipis',
+                                    value: '${state.lowStockCount}',
+                                    valueColor: const Color(0xFF9C4F1A),
+                                    icon: Icons.warning_amber_rounded,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    title: 'Stok Habis',
+                                    value: '$outOfStockCount',
+                                    valueColor: const Color(0xFFBA1A1A),
+                                    icon: Icons.error_outline_rounded,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    title: 'Nilai Aset Stok',
+                                    value: CurrencyFormatter.format(
+                                      state.liveAssetValuation,
+                                    ),
+                                    valueColor: const Color(0xFF0D5C56),
+                                    icon: Icons.account_balance_wallet_outlined,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    title: 'Stok Mati (Dead Stock)',
+                                    value: CurrencyFormatter.format(
+                                      state.deadStockValuation,
+                                    ),
+                                    valueColor: const Color(0xFFBA1A1A),
+                                    icon: Icons.money_off_outlined,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Search & Category Filter Section Card
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: const Color(0xFFBEC9C6)
+                                      .withValues(alpha: 0.3),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.03),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  TextField(
+                                    controller: _searchController,
+                                    onChanged: ref
+                                        .read(stokControllerProvider.notifier)
+                                        .updateSearch,
+                                    decoration: InputDecoration(
+                                      hintText: 'Cari nama barang, kategori, atau SKU...',
+                                      prefixIcon: const Icon(
+                                        Icons.search,
+                                        color: Color(0xFF3F4947),
+                                      ),
+                                      filled: true,
+                                      fillColor: const Color(0xFFF2F4F2),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: BorderSide.none,
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(24),
+                                        borderSide: const BorderSide(
+                                          color: Color(0xFF0D5C56),
+                                          width: 1.5,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: _scanAndAddStock,
+                                    icon: const Icon(Icons.qr_code_scanner),
+                                    label: const Text(
+                                      'Pindai Barcode untuk Tambah Stok',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: [
+                                        for (final category
+                                            in state.categories) ...[
+                                          GestureDetector(
+                                            onTap: () {
+                                              ref
+                                                  .read(
+                                                    stokControllerProvider
+                                                        .notifier,
+                                                  )
+                                                  .updateCategoryFilter(
+                                                    category,
+                                                  );
+                                            },
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 14,
+                                                    vertical: 6,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    state.categoryFilter ==
+                                                        category
+                                                    ? const Color(0xFF0D5C56)
+                                                    : const Color(0xFFECEEED),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                              ),
+                                              child: Text(
+                                                category == 'semua'
+                                                    ? 'Semua Kategori'
+                                                    : category,
+                                                style: TextStyle(
+                                                  fontFamily: 'Inter',
+                                                  fontSize: 12,
+                                                  fontWeight:
+                                                      state.categoryFilter ==
+                                                          category
+                                                      ? FontWeight.bold
+                                                      : FontWeight.normal,
+                                                  color:
+                                                      state.categoryFilter ==
+                                                          category
+                                                      ? Colors.white
+                                                      : const Color(0xFF3F4947),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Attention section if items are low stock
+                            if (state.lowStockItems.isNotEmpty) ...[
+                              Row(
+                                children: const [
+                                  Icon(
+                                    Icons.notification_important_outlined,
+                                    color: Color(0xFF9C4F1A),
+                                    size: 20,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    'Perlu Perhatian Segera',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF9C4F1A),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              ...state.lowStockItems
+                                  .take(2)
+                                  .map(
+                                    (item) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 10,
+                                      ),
+                                      child: _buildAttentionCard(item),
+                                    ),
+                                  ),
+                              const SizedBox(height: 10),
                             ],
+
+                            // Main stock item list
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: const [
+                                Text(
+                                  'Daftar Stok Barang',
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF191C1C),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+
+                            if (state.allItems.isEmpty)
+                              _buildEmptyStateCard(
+                                icon: Icons.inventory_2_outlined,
+                                title: 'Belum ada barang di katalog',
+                                subtitle: 'Tambahkan item bertipe barang dari katalog agar modul stok mulai menampilkan ringkasan.',
+                                actionLabel: 'Tambah Item',
+                                onAction: () =>
+                                    context.push(AppRoutes.catalogCreate),
+                              )
+                            else if (state.filteredItems.isEmpty)
+                              _buildEmptyStateCard(
+                                icon: Icons.filter_alt_off_outlined,
+                                title: 'Tidak ada barang yang cocok',
+                                subtitle: 'Ubah kata kunci pencarian atau filter kategori untuk melihat item lain.',
+                              ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Attention section if items are low stock
-                if (state.lowStockItems.isNotEmpty) ...[
-                  Row(
-                    children: const [
-                      Icon(
-                        Icons.notification_important_outlined,
-                        color: Color(0xFF9C4F1A),
-                        size: 20,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Perlu Perhatian Segera',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF9C4F1A),
-                        ),
+                      SliverList.builder(
+                        itemCount: state.filteredItems.length,
+                        itemBuilder: (context, index) =>
+                            _buildStockItemCard(state.filteredItems[index]),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  ...state.lowStockItems
-                      .take(2)
-                      .map(
-                        (item) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _buildAttentionCard(item),
-                        ),
-                      ),
-                  const SizedBox(height: 10),
-                ],
-
-                // Main stock item list
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
-                      'Daftar Stok Barang',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF191C1C),
-                      ),
-                    ),
-                  ],
                 ),
-                const SizedBox(height: 10),
-
-                if (state.allItems.isEmpty)
-                  _buildEmptyStateCard(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'Belum ada barang di katalog',
-                    subtitle:
-                        'Tambahkan item bertipe barang dari katalog agar modul stok mulai menampilkan ringkasan.',
-                    actionLabel: 'Tambah Item',
-                    onAction: () => context.push(AppRoutes.catalogCreate),
-                  )
-                else if (state.filteredItems.isEmpty)
-                  _buildEmptyStateCard(
-                    icon: Icons.filter_alt_off_outlined,
-                    title: 'Tidak ada barang yang cocok',
-                    subtitle:
-                        'Ubah kata kunci pencarian atau filter kategori untuk melihat item lain.',
-                  )
-                else
-                  ...state.filteredItems.map(
-                    (item) => _buildStockItemCard(item),
-                  ),
               ],
             ),
           );

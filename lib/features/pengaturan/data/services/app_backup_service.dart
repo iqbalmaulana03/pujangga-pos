@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/business_logo_service.dart';
 import '../../domain/entities/app_backup_file.dart';
 import 'app_backup_payload_builder.dart';
 
@@ -16,13 +18,15 @@ class AppBackupService {
     required this.database,
     required this.logger,
     AppBackupPayloadBuilder? payloadBuilder,
-    this._backupDirectoryProvider,
+    this.backupDirectoryProvider,
+    this.logoService,
   }) : _payloadBuilder = payloadBuilder ?? const AppBackupPayloadBuilder();
 
   final AppDatabase database;
   final Logger logger;
   final AppBackupPayloadBuilder _payloadBuilder;
-  final BackupDirectoryProvider? _backupDirectoryProvider;
+  final BackupDirectoryProvider? backupDirectoryProvider;
+  final BusinessLogoService? logoService;
 
   static const List<String> backupTables = [
     'business_profile',
@@ -38,7 +42,10 @@ class AppBackupService {
     'employee_compensation_periods',
   ];
 
-  Future<AppBackupFile> createBackup() async {
+  Future<AppBackupFile> createBackup() =>
+      (logoService ?? BusinessLogoService()).synchronized(_createBackup);
+
+  Future<AppBackupFile> _createBackup() async {
     final db = await database.database();
     final generatedAt = DateTime.now();
     final tables = <String, List<Map<String, Object?>>>{};
@@ -50,13 +57,30 @@ class AppBackupService {
           .toList(growable: false);
     }
 
+    Uint8List? logoBytes;
+    final warnings = <String>[];
+    final profiles = tables['business_profile']!;
+    final logoPath = profiles.isEmpty
+        ? null
+        : profiles.first['logo_path'] as String?;
+    if (logoPath != null && logoPath.isNotEmpty) {
+      try {
+        final logos = logoService ?? BusinessLogoService();
+        logoBytes = await logos.normalize(await logos.readSource(logoPath));
+      } catch (_) {
+        warnings.add(
+          'Logo tidak dapat dibaca dan tidak disertakan dalam cadangan.',
+        );
+      }
+    }
     final payload = _payloadBuilder.build(
       generatedAt: generatedAt,
       tables: tables,
+      businessLogoBytes: logoBytes,
     );
 
     final targetDirectory =
-        await (_backupDirectoryProvider?.call() ??
+        await (backupDirectoryProvider?.call() ??
             getApplicationDocumentsDirectory());
     await targetDirectory.create(recursive: true);
 
@@ -74,6 +98,7 @@ class AppBackupService {
       filePath: file.path,
       fileName: fileName,
       generatedAt: generatedAt,
+      warnings: warnings,
       recordCounts: {
         for (final entry in tables.entries) entry.key: entry.value.length,
       },

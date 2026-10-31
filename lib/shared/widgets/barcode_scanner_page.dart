@@ -1,12 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import 'scanner_session.dart';
+
 class BarcodeScannerPage extends StatefulWidget {
-  const BarcodeScannerPage({super.key});
+  const BarcodeScannerPage({super.key, this.onReleased});
+
+  final VoidCallback? onReleased;
 
   static Future<String?> scan(BuildContext context) async {
+    final released = Completer<void>();
     final route = MaterialPageRoute<String>(
-      builder: (_) => const BarcodeScannerPage(),
+      builder: (_) => BarcodeScannerPage(onReleased: released.complete),
     );
     // Stock and transaction pages live inside StatefulShellRoute branch
     // navigators, while dialogs opened after scanning use the root navigator.
@@ -19,6 +26,7 @@ class BarcodeScannerPage extends StatefulWidget {
     // scanner route. Wait until its overlay is gone before callers open a
     // dialog or update route-dependent widgets.
     await route.completed;
+    await released.future;
     return barcode;
   }
 
@@ -26,15 +34,49 @@ class BarcodeScannerPage extends StatefulWidget {
   State<BarcodeScannerPage> createState() => _BarcodeScannerPageState();
 }
 
-class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
+class _BarcodeScannerPageState extends State<BarcodeScannerPage>
+    with WidgetsBindingObserver {
   final _controller = MobileScannerController(
+    autoStart: false,
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   bool _didRead = false;
+  late final ScannerSession _session;
+
+  @override
+  void initState() {
+    super.initState();
+    _session = ScannerSession(
+      start: () => _controller.start(),
+      stop: () => _controller.stop(),
+      dispose: () => _controller.dispose(),
+    );
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final lifecycleState = WidgetsBinding.instance.lifecycleState;
+        unawaited(
+          _session.setActive(
+            lifecycleState == null ||
+                lifecycleState == AppLifecycleState.resumed,
+          ),
+        );
+      }
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    unawaited(
+      _session.setActive(state == AppLifecycleState.resumed && !_didRead),
+    );
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    final onReleased = widget.onReleased;
+    unawaited(_session.close().whenComplete(() => onReleased?.call()));
     super.dispose();
   }
 
@@ -67,6 +109,7 @@ class _BarcodeScannerPageState extends State<BarcodeScannerPage> {
                 final value = barcode.rawValue?.trim();
                 if (value == null || value.isEmpty) continue;
                 _didRead = true;
+                unawaited(_session.setActive(false));
                 Navigator.of(context).pop(value);
                 break;
               }

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'dart:io';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
+import '../../../../shared/widgets/business_logo.dart';
 import '../../domain/entities/catalog_item.dart';
 import '../controllers/katalog_controller.dart';
 
@@ -131,28 +131,41 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
 
           return RefreshIndicator(
             onRefresh: () => ref.refresh(katalogControllerProvider.future),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _buildHeaderArea(),
-                const SizedBox(height: 20),
-                _buildTabsArea(),
-                const SizedBox(height: 16),
-                if (_selectedTab != 2) ...[
-                  _buildToolbarArea(),
-                  const SizedBox(height: 16),
-                ],
-                _selectedTab == 2
-                    ? _buildCategoryView(state.allItems)
-                    : _buildItemGrid(
-                        filtered,
-                        logoPath,
-                        isCatalogEmpty: !state.allItems.any(
-                          (item) =>
-                              item.itemType ==
-                              (_selectedTab == 0 ? 'barang' : 'jasa'),
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.all(16),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildHeaderArea(),
+                            const SizedBox(height: 20),
+                            _buildTabsArea(),
+                            const SizedBox(height: 16),
+                            if (_selectedTab != 2) ...[
+                              _buildToolbarArea(),
+                              const SizedBox(height: 16),
+                            ],
+                          ],
                         ),
                       ),
+                      _selectedTab == 2
+                          ? _buildCategoryView(state.allItems)
+                          : _buildItemGrid(
+                              filtered,
+                              logoPath,
+                              isCatalogEmpty: !state.allItems.any(
+                                (item) =>
+                                    item.itemType ==
+                                    (_selectedTab == 0 ? 'barang' : 'jasa'),
+                              ),
+                            ),
+                    ],
+                  ),
+                ),
               ],
             ),
           );
@@ -472,65 +485,65 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
     required bool isCatalogEmpty,
   }) {
     if (items.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Center(
-          child: Column(
-            children: [
-              const Icon(
-                Icons.inventory_2_outlined,
-                size: 48,
-                color: Color(0xFFBEC9C6),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                isCatalogEmpty
-                    ? 'Katalog masih kosong'
-                    : 'Tidak ada item yang cocok',
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF3F4947),
+      return SliverToBoxAdapter(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.inventory_2_outlined,
+                  size: 48,
+                  color: Color(0xFFBEC9C6),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                isCatalogEmpty
-                    ? 'Tambahkan item agar siap dipakai dalam transaksi.'
-                    : 'Ubah kata kunci pencarian atau filter Anda.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  color: Color(0xFF3F4947),
-                ),
-              ),
-              if (isCatalogEmpty) ...[
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () => context.push(AppRoutes.catalogCreate),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah Item'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0D5C56),
+                Text(
+                  isCatalogEmpty
+                      ? 'Katalog masih kosong'
+                      : 'Tidak ada item yang cocok',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF3F4947),
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  isCatalogEmpty
+                      ? 'Tambahkan item agar siap dipakai dalam transaksi.'
+                      : 'Ubah kata kunci pencarian atau filter Anda.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF3F4947),
+                  ),
+                ),
+                if (isCatalogEmpty) ...[
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: () => context.push(AppRoutes.catalogCreate),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah Item'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0D5C56),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       );
     }
 
-    return LayoutBuilder(
+    return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth;
+        final width = constraints.crossAxisExtent;
         final crossAxisCount = width < 480 ? 2 : (width < 800 ? 3 : 4);
 
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+        return SliverGrid.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
             crossAxisSpacing: 16,
@@ -590,24 +603,6 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
   }
 
   Widget _buildProductCard(CatalogItem item, String? logoPath) {
-    String? imageUrl;
-    final nameLower = item.name.toLowerCase();
-    if (nameLower.contains('coffee maker') ||
-        nameLower.contains('mesin kopi')) {
-      imageUrl =
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAYRo5f6D7cezGrPWCQ8azi_JgrocwGAaPjErsSWBHHMVrIOl0sQOLFSzoukpuB0Bo24qzoV6GHmVsxkAZ2qPxY3Fh95nFpCxQJodXlhmQ48NrsJXwYGwVWmnvwhJ4OKgqbS18zhuLXuapTg6oFAMjW2h5hCf5GNRXmptpZlWzfIofgXo3iyH6n6jLWzvJLq0RWxWfpCn3Xn5eScP_2iFqZ_h10vEdal3owhpxWedXBJOXZ_vzNaRiK';
-    } else if (nameLower.contains('beans') ||
-        nameLower.contains('biji kopi') ||
-        nameLower.contains('kopi roasted') ||
-        nameLower.contains('arabica') ||
-        nameLower.contains('robusta')) {
-      imageUrl =
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuBAnR4s6qrUz7K8v3e4CVx0jE4XTqSrp-DE993UDRCf6qeS3xns-0qVkZI3Dgre_fWgORI_IkU-Ta_KUs-nvL4sCgFTWqS14wccqMW6a_UvoDhCHY2Kt439GnWQHfHpvx7AXphwT8bKtjY_xG3ytYBoT3S0fZjHd6AByj-XUqybXoluEMuPiwy_DrloejdwIYsF3VlM5pj-Ge2uX5tYAqK2LuKeRzjQS2tt1WHUWSg3Bi4Ip2_HAZ7F';
-    } else if (nameLower.contains('press')) {
-      imageUrl =
-          'https://lh3.googleusercontent.com/aida-public/AB6AXuAyOrq4G3XULM6ZN06lo5YmlzQLVHlRMAkD1ln0Jg5EtTPd47X_9M-DZ3XNM5UQKm7F57jd5fNwyxoKU3cwSvTLn6DoFqR8ZAcHO5Ag5Mpe7eaqiNaeulB_aRat0y55_9LGuEpetXRQT0_SXF8g1SD5mIjadT0YqmyQL4nQhb1F1j1ySDE54uNNrVMkyRzjarvMQL11TX5kIj__bLQUUM6bOMe24QGhYQ6d1o6yDnJ_T56ivVlFS1Xa';
-    }
-
     final isLowStock = item.isBarang && (item.stockQuantity ?? 0) <= 5;
 
     return Container(
@@ -631,32 +626,7 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
             aspectRatio: 1.15,
             child: Stack(
               children: [
-                imageUrl != null
-                    ? Image.network(
-                        imageUrl,
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : (logoPath != null &&
-                          logoPath.isNotEmpty &&
-                          File(logoPath).existsSync())
-                    ? Image.file(
-                        File(logoPath),
-                        width: double.infinity,
-                        height: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        color: const Color(0xFFECEEED),
-                        width: double.infinity,
-                        height: double.infinity,
-                        child: const Icon(
-                          Icons.storefront,
-                          size: 40,
-                          color: Color(0xFFBEC9C6),
-                        ),
-                      ),
+                BusinessLogo(path: logoPath),
                 if (item.isBarang)
                   Positioned(
                     top: 8,
@@ -805,27 +775,27 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
     final categories = grouped.keys.toList()..sort();
 
     if (categories.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 40),
-        child: Center(
-          child: Text(
-            'Belum ada kategori.',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 14,
-              color: Color(0xFF3F4947),
+      return const SliverToBoxAdapter(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Text(
+              'Belum ada kategori.',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14,
+                color: Color(0xFF3F4947),
+              ),
             ),
           ),
         ),
       );
     }
 
-    return LayoutBuilder(
+    return SliverLayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 600;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
+        final isWide = constraints.crossAxisExtent >= 600;
+        return SliverGrid.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: isWide ? 3 : 2,
             crossAxisSpacing: 16,

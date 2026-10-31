@@ -23,6 +23,9 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
+      - name: Check launcher icon dimensions and size budget
+        run: python3 tools/launcher_icons.py
+
       - name: Set up Java
         uses: actions/setup-java@v6
         with:
@@ -164,11 +167,24 @@ jobs:
           --build-name "${{ steps.release_version.outputs.build_name }}"
           --build-number "${{ steps.release_version.outputs.build_number }}"
 
+      - name: Record release artifact size and checksum
+        shell: bash
+        run: |
+          mkdir -p build/android-size
+          flutter --version --machine > build/android-size/flutter-version.json
+          python3 tools/android_size_report.py \
+            --bundle build/app/outputs/bundle/release/app-release.aab \
+            --flutter-version-file build/android-size/flutter-version.json \
+            --output build/android-size/release.json
+          cp build/app/outputs/bundle/release/app-release.aab build/android-size/app-release.aab
+
       - name: Save Android App Bundle artifact
         uses: actions/upload-artifact@v7
         with:
           name: pujangga-pos-${{ steps.release_version.outputs.build_name }}+${{ steps.release_version.outputs.build_number }}
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: |
+            build/android-size/app-release.aab
+            build/android-size/release.json
           if-no-files-found: error
           retention-days: 30
 

@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'business_logo.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -42,10 +43,10 @@ class MainNavigationShell extends ConsumerWidget {
     ];
 
     final currentIndex = navigationShell.currentIndex;
- 
+
     final profileAsync = ref.watch(businessProfileProvider);
     final logoPath = profileAsync.asData?.value?.logoPath;
- 
+
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 48,
@@ -72,7 +73,10 @@ class MainNavigationShell extends ConsumerWidget {
         actions: [
           if (currentIndex == 0 || currentIndex == 2)
             IconButton(
-              icon: const Icon(Icons.receipt_long_outlined, color: Color(0xFF0D5C56)),
+              icon: const Icon(
+                Icons.receipt_long_outlined,
+                color: Color(0xFF0D5C56),
+              ),
               tooltip: 'Riwayat Transaksi',
               onPressed: () => context.push(AppRoutes.history),
             ),
@@ -82,44 +86,26 @@ class MainNavigationShell extends ConsumerWidget {
               message: 'Pengaturan',
               child: GestureDetector(
                 onTap: () => context.push(AppRoutes.settings),
-                child: (logoPath != null && logoPath.isNotEmpty && File(logoPath).existsSync())
-                    ? Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFBEC9C6)),
-                          image: DecorationImage(
-                            image: FileImage(File(logoPath)),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      )
-                    : Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: const Color(0xFFECEEED),
-                          border: Border.all(color: const Color(0xFFBEC9C6)),
-                        ),
-                        child: const Icon(
-                          Icons.storefront,
-                          size: 18,
-                          color: Color(0xFF3F4947),
-                        ),
-                      ),
+                child: Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFBEC9C6)),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: BusinessLogo(path: logoPath, iconSize: 18),
+                  ),
+                ),
               ),
             ),
           ),
         ],
         bottom: const PreferredSize(
           preferredSize: Size.fromHeight(1),
-          child: Divider(
-            height: 1,
-            thickness: 1,
-            color: Color(0xFFBEC9C6),
-          ),
+          child: Divider(height: 1, thickness: 1, color: Color(0xFFBEC9C6)),
         ),
       ),
       body: navigationShell,

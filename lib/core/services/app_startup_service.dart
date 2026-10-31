@@ -7,6 +7,7 @@ import '../../features/setup_usaha/domain/entities/business_profile.dart';
 import '../../features/setup_usaha/domain/repositories/business_profile_repository.dart';
 import '../database/app_database.dart';
 import 'app_logger.dart';
+import 'business_logo_service.dart';
 
 final appLoggerProvider = Provider<Logger>((ref) {
   return AppLogger.bootstrap();
@@ -29,6 +30,7 @@ final businessProfileRepositoryProvider = Provider<BusinessProfileRepository>((
   return BusinessProfileRepositoryImpl(
     localDataSource: ref.watch(businessProfileLocalDataSourceProvider),
     logger: ref.watch(appLoggerProvider),
+    logoService: ref.watch(businessLogoServiceProvider),
   );
 });
 
@@ -37,6 +39,7 @@ final appStartupServiceProvider = Provider<AppStartupService>((ref) {
     database: ref.watch(appDatabaseProvider),
     businessProfileRepository: ref.watch(businessProfileRepositoryProvider),
     logger: ref.watch(appLoggerProvider),
+    logoService: ref.watch(businessLogoServiceProvider),
   );
 });
 
@@ -59,11 +62,13 @@ class AppStartupService {
     required this.database,
     required this.businessProfileRepository,
     required this.logger,
+    this.logoService,
   });
 
   final AppDatabase database;
   final BusinessProfileRepository businessProfileRepository;
   final Logger logger;
+  final BusinessLogoService? logoService;
 
   Future<AppStartupState> load() async {
     logger.info('App init started');
@@ -71,6 +76,9 @@ class AppStartupService {
     logger.info('Database init completed');
 
     final hasBusinessProfile = await businessProfileRepository.hasProfile();
+    await logoService?.cleanupOnStartup(
+      () async => (await businessProfileRepository.getProfile())?.logoPath,
+    );
     logger.info('Business profile exists: $hasBusinessProfile');
 
     return AppStartupState(hasBusinessProfile: hasBusinessProfile);

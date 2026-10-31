@@ -23,13 +23,16 @@ class PengaturanProfilController extends AsyncNotifier<void> {
     }
 
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    try {
       await ref
           .read(businessProfileRepositoryProvider)
           .saveProfile(businessProfile);
 
-      ref.invalidate(appStartupProvider);
       ref.invalidate(businessProfileProvider);
-    });
+      state = const AsyncData(null);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
   }
 }

@@ -1,8 +1,13 @@
+import 'dart:typed_data';
+
+import '../../../../core/services/business_logo_service.dart';
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
+
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/employee_compensation_history.dart';
@@ -12,10 +17,15 @@ import 'app_backup_payload_builder.dart';
 import 'app_backup_service.dart';
 
 class AppRestoreService {
-  AppRestoreService({required this.database, required this.logger});
+  AppRestoreService({
+    required this.database,
+    required this.logger,
+    this.logoService,
+  });
 
   final AppDatabase database;
   final Logger logger;
+  final BusinessLogoService? logoService;
 
   Future<AppBackupRestoreCandidate> inspectBackupFile(String filePath) async {
     final file = File(filePath);
@@ -49,7 +59,10 @@ class AppRestoreService {
     final generatedAtRaw = decoded['generated_at'];
 
     if (format != AppBackupPayloadBuilder.backupFormat ||
-        formatVersion != AppBackupPayloadBuilder.backupFormatVersion) {
+        !const [
+          2,
+          AppBackupPayloadBuilder.backupFormatVersion,
+        ].contains(formatVersion)) {
       throw const AppException(
         'backup_incompatible',
         'File backup tidak kompatibel dengan aplikasi ini.',
@@ -209,6 +222,53 @@ class AppRestoreService {
       recordCounts[EmployeeCompensationHistory.table] =
           tables[EmployeeCompensationHistory.table]!.length;
     }
+    Uint8List? logoBytes;
+    final warnings = <String>[];
+    final profiles = tables['business_profile']!;
+    if (formatVersion == 3) {
+      final assets = decoded['assets'];
+      if (assets is! Map || !assets.containsKey('business_logo')) {
+        throw const AppException(
+          'backup_invalid',
+          'Aset logo pada backup tidak valid.',
+        );
+      }
+      final asset = assets['business_logo'];
+      if (asset != null) {
+        if (profiles.length != 1 ||
+            asset is! Map ||
+            asset['mime_type'] != 'image/png' ||
+            asset['data_base64'] is! String ||
+            (asset['data_base64'] as String).length >
+                ((BusinessLogoService.maxBackupBytes + 2) ~/ 3) * 4) {
+          throw const AppException(
+            'backup_invalid',
+            'Aset logo pada backup tidak valid.',
+          );
+        }
+        try {
+          logoBytes = await (logoService ?? BusinessLogoService()).normalize(
+            base64Decode(asset['data_base64'] as String),
+            backup: true,
+          );
+        } catch (_) {
+          throw const AppException(
+            'backup_invalid',
+            'Gambar logo pada backup rusak atau melebihi batas.',
+          );
+        }
+      }
+    } else if (profiles.any(
+      (row) => row['logo_path'] != null && row['logo_path'] != '',
+    )) {
+      warnings.add(
+        'Backup lama tidak membawa gambar logo. Pilih logo kembali di Pengaturan.',
+      );
+    }
+    // Never trust a path from another device or a manually edited backup.
+    for (final profile in profiles) {
+      profile['logo_path'] = null;
+    }
     await _validateTables(await database.database(), tables);
 
     return AppBackupRestoreCandidate(
@@ -220,17 +280,45 @@ class AppRestoreService {
       schemaVersion: AppConstants.databaseVersion,
       recordCounts: recordCounts,
       tables: tables,
+      businessLogoBytes: logoBytes,
+      warnings: warnings,
     );
   }
 
-  Future<void> restoreBackup(AppBackupRestoreCandidate candidate) async {
+  Future<void> restoreBackup(AppBackupRestoreCandidate candidate) =>
+      (logoService ?? BusinessLogoService()).synchronized(
+        () => _restoreBackup(candidate),
+      );
+
+  Future<void> _restoreBackup(AppBackupRestoreCandidate candidate) async {
     logger.warning('Restoring backup from ${candidate.filePath}');
 
     final db = await database.database();
-    await _validateTables(db, candidate.tables);
+    final tables = {
+      for (final entry in candidate.tables.entries)
+        entry.key: [
+          for (final row in entry.value) Map<String, Object?>.from(row),
+        ],
+    };
+    final logos = logoService ?? BusinessLogoService();
+    final bytes = candidate.businessLogoBytes;
+    Uint8List? png;
+    if (bytes != null) {
+      if (tables['business_profile']?.length != 1) {
+        throw const AppException(
+          'backup_invalid',
+          'Logo harus terkait satu profil usaha.',
+        );
+      }
+      png = await logos.normalize(Uint8List.fromList(bytes), backup: true);
+    }
+    for (final profile
+        in tables['business_profile'] ?? <Map<String, Object?>>[]) {
+      profile['logo_path'] = null;
+    }
+    await _validateTables(db, tables);
     for (final tableName in AppBackupService.backupTables) {
-      if (candidate.recordCounts[tableName] !=
-          candidate.tables[tableName]!.length) {
+      if (candidate.recordCounts[tableName] != tables[tableName]!.length) {
         throw AppException(
           'backup_invalid',
           'Jumlah data tabel $tableName pada kandidat restore tidak konsisten.',
@@ -238,29 +326,43 @@ class AppRestoreService {
       }
     }
 
-    // Keep the current database and replace its rows in one SQLite transaction.
-    // Any constraint or insert failure rolls back the deletes as well, leaving
-    // the active business data intact.
-    await db.transaction((txn) async {
-      for (final tableName in AppBackupService.backupTables.reversed) {
-        await txn.delete(tableName);
-      }
-
-      for (final tableName in AppBackupService.backupTables) {
-        final rows = candidate.tables[tableName] ?? const [];
-        for (final row in rows) {
-          await txn.insert(tableName, row);
+    final previous = await db.query('business_profile', columns: ['logo_path']);
+    String? created;
+    if (png != null) {
+      created = await logos.write(png);
+      tables['business_profile']!.single['logo_path'] = created;
+    }
+    try {
+      // Keep the current database and replace its rows in one SQLite transaction.
+      // Any constraint or insert failure rolls back the deletes as well, leaving
+      // the active business data intact.
+      await db.transaction((txn) async {
+        for (final tableName in AppBackupService.backupTables.reversed) {
+          await txn.delete(tableName);
         }
-      }
 
-      final foreignKeyErrors = await txn.rawQuery('PRAGMA foreign_key_check');
-      if (foreignKeyErrors.isNotEmpty) {
-        throw const AppException(
-          'backup_invalid',
-          'Relasi data pada file backup tidak valid.',
-        );
-      }
-    });
+        for (final tableName in AppBackupService.backupTables) {
+          final rows = tables[tableName] ?? const [];
+          for (final row in rows) {
+            await txn.insert(tableName, row);
+          }
+        }
+
+        final foreignKeyErrors = await txn.rawQuery('PRAGMA foreign_key_check');
+        if (foreignKeyErrors.isNotEmpty) {
+          throw const AppException(
+            'backup_invalid',
+            'Relasi data pada file backup tidak valid.',
+          );
+        }
+      });
+    } catch (_) {
+      await logos.deleteOwned(created);
+      rethrow;
+    }
+    for (final profile in previous) {
+      await logos.deleteOwned(profile['logo_path'] as String?);
+    }
 
     logger.info('Backup restore completed from ${candidate.filePath}');
   }
