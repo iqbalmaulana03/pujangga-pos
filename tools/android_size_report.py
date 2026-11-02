@@ -32,6 +32,8 @@ def main():
     parser.add_argument("--bundletool", type=Path)
     parser.add_argument("--device-spec", type=Path)
     parser.add_argument("--flutter-version-file", type=Path)
+    parser.add_argument("--dart-symbols", type=Path,
+                        help="Directory produced by --split-debug-info for this bundle")
     parser.add_argument("--source-revision", help="Known CI revision for an existing external artifact")
     args = parser.parse_args()
     if bool(args.bundletool) != bool(args.device_spec):
@@ -42,6 +44,12 @@ def main():
         icons = [entry for entry in archive.infolist()
                  if entry.filename.endswith("/ic_launcher.png")]
         icon_sizes = {entry.filename: entry.file_size for entry in icons}
+        native_sizes = {entry.filename: entry.file_size
+                        for entry in archive.infolist()
+                        if entry.filename.startswith("base/lib/")
+                        and entry.filename.endswith(".so")}
+        dex_bytes = sum(entry.file_size for entry in archive.infolist()
+                        if entry.filename.startswith("base/dex/"))
     report = {
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "source_revision": args.source_revision or run(["git", "rev-parse", "HEAD"]),
@@ -52,10 +60,20 @@ def main():
                    "sha256": digest(bundle)},
         "launcher_png_uncompressed_bytes": sum(icon_sizes.values()),
         "launcher_pngs": icon_sizes,
+        "native_libraries_uncompressed_bytes": native_sizes,
+        "dex_uncompressed_bytes": dex_bytes,
         "notes": "bundletool estimates are not measured Google Play transfer sizes",
     }
     if args.flutter_version_file:
         report["flutter"] = json.loads(args.flutter_version_file.read_text(encoding="utf-8-sig"))
+    if args.dart_symbols:
+        symbols = sorted(args.dart_symbols.glob("*.symbols"))
+        if not symbols:
+            parser.error("--dart-symbols must contain the matching Dart .symbols files")
+        report["dart_debug_symbols"] = {
+            path.name: {"bytes": path.stat().st_size, "sha256": digest(path)}
+            for path in symbols
+        }
     if args.bundletool:
         tool = args.bundletool.resolve()
         spec = args.device_spec.resolve()
