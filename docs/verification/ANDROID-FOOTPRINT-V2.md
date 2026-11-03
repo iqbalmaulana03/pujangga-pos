@@ -1,8 +1,10 @@
 # Optimasi lanjutan storage dan pengukuran RAM
 
 Tanggal: 3 November 2026 WIB. Mode implementasi lokal, sesuai permintaan pengguna.
-Implementasi dan perbaikan review dikirim melalui PR #44. Tidak ada perubahan
-versi, upload Play, atau rollout.
+Implementasi dan perbaikan review dikirim melalui PR #44. Setelah audit,
+metadata versi dan label aplikasi dinaikkan menjadi `1.2.5+6`; angka pengukuran
+di bawah tetap berasal dari build audit sebelum kenaikan versi.
+Tidak ada upload Play atau rollout.
 
 ## Target dan baseline Play Store
 
