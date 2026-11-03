@@ -13,6 +13,7 @@ import tempfile
 
 
 def normalize_trace(trace):
+    """Preserve legacy traces or select virtual PCs for supported unified traces."""
     if "_kDartSnapshotText+" not in trace:
         return trace
     frames = [line for line in trace.splitlines() if "_kDartSnapshotText+" in line]
@@ -27,6 +28,7 @@ def normalize_trace(trace):
 
 
 def main():
+    """Decode a trace to a file with matching symbols, keeping raw input untouched."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--symbols", type=Path, required=True)

@@ -1,7 +1,8 @@
 # Optimasi lanjutan storage dan pengukuran RAM
 
 Tanggal: 3 November 2026 WIB. Mode implementasi lokal, sesuai permintaan pengguna.
-Tidak ada push, perubahan versi, upload Play, atau rollout.
+Implementasi dan perbaikan review dikirim melalui PR #44. Tidak ada perubahan
+versi, upload Play, atau rollout.
 
 ## Target dan baseline Play Store
 
@@ -42,6 +43,21 @@ Bundletool 1.18.3 dan profil tetap ARM64/API 33/density 440/locale `id` identik.
 AAB pengukuran tetap menggunakan application ID produksi dan tidak dipasang
 di atas aplikasi Play. Paket QA menggunakan ID lain.
 
+Saat review PR #44, pasangan build ukuran baseline dan kandidat diulang untuk
+merekam SHA-256 lockfile mentah dan konfigurasi paket sebelum serta sesudah
+masing-masing build. Keempat capture identik; baseline tidak lagi mengandalkan
+hash yang kosong dari laporan historis. JSON menyertakan waktu capture, hash
+source, dan checksum artefak hasil build. Source runtime kandidat tetap sama;
+pengukuran RAM tidak diulang dan tetap memakai 60 sampel QA awal.
+
+Hash lockfile mentah Windows adalah
+`70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21`.
+Hash setelah normalisasi CRLF menjadi LF adalah
+`3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9`,
+sama dengan blob Git baseline/kandidat dan lockfile CI Play. Perbedaan hash
+mentah berasal dari line ending; isi dependency identik. Kedua fingerprint
+disimpan agar provenance byte build dan perbandingan lintas OS dapat diperiksa.
+
 | Metrik, byte desimal | Baseline lokal | Optimasi | Penghematan |
 | --- | ---: | ---: | ---: |
 | AAB unggahan | 67.736.895 | 63.378.297 | 4.358.598 |
@@ -49,7 +65,7 @@ di atas aplikasi Play. Paket QA menggunakan ID lain.
 | Estimasi unduhan bundletool | 13.250.843 | 12.569.058 | 681.785 (5,15%) |
 | Kode Dart ARM64, tanpa kompresi | 8.192.904 | 6.947.720 | 1.245.184 |
 
-Build antara yang hanya memangkas data tanggal menghasilkan APK terpilih
+Build antara awal (tidak diulang saat review) yang hanya memangkas data tanggal menghasilkan APK terpilih
 29.433.205 byte: hemat 131.072 byte. Pemisahan simbol memberi penghematan
 tambahan 1.114.112 byte. Pemeriksaan hash membuktikan **18/18 library native
 engine/plugin dan aset model barcode identik**, selain library kode Dart yang
@@ -105,7 +121,10 @@ perubahan RAM tambahan yang diterapkan berdasarkan dugaan.
 - `flutter analyze --fatal-infos --no-pub`: lulus.
 - `flutter test --no-pub`: **99 tes lulus**. Suite database memakai SQLite FFI
   dengan direktori temporer; tes UI memakai provider/mock uji.
-- Empat tes Python helper simbolisasi lulus; kedua workflow dapat diparse.
+- Sepuluh tes Python lulus: empat tes simbolisasi dan enam tes laporan ukuran,
+  termasuk penolakan simbol ABI parsial dan pembandingan fingerprint CRLF/LF.
+  Kedua workflow dapat diparse. Validator juga lulus pada AAB kandidat aktual
+  dengan simbol Dart lengkap untuk ARM, ARM64, dan x64.
 - Build release AAB baseline, tanggal saja, dan optimasi final lulus. Laporan
   ukuran mencatat setiap library native, DEX, serta ukuran/hash file simbol.
 - Decoder EAN-13 membaca fixture `5901234123457` pada paket terpisah
@@ -131,8 +150,8 @@ Kedua paket QA dan ADB forward port 18766 telah dihapus; forward lain
 dipertahankan. Pemeriksaan independen setelah pembersihan memverifikasi
 identitas Play `1.2.4+5` dan checksum keempat APK terpasang tetap sama.
 Gradle dan manifest produksi dipulihkan ke isi checkout semula. Perubahan
-implementasi tersedia sebagai working tree yang belum di-commit pada branch
-tugas; file tracked checkout rilis awal tetap utuh. Folder `.worktrees/` yang
+implementasi tersedia pada branch tugas melalui PR #44;
+file tracked checkout rilis awal tetap utuh. Folder `.worktrees/` yang
 berisi worktree tugas terlihat sebagai entri untracked pada checkout awal.
 Publikasi dan pengukuran ulang ukuran
 terpasang dari Play menunggu otorisasi rilis terpisah.

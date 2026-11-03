@@ -79,11 +79,12 @@
   ],
   "size": {
     "before": {
-      "generated_at_utc": "2026-11-02T18:29:51.122522+00:00",
+      "generated_at_utc": "2026-11-03T05:00:15.892893+00:00",
       "source_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
-      "lockfile_sha256": null,
+      "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+      "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
       "bundle": {
-        "name": "baseline.aab",
+        "name": "review-baseline.aab",
         "bytes": 67736895,
         "sha256": "775daf7fd0537fea0bc92644b5fe9de25b9336377c8b6ccb475434ded072ffe0"
       },
@@ -157,7 +158,31 @@
         "min": 13250843,
         "max": 13250843
       },
-      "provenance": "Local build of baseline runtime; temporary debug signing only"
+      "build_input_capture": {
+        "before": {
+          "captured_at_utc": "2026-11-03T04:54:00.517726+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+        },
+        "after": {
+          "captured_at_utc": "2026-11-03T04:58:41.255734+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+        },
+        "arguments": [
+          "build",
+          "appbundle",
+          "--release",
+          "--no-pub"
+        ],
+        "bundle_sha256": "775daf7fd0537fea0bc92644b5fe9de25b9336377c8b6ccb475434ded072ffe0",
+        "bundle_bytes": 67736895
+      },
+      "provenance": "Review rebuild with lockfile/package configuration captured before and after build; temporary debug signing only"
     },
     "date-only": {
       "generated_at_utc": "2026-11-02T18:32:28.076801+00:00",
@@ -238,14 +263,17 @@
         "min": 13167140,
         "max": 13167140
       },
-      "provenance": "Baseline plus generated date locales; temporary debug signing"
+      "provenance": "Baseline plus generated date locales; temporary debug signing",
+      "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+      "lockfile_lf_provenance": "Derived from identical raw lockfile bytes revalidated during review; intermediate build not repeated"
     },
     "after": {
-      "generated_at_utc": "2026-11-02T18:33:58.968649+00:00",
-      "source_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+      "generated_at_utc": "2026-11-03T05:00:15.908215+00:00",
+      "source_revision": "44909fe10d7d02d71eed4a128c705a48e28c2919",
       "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+      "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
       "bundle": {
-        "name": "optimized.aab",
+        "name": "review-optimized.aab",
         "bytes": 63378297,
         "sha256": "d3846a7d691728ed2d9d915dac50dc6dc8688c055339613400b95a330779628c"
       },
@@ -333,7 +361,32 @@
         "min": 12569058,
         "max": 12569058
       },
-      "provenance": "Date locales plus split-debug-info; production package ID; temporary debug signing"
+      "build_input_capture": {
+        "before": {
+          "captured_at_utc": "2026-11-03T04:58:41.520042+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+        },
+        "after": {
+          "captured_at_utc": "2026-11-03T05:00:09.843857+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+        },
+        "arguments": [
+          "build",
+          "appbundle",
+          "--release",
+          "--no-pub",
+          "--split-debug-info=build/footprint-v2/review-dart-symbols"
+        ],
+        "bundle_sha256": "d3846a7d691728ed2d9d915dac50dc6dc8688c055339613400b95a330779628c",
+        "bundle_bytes": 63378297
+      },
+      "provenance": "Review rebuild with lockfile/package configuration captured before and after build; temporary debug signing only"
     }
   },
   "ram": {
@@ -1632,12 +1685,78 @@
   },
   "validation": {
     "flutter_tests_passed": 99,
-    "python_tests_passed": 4,
+    "python_tests_passed": 10,
     "flutter_analyze_fatal_infos": "passed",
     "workflow_yaml_parse": "passed"
   },
   "runtime_source_sha256": {
     "lib/main.dart": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123",
     "lib/core/utils/app_date_formatting.dart": "fe65cdbac93819be708c116c1ccb8902b0846e5c1d52357b1335183d4df1390e"
+  },
+  "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+  "size_remeasurement": {
+    "reason": "PR #44: capture baseline/candidate lockfile provenance directly",
+    "captured_at_utc": "2026-11-03T05:00:37.373750+00:00",
+    "baseline_revision_lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+    "candidate_revision_lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+    "same_raw_lockfile_before_after_both_builds": true,
+    "same_package_configuration_before_after_both_builds": true,
+    "original_ram_measurements_repeated": false,
+    "build_inputs": {
+      "baseline_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+      "candidate_runtime_revision": "44909fe10d7d02d71eed4a128c705a48e28c2919",
+      "signing": "debug key for local measurement; no Play publishing",
+      "builds": {
+        "baseline": {
+          "before": {
+            "captured_at_utc": "2026-11-03T04:54:00.517726+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+          },
+          "after": {
+            "captured_at_utc": "2026-11-03T04:58:41.255734+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+          },
+          "arguments": [
+            "build",
+            "appbundle",
+            "--release",
+            "--no-pub"
+          ],
+          "bundle_sha256": "775daf7fd0537fea0bc92644b5fe9de25b9336377c8b6ccb475434ded072ffe0",
+          "bundle_bytes": 67736895
+        },
+        "optimized": {
+          "before": {
+            "captured_at_utc": "2026-11-03T04:58:41.520042+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+          },
+          "after": {
+            "captured_at_utc": "2026-11-03T05:00:09.843857+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+          },
+          "arguments": [
+            "build",
+            "appbundle",
+            "--release",
+            "--no-pub",
+            "--split-debug-info=build/footprint-v2/review-dart-symbols"
+          ],
+          "bundle_sha256": "d3846a7d691728ed2d9d915dac50dc6dc8688c055339613400b95a330779628c",
+          "bundle_bytes": 63378297
+        }
+      }
+    }
   }
 }

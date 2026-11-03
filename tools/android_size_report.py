@@ -25,7 +25,40 @@ def run(command):
     return subprocess.check_output(command, text=True).strip()
 
 
+def lockfile_fingerprints(path):
+    """Record exact build-input bytes and a CRLF/LF-independent fingerprint."""
+    data = path.read_bytes()
+    return {
+        "lockfile_sha256": hashlib.sha256(data).hexdigest(),
+        "lockfile_lf_sha256": hashlib.sha256(data.replace(b"\r\n", b"\n")).hexdigest(),
+    }
+
+
+def dart_symbols_for_bundle(directory, native_libraries):
+    """Require Dart symbols for each libapp.so ABI, excluding plugin-only ABIs."""
+    names = {
+        "armeabi-v7a": "app.android-arm.symbols",
+        "arm64-v8a": "app.android-arm64.symbols",
+        "x86_64": "app.android-x64.symbols",
+    }
+    abis = {name.split("/")[2] for name in native_libraries
+            if name.startswith("base/lib/") and name.endswith("/libapp.so")}
+    unknown = abis.difference(names)
+    if unknown:
+        raise ValueError("Unsupported Dart ABI in bundle: " + ", ".join(sorted(unknown)))
+    symbols = sorted(path for path in directory.glob("*.symbols") if path.is_file())
+    available = {path.name for path in symbols}
+    missing = [f"{abi} ({names[abi]})" for abi in sorted(abis)
+               if names[abi] not in available]
+    if missing:
+        raise ValueError("Missing Dart symbols for bundle ABIs: " + ", ".join(missing))
+    if not symbols:
+        raise ValueError("--dart-symbols must contain the matching Dart .symbols files")
+    return symbols
+
+
 def main():
+    """Write artifact checksums and size metrics, rejecting incomplete ABI symbols."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -55,7 +88,8 @@ def main():
         "source_revision": args.source_revision or run(["git", "rev-parse", "HEAD"]),
         "source_status": None if args.source_revision else run(
             ["git", "status", "--porcelain", "--untracked-files=normal"]),
-        "lockfile_sha256": None if args.source_revision else digest(Path("pubspec.lock")),
+        **({"lockfile_sha256": None, "lockfile_lf_sha256": None}
+           if args.source_revision else lockfile_fingerprints(Path("pubspec.lock"))),
         "bundle": {"name": bundle.name, "bytes": bundle.stat().st_size,
                    "sha256": digest(bundle)},
         "launcher_png_uncompressed_bytes": sum(icon_sizes.values()),
@@ -67,9 +101,10 @@ def main():
     if args.flutter_version_file:
         report["flutter"] = json.loads(args.flutter_version_file.read_text(encoding="utf-8-sig"))
     if args.dart_symbols:
-        symbols = sorted(args.dart_symbols.glob("*.symbols"))
-        if not symbols:
-            parser.error("--dart-symbols must contain the matching Dart .symbols files")
+        try:
+            symbols = dart_symbols_for_bundle(args.dart_symbols, native_sizes)
+        except ValueError as error:
+            parser.error(str(error))
         report["dart_debug_symbols"] = {
             path.name: {"bytes": path.stat().st_size, "sha256": digest(path)}
             for path in symbols

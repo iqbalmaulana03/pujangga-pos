@@ -56,6 +56,15 @@ selisih source runtime hanya perubahan optimasi. Untuk artefak CI lama gunakan
 `--source-revision <sha-ci>` dan jangan memasukkan metadata SDK build lokal.
 Status checkout dan hash lockfile dihilangkan untuk artefak eksternal tersebut.
 
+Untuk build lokal, `lockfile_sha256` mempertahankan hash byte asli dan
+`lockfile_lf_sha256` mencatat hash setelah CRLF dinormalisasi menjadi LF.
+Gunakan fingerprint LF untuk membandingkan isi lockfile Windows dan CI;
+catat juga hash sebelum/sesudah build untuk membuktikan input tidak berubah.
+Jika `--dart-symbols` diberikan, laporan wajib menemukan file simbol untuk
+setiap ABI yang memuat `libapp.so` dalam bundle. ABI yang hanya memuat library
+plugin tidak memerlukan simbol Dart. Simbol ABI yang hilang menggagalkan
+laporan sebelum JSON ditulis.
+
 ## CI dan publikasi
 
 Build rilis memisahkan informasi diagnostik Dart dengan `--split-debug-info`,
