@@ -1,0 +1,1762 @@
+{
+  "generated_at_utc": "2026-11-02T18:53:02.001330+00:00",
+  "baseline_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+  "implementation_branch": "perf/android-footprint-v2",
+  "implementation_state": "uncommitted working tree; runtime source hashes recorded below",
+  "device": {
+    "model": "2201116TG",
+    "android_api": 33,
+    "abi": "arm64-v8a",
+    "density": 440
+  },
+  "play_release": {
+    "generated_at_utc": "2026-10-31T17:55:29.145679+00:00",
+    "source_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+    "source_status": "",
+    "lockfile_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+    "bundle": {
+      "name": "app-release.aab",
+      "bytes": 67700746,
+      "sha256": "4879f31cd2195dffeeb40a7e36baa7bd0d1a6d518f45ece937ddf0cd78d3af6c"
+    },
+    "launcher_png_uncompressed_bytes": 59854,
+    "launcher_pngs": {
+      "base/res/mipmap-hdpi-v4/ic_launcher.png": 5184,
+      "base/res/mipmap-mdpi-v4/ic_launcher.png": 2863,
+      "base/res/mipmap-xhdpi-v4/ic_launcher.png": 8059,
+      "base/res/mipmap-xxhdpi-v4/ic_launcher.png": 16069,
+      "base/res/mipmap-xxxhdpi-v4/ic_launcher.png": 27679
+    },
+    "notes": "bundletool estimates are not measured Google Play transfer sizes",
+    "flutter": {
+      "frameworkVersion": "3.47.9",
+      "channel": "stable",
+      "repositoryUrl": "https://github.com/flutter/flutter.git",
+      "frameworkRevision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+      "frameworkCommitDate": "2026-10-29 10:10:20 -0400",
+      "engineRevision": "89c39edfdfae2949f6806e4a315c0c08522238b7",
+      "engineCommitDate": "2026-10-27 19:51:20.000Z",
+      "engineContentHash": "9e025265bef30b838c0c1b68cad19decf97048f2",
+      "engineBuildDate": "2026-10-27 13:22:45.983",
+      "dartSdkVersion": "3.13.7",
+      "devToolsVersion": "2.60.0",
+      "flutterVersion": "3.47.9"
+    }
+  },
+  "installed_ui": [
+    "Penyimpanan-Pujangga POS",
+    "Total",
+    "30,83 MB",
+    "Ukuran apl",
+    "30,21 MB",
+    "Data pengguna",
+    "618 KB",
+    "Cache",
+    "471 KB",
+    "Hapus data"
+  ],
+  "installed_apks": [
+    {
+      "name": "base.apk",
+      "bytes": 4480619,
+      "sha256": "fb2586c515b73c3d8e72322f4728b0fb3bfec68fe49f61dbec345e234ecc8e9c"
+    },
+    {
+      "name": "split_config.arm64_v8a.apk",
+      "bytes": 25145960,
+      "sha256": "483922c1d10aea3eae060399fb3f260b59788dbde1d96771116d052c70d6df4a"
+    },
+    {
+      "name": "split_config.in.apk",
+      "bytes": 41170,
+      "sha256": "52552243c0694f3f862e85242f9b04fa2fecc87c61fbf61a811c4c93b438c405"
+    },
+    {
+      "name": "split_config.xxhdpi.apk",
+      "bytes": 68812,
+      "sha256": "ef62c585d7f37277699c6b7e0517243b0391e788ef40c41bd71e89fbe0bd478e"
+    }
+  ],
+  "size": {
+    "before": {
+      "generated_at_utc": "2026-11-03T05:00:15.892893+00:00",
+      "source_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+      "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+      "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+      "bundle": {
+        "name": "review-baseline.aab",
+        "bytes": 67736895,
+        "sha256": "775daf7fd0537fea0bc92644b5fe9de25b9336377c8b6ccb475434ded072ffe0"
+      },
+      "launcher_png_uncompressed_bytes": 59854,
+      "launcher_pngs": {
+        "base/res/mipmap-hdpi-v4/ic_launcher.png": 5184,
+        "base/res/mipmap-mdpi-v4/ic_launcher.png": 2863,
+        "base/res/mipmap-xhdpi-v4/ic_launcher.png": 8059,
+        "base/res/mipmap-xxhdpi-v4/ic_launcher.png": 16069,
+        "base/res/mipmap-xxxhdpi-v4/ic_launcher.png": 27679
+      },
+      "native_libraries_uncompressed_bytes": {
+        "base/lib/arm64-v8a/libapp.so": 8192904,
+        "base/lib/arm64-v8a/libbarhopper_v3.so": 4946720,
+        "base/lib/arm64-v8a/libdartjni.so": 124744,
+        "base/lib/arm64-v8a/libflutter.so": 11763360,
+        "base/lib/arm64-v8a/libimage_processing_util_jni.so": 32528,
+        "base/lib/arm64-v8a/libsurface_util_jni.so": 4896,
+        "base/lib/armeabi-v7a/libapp.so": 9093704,
+        "base/lib/armeabi-v7a/libbarhopper_v3.so": 3244440,
+        "base/lib/armeabi-v7a/libdartjni.so": 76816,
+        "base/lib/armeabi-v7a/libflutter.so": 8625652,
+        "base/lib/armeabi-v7a/libimage_processing_util_jni.so": 24448,
+        "base/lib/armeabi-v7a/libsurface_util_jni.so": 3460,
+        "base/lib/x86_64/libapp.so": 8455048,
+        "base/lib/x86_64/libbarhopper_v3.so": 5909280,
+        "base/lib/x86_64/libdartjni.so": 108616,
+        "base/lib/x86_64/libflutter.so": 13074608,
+        "base/lib/x86_64/libimage_processing_util_jni.so": 49416,
+        "base/lib/x86_64/libsurface_util_jni.so": 4912
+      },
+      "dex_uncompressed_bytes": 3164900,
+      "notes": "bundletool estimates are not measured Google Play transfer sizes",
+      "flutter": {
+        "frameworkVersion": "3.47.9",
+        "channel": "stable",
+        "repositoryUrl": "https://github.com/flutter/flutter.git",
+        "frameworkRevision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "frameworkCommitDate": "2026-10-29 10:10:20 -0400",
+        "engineRevision": "89c39edfdfae2949f6806e4a315c0c08522238b7",
+        "engineCommitDate": "2026-10-27 19:51:20.000Z",
+        "engineContentHash": "9e025265bef30b838c0c1b68cad19decf97048f2",
+        "engineBuildDate": "2026-10-28 03:22:45.983",
+        "dartSdkVersion": "3.13.7",
+        "devToolsVersion": "2.60.0",
+        "flutterVersion": "3.47.9"
+      },
+      "bundletool": {
+        "version": "1.18.3",
+        "sha256": "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29"
+      },
+      "device_spec": {
+        "supportedAbis": [
+          "arm64-v8a"
+        ],
+        "supportedLocales": [
+          "id"
+        ],
+        "screenDensity": 440,
+        "sdkVersion": 33
+      },
+      "selected_apk_bytes": 29564277,
+      "selected_apks": {
+        "splits/base-arm64_v8a.apk": 25113129,
+        "splits/base-in.apk": 8339,
+        "splits/base-master.apk": 4406828,
+        "splits/base-xxhdpi.apk": 35981
+      },
+      "apks_sha256": "ba32f28cd212bad76770efaa97f5c4b849757b09b2ad8c01f3ed9ec8df49f454",
+      "estimated_download_bytes": {
+        "min": 13250843,
+        "max": 13250843
+      },
+      "build_input_capture": {
+        "before": {
+          "captured_at_utc": "2026-11-03T04:54:00.517726+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+        },
+        "after": {
+          "captured_at_utc": "2026-11-03T04:58:41.255734+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+        },
+        "arguments": [
+          "build",
+          "appbundle",
+          "--release",
+          "--no-pub"
+        ],
+        "bundle_sha256": "775daf7fd0537fea0bc92644b5fe9de25b9336377c8b6ccb475434ded072ffe0",
+        "bundle_bytes": 67736895
+      },
+      "provenance": "Review rebuild with lockfile/package configuration captured before and after build; temporary debug signing only"
+    },
+    "date-only": {
+      "generated_at_utc": "2026-11-02T18:32:28.076801+00:00",
+      "source_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+      "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+      "bundle": {
+        "name": "date-only.aab",
+        "bytes": 67178921,
+        "sha256": "8b5778abbccd6abe714662b7cb2a175538e75f431d863c9d0ada46dc794d6b16"
+      },
+      "launcher_png_uncompressed_bytes": 59854,
+      "launcher_pngs": {
+        "base/res/mipmap-hdpi-v4/ic_launcher.png": 5184,
+        "base/res/mipmap-mdpi-v4/ic_launcher.png": 2863,
+        "base/res/mipmap-xhdpi-v4/ic_launcher.png": 8059,
+        "base/res/mipmap-xxhdpi-v4/ic_launcher.png": 16069,
+        "base/res/mipmap-xxxhdpi-v4/ic_launcher.png": 27679
+      },
+      "native_libraries_uncompressed_bytes": {
+        "base/lib/arm64-v8a/libapp.so": 8061832,
+        "base/lib/arm64-v8a/libbarhopper_v3.so": 4946720,
+        "base/lib/arm64-v8a/libdartjni.so": 124744,
+        "base/lib/arm64-v8a/libflutter.so": 11763360,
+        "base/lib/arm64-v8a/libimage_processing_util_jni.so": 32528,
+        "base/lib/arm64-v8a/libsurface_util_jni.so": 4896,
+        "base/lib/armeabi-v7a/libapp.so": 8897096,
+        "base/lib/armeabi-v7a/libbarhopper_v3.so": 3244440,
+        "base/lib/armeabi-v7a/libdartjni.so": 76816,
+        "base/lib/armeabi-v7a/libflutter.so": 8625652,
+        "base/lib/armeabi-v7a/libimage_processing_util_jni.so": 24448,
+        "base/lib/armeabi-v7a/libsurface_util_jni.so": 3460,
+        "base/lib/x86_64/libapp.so": 8323976,
+        "base/lib/x86_64/libbarhopper_v3.so": 5909280,
+        "base/lib/x86_64/libdartjni.so": 108616,
+        "base/lib/x86_64/libflutter.so": 13074608,
+        "base/lib/x86_64/libimage_processing_util_jni.so": 49416,
+        "base/lib/x86_64/libsurface_util_jni.so": 4912
+      },
+      "dex_uncompressed_bytes": 3164900,
+      "notes": "bundletool estimates are not measured Google Play transfer sizes",
+      "flutter": {
+        "frameworkVersion": "3.47.9",
+        "channel": "stable",
+        "repositoryUrl": "https://github.com/flutter/flutter.git",
+        "frameworkRevision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "frameworkCommitDate": "2026-10-29 10:10:20 -0400",
+        "engineRevision": "89c39edfdfae2949f6806e4a315c0c08522238b7",
+        "engineCommitDate": "2026-10-27 19:51:20.000Z",
+        "engineContentHash": "9e025265bef30b838c0c1b68cad19decf97048f2",
+        "engineBuildDate": "2026-10-28 03:22:45.983",
+        "dartSdkVersion": "3.13.7",
+        "devToolsVersion": "2.60.0",
+        "flutterVersion": "3.47.9"
+      },
+      "bundletool": {
+        "version": "1.18.3",
+        "sha256": "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29"
+      },
+      "device_spec": {
+        "supportedAbis": [
+          "arm64-v8a"
+        ],
+        "supportedLocales": [
+          "id"
+        ],
+        "screenDensity": 440,
+        "sdkVersion": 33
+      },
+      "selected_apk_bytes": 29433205,
+      "selected_apks": {
+        "splits/base-arm64_v8a.apk": 24982057,
+        "splits/base-in.apk": 8339,
+        "splits/base-master.apk": 4406828,
+        "splits/base-xxhdpi.apk": 35981
+      },
+      "apks_sha256": "1963cd47100810d3b60015609d0ad4cba01d3c0bdc4c4ef0f4fe81cc1e38355b",
+      "estimated_download_bytes": {
+        "min": 13167140,
+        "max": 13167140
+      },
+      "provenance": "Baseline plus generated date locales; temporary debug signing",
+      "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+      "lockfile_lf_provenance": "Derived from identical raw lockfile bytes revalidated during review; intermediate build not repeated"
+    },
+    "after": {
+      "generated_at_utc": "2026-11-03T05:00:15.908215+00:00",
+      "source_revision": "44909fe10d7d02d71eed4a128c705a48e28c2919",
+      "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+      "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+      "bundle": {
+        "name": "review-optimized.aab",
+        "bytes": 63378297,
+        "sha256": "d3846a7d691728ed2d9d915dac50dc6dc8688c055339613400b95a330779628c"
+      },
+      "launcher_png_uncompressed_bytes": 59854,
+      "launcher_pngs": {
+        "base/res/mipmap-hdpi-v4/ic_launcher.png": 5184,
+        "base/res/mipmap-mdpi-v4/ic_launcher.png": 2863,
+        "base/res/mipmap-xhdpi-v4/ic_launcher.png": 8059,
+        "base/res/mipmap-xxhdpi-v4/ic_launcher.png": 16069,
+        "base/res/mipmap-xxxhdpi-v4/ic_launcher.png": 27679
+      },
+      "native_libraries_uncompressed_bytes": {
+        "base/lib/arm64-v8a/libapp.so": 6947720,
+        "base/lib/arm64-v8a/libbarhopper_v3.so": 4946720,
+        "base/lib/arm64-v8a/libdartjni.so": 124744,
+        "base/lib/arm64-v8a/libflutter.so": 11763360,
+        "base/lib/arm64-v8a/libimage_processing_util_jni.so": 32528,
+        "base/lib/arm64-v8a/libsurface_util_jni.so": 4896,
+        "base/lib/armeabi-v7a/libapp.so": 7488072,
+        "base/lib/armeabi-v7a/libbarhopper_v3.so": 3244440,
+        "base/lib/armeabi-v7a/libdartjni.so": 76816,
+        "base/lib/armeabi-v7a/libflutter.so": 8625652,
+        "base/lib/armeabi-v7a/libimage_processing_util_jni.so": 24448,
+        "base/lib/armeabi-v7a/libsurface_util_jni.so": 3460,
+        "base/lib/x86_64/libapp.so": 7209864,
+        "base/lib/x86_64/libbarhopper_v3.so": 5909280,
+        "base/lib/x86_64/libdartjni.so": 108616,
+        "base/lib/x86_64/libflutter.so": 13074608,
+        "base/lib/x86_64/libimage_processing_util_jni.so": 49416,
+        "base/lib/x86_64/libsurface_util_jni.so": 4912
+      },
+      "dex_uncompressed_bytes": 3164900,
+      "notes": "bundletool estimates are not measured Google Play transfer sizes",
+      "flutter": {
+        "frameworkVersion": "3.47.9",
+        "channel": "stable",
+        "repositoryUrl": "https://github.com/flutter/flutter.git",
+        "frameworkRevision": "c197ca5199e9ee5661e865596c9c07294dfab51c",
+        "frameworkCommitDate": "2026-10-29 10:10:20 -0400",
+        "engineRevision": "89c39edfdfae2949f6806e4a315c0c08522238b7",
+        "engineCommitDate": "2026-10-27 19:51:20.000Z",
+        "engineContentHash": "9e025265bef30b838c0c1b68cad19decf97048f2",
+        "engineBuildDate": "2026-10-28 03:22:45.983",
+        "dartSdkVersion": "3.13.7",
+        "devToolsVersion": "2.60.0",
+        "flutterVersion": "3.47.9"
+      },
+      "dart_debug_symbols": {
+        "app.android-arm.symbols": {
+          "bytes": 3229680,
+          "sha256": "309d2686a8877f1f8749717c0af644f18266d0b33608bbcb5ba35bb175f79924"
+        },
+        "app.android-arm64.symbols": {
+          "bytes": 3775824,
+          "sha256": "a8bd221d0234d1ea60766336250b6480e210691f0acd1c6cbe05db3709710c5b"
+        },
+        "app.android-x64.symbols": {
+          "bytes": 3776808,
+          "sha256": "b9a619155508552280f64d21430580b1f701b7dc77f8ca2044c9472f7d0fc9a7"
+        }
+      },
+      "bundletool": {
+        "version": "1.18.3",
+        "sha256": "a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29"
+      },
+      "device_spec": {
+        "supportedAbis": [
+          "arm64-v8a"
+        ],
+        "supportedLocales": [
+          "id"
+        ],
+        "screenDensity": 440,
+        "sdkVersion": 33
+      },
+      "selected_apk_bytes": 28319093,
+      "selected_apks": {
+        "splits/base-arm64_v8a.apk": 23867945,
+        "splits/base-in.apk": 8339,
+        "splits/base-master.apk": 4406828,
+        "splits/base-xxhdpi.apk": 35981
+      },
+      "apks_sha256": "3c7379fef32a76a60a4d3f0897e1aa22d7ce06a64321278e647b642a64b294f6",
+      "estimated_download_bytes": {
+        "min": 12569058,
+        "max": 12569058
+      },
+      "build_input_capture": {
+        "before": {
+          "captured_at_utc": "2026-11-03T04:58:41.520042+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+        },
+        "after": {
+          "captured_at_utc": "2026-11-03T05:00:09.843857+00:00",
+          "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+          "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+          "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+          "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+        },
+        "arguments": [
+          "build",
+          "appbundle",
+          "--release",
+          "--no-pub",
+          "--split-debug-info=build/footprint-v2/review-dart-symbols"
+        ],
+        "bundle_sha256": "d3846a7d691728ed2d9d915dac50dc6dc8688c055339613400b95a330779628c",
+        "bundle_bytes": 63378297
+      },
+      "provenance": "Review rebuild with lockfile/package configuration captured before and after build; temporary debug signing only"
+    }
+  },
+  "ram": {
+    "unit": "KiB for Android meminfo, bytes for ProcessInfo",
+    "samples": [
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "startup",
+        "android_total_pss_kib": 190995,
+        "android_total_rss_kib": 308436,
+        "android_swap_pss_kib": 1641,
+        "java_heap_kib": 3092,
+        "native_heap_kib": 107088,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 315252736,
+        "process_peak_rss_bytes": 478621696,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "catalog",
+        "android_total_pss_kib": 202850,
+        "android_total_rss_kib": 327216,
+        "android_swap_pss_kib": 275,
+        "java_heap_kib": 4224,
+        "native_heap_kib": 106184,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 334462976,
+        "process_peak_rss_bytes": 478621696,
+        "image_cache_bytes": 65536,
+        "elements": 1663
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "history",
+        "android_total_pss_kib": 231387,
+        "android_total_rss_kib": 355768,
+        "android_swap_pss_kib": 276,
+        "java_heap_kib": 4476,
+        "native_heap_kib": 109456,
+        "graphics_kib": 36520,
+        "process_rss_bytes": 364830720,
+        "process_peak_rss_bytes": 478621696,
+        "image_cache_bytes": 65536,
+        "elements": 392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "navigation",
+        "android_total_pss_kib": 200661,
+        "android_total_rss_kib": 323620,
+        "android_swap_pss_kib": 276,
+        "java_heap_kib": 4244,
+        "native_heap_kib": 109024,
+        "graphics_kib": 13992,
+        "process_rss_bytes": 332369920,
+        "process_peak_rss_bytes": 478621696,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "scanner",
+        "android_total_pss_kib": 160964,
+        "android_total_rss_kib": 287100,
+        "android_swap_pss_kib": 290,
+        "java_heap_kib": 6100,
+        "native_heap_kib": 58456,
+        "graphics_kib": 14304,
+        "process_rss_bytes": 292028416,
+        "process_peak_rss_bytes": 624197632,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "startup",
+        "android_total_pss_kib": 189196,
+        "android_total_rss_kib": 304764,
+        "android_swap_pss_kib": 3254,
+        "java_heap_kib": 2972,
+        "native_heap_kib": 103880,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 309784576,
+        "process_peak_rss_bytes": 475234304,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "catalog",
+        "android_total_pss_kib": 136064,
+        "android_total_rss_kib": 260196,
+        "android_swap_pss_kib": 300,
+        "java_heap_kib": 4212,
+        "native_heap_kib": 40048,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 263659520,
+        "process_peak_rss_bytes": 475234304,
+        "image_cache_bytes": 65536,
+        "elements": 1663
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "history",
+        "android_total_pss_kib": 163545,
+        "android_total_rss_kib": 287680,
+        "android_swap_pss_kib": 300,
+        "java_heap_kib": 4476,
+        "native_heap_kib": 43420,
+        "graphics_kib": 36524,
+        "process_rss_bytes": 294846464,
+        "process_peak_rss_bytes": 475234304,
+        "image_cache_bytes": 65536,
+        "elements": 392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "navigation",
+        "android_total_pss_kib": 134759,
+        "android_total_rss_kib": 257440,
+        "android_swap_pss_kib": 300,
+        "java_heap_kib": 4244,
+        "native_heap_kib": 42580,
+        "graphics_kib": 13996,
+        "process_rss_bytes": 265494528,
+        "process_peak_rss_bytes": 475234304,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "scanner",
+        "android_total_pss_kib": 158597,
+        "android_total_rss_kib": 284328,
+        "android_swap_pss_kib": 303,
+        "java_heap_kib": 5984,
+        "native_heap_kib": 56316,
+        "graphics_kib": 14052,
+        "process_rss_bytes": 289611776,
+        "process_peak_rss_bytes": 475234304,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "startup",
+        "android_total_pss_kib": 190979,
+        "android_total_rss_kib": 305016,
+        "android_swap_pss_kib": 4645,
+        "java_heap_kib": 2980,
+        "native_heap_kib": 103660,
+        "graphics_kib": 13980,
+        "process_rss_bytes": 311046144,
+        "process_peak_rss_bytes": 475119616,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "catalog",
+        "android_total_pss_kib": 136777,
+        "android_total_rss_kib": 260732,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 4212,
+        "native_heap_kib": 40080,
+        "graphics_kib": 13980,
+        "process_rss_bytes": 265977856,
+        "process_peak_rss_bytes": 475119616,
+        "image_cache_bytes": 65536,
+        "elements": 1663
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "history",
+        "android_total_pss_kib": 164688,
+        "android_total_rss_kib": 288648,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 4480,
+        "native_heap_kib": 43348,
+        "graphics_kib": 36524,
+        "process_rss_bytes": 295612416,
+        "process_peak_rss_bytes": 475119616,
+        "image_cache_bytes": 65536,
+        "elements": 392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "navigation",
+        "android_total_pss_kib": 135540,
+        "android_total_rss_kib": 258052,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 4244,
+        "native_heap_kib": 42732,
+        "graphics_kib": 13996,
+        "process_rss_bytes": 265682944,
+        "process_peak_rss_bytes": 475119616,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "scanner",
+        "android_total_pss_kib": 158419,
+        "android_total_rss_kib": 284148,
+        "android_swap_pss_kib": 305,
+        "java_heap_kib": 7744,
+        "native_heap_kib": 54000,
+        "graphics_kib": 14044,
+        "process_rss_bytes": 288727040,
+        "process_peak_rss_bytes": 475119616,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 1,
+        "stage": "startup",
+        "android_total_pss_kib": 267658,
+        "android_total_rss_kib": 382660,
+        "android_swap_pss_kib": 4545,
+        "java_heap_kib": 46800,
+        "native_heap_kib": 111196,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 388841472,
+        "process_peak_rss_bytes": 562565120,
+        "image_cache_bytes": 65536,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 1,
+        "stage": "catalog",
+        "android_total_pss_kib": 161154,
+        "android_total_rss_kib": 285152,
+        "android_swap_pss_kib": 317,
+        "java_heap_kib": 5496,
+        "native_heap_kib": 44228,
+        "graphics_kib": 15548,
+        "process_rss_bytes": 291844096,
+        "process_peak_rss_bytes": 562565120,
+        "image_cache_bytes": 1114112,
+        "elements": 2733
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 1,
+        "stage": "history",
+        "android_total_pss_kib": 164760,
+        "android_total_rss_kib": 288788,
+        "android_swap_pss_kib": 317,
+        "java_heap_kib": 5808,
+        "native_heap_kib": 46956,
+        "graphics_kib": 16120,
+        "process_rss_bytes": 307322880,
+        "process_peak_rss_bytes": 562565120,
+        "image_cache_bytes": 1114112,
+        "elements": 1110
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 1,
+        "stage": "navigation",
+        "android_total_pss_kib": 157291,
+        "android_total_rss_kib": 279936,
+        "android_swap_pss_kib": 317,
+        "java_heap_kib": 5692,
+        "native_heap_kib": 47208,
+        "graphics_kib": 15556,
+        "process_rss_bytes": 287449088,
+        "process_peak_rss_bytes": 562565120,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 1,
+        "stage": "scanner",
+        "android_total_pss_kib": 181085,
+        "android_total_rss_kib": 306572,
+        "android_swap_pss_kib": 312,
+        "java_heap_kib": 8728,
+        "native_heap_kib": 60036,
+        "graphics_kib": 15616,
+        "process_rss_bytes": 311226368,
+        "process_peak_rss_bytes": 562565120,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 2,
+        "stage": "startup",
+        "android_total_pss_kib": 151716,
+        "android_total_rss_kib": 267884,
+        "android_swap_pss_kib": 2579,
+        "java_heap_kib": 11112,
+        "native_heap_kib": 42004,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 271876096,
+        "process_peak_rss_bytes": 479694848,
+        "image_cache_bytes": 65536,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 2,
+        "stage": "catalog",
+        "android_total_pss_kib": 161284,
+        "android_total_rss_kib": 285912,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 5492,
+        "native_heap_kib": 44120,
+        "graphics_kib": 15812,
+        "process_rss_bytes": 292126720,
+        "process_peak_rss_bytes": 521199616,
+        "image_cache_bytes": 1114112,
+        "elements": 2733
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 2,
+        "stage": "history",
+        "android_total_pss_kib": 175783,
+        "android_total_rss_kib": 300564,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 5768,
+        "native_heap_kib": 47028,
+        "graphics_kib": 27264,
+        "process_rss_bytes": 308592640,
+        "process_peak_rss_bytes": 521199616,
+        "image_cache_bytes": 1114112,
+        "elements": 1110
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 2,
+        "stage": "navigation",
+        "android_total_pss_kib": 157676,
+        "android_total_rss_kib": 281044,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 5644,
+        "native_heap_kib": 47528,
+        "graphics_kib": 15560,
+        "process_rss_bytes": 289394688,
+        "process_peak_rss_bytes": 521199616,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 2,
+        "stage": "scanner",
+        "android_total_pss_kib": 182149,
+        "android_total_rss_kib": 308796,
+        "android_swap_pss_kib": 292,
+        "java_heap_kib": 10428,
+        "native_heap_kib": 59652,
+        "graphics_kib": 15612,
+        "process_rss_bytes": 314134528,
+        "process_peak_rss_bytes": 521199616,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 3,
+        "stage": "startup",
+        "android_total_pss_kib": 222668,
+        "android_total_rss_kib": 337404,
+        "android_swap_pss_kib": 4626,
+        "java_heap_kib": 11108,
+        "native_heap_kib": 111592,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 342626304,
+        "process_peak_rss_bytes": 489734144,
+        "image_cache_bytes": 65536,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 3,
+        "stage": "catalog",
+        "android_total_pss_kib": 160658,
+        "android_total_rss_kib": 285344,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 5492,
+        "native_heap_kib": 43828,
+        "graphics_kib": 15812,
+        "process_rss_bytes": 290537472,
+        "process_peak_rss_bytes": 514203648,
+        "image_cache_bytes": 1114112,
+        "elements": 2733
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 3,
+        "stage": "history",
+        "android_total_pss_kib": 175044,
+        "android_total_rss_kib": 299756,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 5772,
+        "native_heap_kib": 46796,
+        "graphics_kib": 27268,
+        "process_rss_bytes": 308314112,
+        "process_peak_rss_bytes": 514203648,
+        "image_cache_bytes": 1114112,
+        "elements": 1110
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 3,
+        "stage": "navigation",
+        "android_total_pss_kib": 156860,
+        "android_total_rss_kib": 280156,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 5656,
+        "native_heap_kib": 46948,
+        "graphics_kib": 15552,
+        "process_rss_bytes": 288030720,
+        "process_peak_rss_bytes": 514203648,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "baseline",
+        "fixture": "large",
+        "run": 3,
+        "stage": "scanner",
+        "android_total_pss_kib": 179577,
+        "android_total_rss_kib": 306096,
+        "android_swap_pss_kib": 292,
+        "java_heap_kib": 7164,
+        "native_heap_kib": 60240,
+        "graphics_kib": 15616,
+        "process_rss_bytes": 310816768,
+        "process_peak_rss_bytes": 514203648,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "startup",
+        "android_total_pss_kib": 120871,
+        "android_total_rss_kib": 236540,
+        "android_swap_pss_kib": 2174,
+        "java_heap_kib": 3092,
+        "native_heap_kib": 42220,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 240205824,
+        "process_peak_rss_bytes": 465608704,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "catalog",
+        "android_total_pss_kib": 134435,
+        "android_total_rss_kib": 259416,
+        "android_swap_pss_kib": 280,
+        "java_heap_kib": 4296,
+        "native_heap_kib": 40124,
+        "graphics_kib": 13964,
+        "process_rss_bytes": 263192576,
+        "process_peak_rss_bytes": 465608704,
+        "image_cache_bytes": 0,
+        "elements": 1663
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "history",
+        "android_total_pss_kib": 157494,
+        "android_total_rss_kib": 288056,
+        "android_swap_pss_kib": 299,
+        "java_heap_kib": 4448,
+        "native_heap_kib": 43720,
+        "graphics_kib": 36528,
+        "process_rss_bytes": 296951808,
+        "process_peak_rss_bytes": 465608704,
+        "image_cache_bytes": 0,
+        "elements": 392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "navigation",
+        "android_total_pss_kib": 186870,
+        "android_total_rss_kib": 317432,
+        "android_swap_pss_kib": 299,
+        "java_heap_kib": 4204,
+        "native_heap_kib": 108812,
+        "graphics_kib": 14256,
+        "process_rss_bytes": 327864320,
+        "process_peak_rss_bytes": 527912960,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 1,
+        "stage": "scanner",
+        "android_total_pss_kib": 147112,
+        "android_total_rss_kib": 281136,
+        "android_swap_pss_kib": 287,
+        "java_heap_kib": 8800,
+        "native_heap_kib": 56508,
+        "graphics_kib": 14304,
+        "process_rss_bytes": 287105024,
+        "process_peak_rss_bytes": 527912960,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "startup",
+        "android_total_pss_kib": 174540,
+        "android_total_rss_kib": 296380,
+        "android_swap_pss_kib": 4650,
+        "java_heap_kib": 2968,
+        "native_heap_kib": 103548,
+        "graphics_kib": 13972,
+        "process_rss_bytes": 301154304,
+        "process_peak_rss_bytes": 465616896,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "catalog",
+        "android_total_pss_kib": 126661,
+        "android_total_rss_kib": 257056,
+        "android_swap_pss_kib": 301,
+        "java_heap_kib": 4168,
+        "native_heap_kib": 39952,
+        "graphics_kib": 13972,
+        "process_rss_bytes": 260841472,
+        "process_peak_rss_bytes": 465616896,
+        "image_cache_bytes": 65536,
+        "elements": 1663
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "history",
+        "android_total_pss_kib": 153789,
+        "android_total_rss_kib": 284188,
+        "android_swap_pss_kib": 301,
+        "java_heap_kib": 4432,
+        "native_heap_kib": 43136,
+        "graphics_kib": 36516,
+        "process_rss_bytes": 290664448,
+        "process_peak_rss_bytes": 465616896,
+        "image_cache_bytes": 65536,
+        "elements": 392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "navigation",
+        "android_total_pss_kib": 120451,
+        "android_total_rss_kib": 250848,
+        "android_swap_pss_kib": 301,
+        "java_heap_kib": 4196,
+        "native_heap_kib": 42528,
+        "graphics_kib": 13992,
+        "process_rss_bytes": 257716224,
+        "process_peak_rss_bytes": 465616896,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 2,
+        "stage": "scanner",
+        "android_total_pss_kib": 144226,
+        "android_total_rss_kib": 278228,
+        "android_swap_pss_kib": 289,
+        "java_heap_kib": 7816,
+        "native_heap_kib": 54264,
+        "graphics_kib": 14040,
+        "process_rss_bytes": 282480640,
+        "process_peak_rss_bytes": 465616896,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "startup",
+        "android_total_pss_kib": 113582,
+        "android_total_rss_kib": 235516,
+        "android_swap_pss_kib": 4650,
+        "java_heap_kib": 2964,
+        "native_heap_kib": 42280,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 240402432,
+        "process_peak_rss_bytes": 472133632,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "catalog",
+        "android_total_pss_kib": 124616,
+        "android_total_rss_kib": 255104,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 4172,
+        "native_heap_kib": 39816,
+        "graphics_kib": 13976,
+        "process_rss_bytes": 260665344,
+        "process_peak_rss_bytes": 472133632,
+        "image_cache_bytes": 65536,
+        "elements": 1663
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "history",
+        "android_total_pss_kib": 154700,
+        "android_total_rss_kib": 285192,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 4432,
+        "native_heap_kib": 43352,
+        "graphics_kib": 36520,
+        "process_rss_bytes": 292179968,
+        "process_peak_rss_bytes": 472133632,
+        "image_cache_bytes": 65536,
+        "elements": 392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "navigation",
+        "android_total_pss_kib": 121286,
+        "android_total_rss_kib": 251776,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 4200,
+        "native_heap_kib": 43028,
+        "graphics_kib": 13992,
+        "process_rss_bytes": 260214784,
+        "process_peak_rss_bytes": 472133632,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "empty",
+        "run": 3,
+        "stage": "scanner",
+        "android_total_pss_kib": 151668,
+        "android_total_rss_kib": 281792,
+        "android_swap_pss_kib": 307,
+        "java_heap_kib": 9456,
+        "native_heap_kib": 56204,
+        "graphics_kib": 14048,
+        "process_rss_bytes": 287657984,
+        "process_peak_rss_bytes": 472133632,
+        "image_cache_bytes": 65536,
+        "elements": 1258
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 1,
+        "stage": "startup",
+        "android_total_pss_kib": 252610,
+        "android_total_rss_kib": 372828,
+        "android_swap_pss_kib": 3298,
+        "java_heap_kib": 46792,
+        "native_heap_kib": 108124,
+        "graphics_kib": 13980,
+        "process_rss_bytes": 380399616,
+        "process_peak_rss_bytes": 556605440,
+        "image_cache_bytes": 65536,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 1,
+        "stage": "catalog",
+        "android_total_pss_kib": 155170,
+        "android_total_rss_kib": 282520,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 5460,
+        "native_heap_kib": 44192,
+        "graphics_kib": 15820,
+        "process_rss_bytes": 289394688,
+        "process_peak_rss_bytes": 556605440,
+        "image_cache_bytes": 1114112,
+        "elements": 2733
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 1,
+        "stage": "history",
+        "android_total_pss_kib": 158327,
+        "android_total_rss_kib": 285696,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 5740,
+        "native_heap_kib": 46924,
+        "graphics_kib": 15816,
+        "process_rss_bytes": 305016832,
+        "process_peak_rss_bytes": 556605440,
+        "image_cache_bytes": 1114112,
+        "elements": 1110
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 1,
+        "stage": "navigation",
+        "android_total_pss_kib": 146936,
+        "android_total_rss_kib": 274372,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 5624,
+        "native_heap_kib": 47400,
+        "graphics_kib": 15564,
+        "process_rss_bytes": 282132480,
+        "process_peak_rss_bytes": 556605440,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 1,
+        "stage": "scanner",
+        "android_total_pss_kib": 168151,
+        "android_total_rss_kib": 298784,
+        "android_swap_pss_kib": 302,
+        "java_heap_kib": 6900,
+        "native_heap_kib": 59596,
+        "graphics_kib": 15616,
+        "process_rss_bytes": 304742400,
+        "process_peak_rss_bytes": 556605440,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 2,
+        "stage": "startup",
+        "android_total_pss_kib": 207209,
+        "android_total_rss_kib": 325876,
+        "android_swap_pss_kib": 4677,
+        "java_heap_kib": 11108,
+        "native_heap_kib": 107432,
+        "graphics_kib": 13872,
+        "process_rss_bytes": 332492800,
+        "process_peak_rss_bytes": 480022528,
+        "image_cache_bytes": 65536,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 2,
+        "stage": "catalog",
+        "android_total_pss_kib": 219522,
+        "android_total_rss_kib": 346720,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 5432,
+        "native_heap_kib": 110020,
+        "graphics_kib": 15812,
+        "process_rss_bytes": 354000896,
+        "process_peak_rss_bytes": 511680512,
+        "image_cache_bytes": 1114112,
+        "elements": 2733
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 2,
+        "stage": "history",
+        "android_total_pss_kib": 157337,
+        "android_total_rss_kib": 284548,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 5712,
+        "native_heap_kib": 47184,
+        "graphics_kib": 16124,
+        "process_rss_bytes": 303591424,
+        "process_peak_rss_bytes": 511680512,
+        "image_cache_bytes": 1114112,
+        "elements": 1110
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 2,
+        "stage": "navigation",
+        "android_total_pss_kib": 145797,
+        "android_total_rss_kib": 273072,
+        "android_swap_pss_kib": 315,
+        "java_heap_kib": 5596,
+        "native_heap_kib": 47932,
+        "graphics_kib": 15560,
+        "process_rss_bytes": 281235456,
+        "process_peak_rss_bytes": 511680512,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 2,
+        "stage": "scanner",
+        "android_total_pss_kib": 166303,
+        "android_total_rss_kib": 295956,
+        "android_swap_pss_kib": 305,
+        "java_heap_kib": 5968,
+        "native_heap_kib": 59476,
+        "graphics_kib": 15616,
+        "process_rss_bytes": 301531136,
+        "process_peak_rss_bytes": 511680512,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 3,
+        "stage": "startup",
+        "android_total_pss_kib": 142217,
+        "android_total_rss_kib": 262252,
+        "android_swap_pss_kib": 2604,
+        "java_heap_kib": 11104,
+        "native_heap_kib": 44040,
+        "graphics_kib": 13972,
+        "process_rss_bytes": 266690560,
+        "process_peak_rss_bytes": 475832320,
+        "image_cache_bytes": 65536,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 3,
+        "stage": "catalog",
+        "android_total_pss_kib": 154457,
+        "android_total_rss_kib": 280924,
+        "android_swap_pss_kib": 311,
+        "java_heap_kib": 5428,
+        "native_heap_kib": 43804,
+        "graphics_kib": 15816,
+        "process_rss_bytes": 287457280,
+        "process_peak_rss_bytes": 517533696,
+        "image_cache_bytes": 1114112,
+        "elements": 2733
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 3,
+        "stage": "history",
+        "android_total_pss_kib": 167521,
+        "android_total_rss_kib": 294020,
+        "android_swap_pss_kib": 311,
+        "java_heap_kib": 5712,
+        "native_heap_kib": 46436,
+        "graphics_kib": 27264,
+        "process_rss_bytes": 301752320,
+        "process_peak_rss_bytes": 517533696,
+        "image_cache_bytes": 1114112,
+        "elements": 1110
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 3,
+        "stage": "navigation",
+        "android_total_pss_kib": 145221,
+        "android_total_rss_kib": 271784,
+        "android_swap_pss_kib": 311,
+        "java_heap_kib": 5592,
+        "native_heap_kib": 46836,
+        "graphics_kib": 15560,
+        "process_rss_bytes": 279621632,
+        "process_peak_rss_bytes": 517533696,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      },
+      {
+        "variant": "optimized",
+        "fixture": "large",
+        "run": 3,
+        "stage": "scanner",
+        "android_total_pss_kib": 164842,
+        "android_total_rss_kib": 295584,
+        "android_swap_pss_kib": 282,
+        "java_heap_kib": 5664,
+        "native_heap_kib": 59592,
+        "graphics_kib": 15592,
+        "process_rss_bytes": 298491904,
+        "process_peak_rss_bytes": 517533696,
+        "image_cache_bytes": 1114112,
+        "elements": 1392
+      }
+    ],
+    "medians_mib": [
+      {
+        "fixture": "empty",
+        "stage": "startup",
+        "baseline": {
+          "pss": 186.5,
+          "rss": 297.87,
+          "swap_pss": 3.18,
+          "pss_min": 184.76,
+          "pss_max": 186.52,
+          "process_peak_rss": 453.22
+        },
+        "optimized": {
+          "pss": 118.04,
+          "rss": 231.0,
+          "swap_pss": 4.54,
+          "pss_min": 110.92,
+          "pss_max": 170.45,
+          "process_peak_rss": 444.05
+        }
+      },
+      {
+        "fixture": "empty",
+        "stage": "catalog",
+        "baseline": {
+          "pss": 133.57,
+          "rss": 254.62,
+          "swap_pss": 0.29,
+          "pss_min": 132.88,
+          "pss_max": 198.1,
+          "process_peak_rss": 453.22
+        },
+        "optimized": {
+          "pss": 123.69,
+          "rss": 251.03,
+          "swap_pss": 0.29,
+          "pss_min": 121.7,
+          "pss_max": 131.28,
+          "process_peak_rss": 444.05
+        }
+      },
+      {
+        "fixture": "empty",
+        "stage": "history",
+        "baseline": {
+          "pss": 160.83,
+          "rss": 281.88,
+          "swap_pss": 0.29,
+          "pss_min": 159.71,
+          "pss_max": 225.96,
+          "process_peak_rss": 453.22
+        },
+        "optimized": {
+          "pss": 151.07,
+          "rss": 278.51,
+          "swap_pss": 0.29,
+          "pss_min": 150.18,
+          "pss_max": 153.8,
+          "process_peak_rss": 444.05
+        }
+      },
+      {
+        "fixture": "empty",
+        "stage": "navigation",
+        "baseline": {
+          "pss": 132.36,
+          "rss": 252.0,
+          "swap_pss": 0.29,
+          "pss_min": 131.6,
+          "pss_max": 195.96,
+          "process_peak_rss": 453.22
+        },
+        "optimized": {
+          "pss": 118.44,
+          "rss": 245.88,
+          "swap_pss": 0.29,
+          "pss_min": 117.63,
+          "pss_max": 182.49,
+          "process_peak_rss": 450.26
+        }
+      },
+      {
+        "fixture": "empty",
+        "stage": "scanner",
+        "baseline": {
+          "pss": 154.88,
+          "rss": 277.66,
+          "swap_pss": 0.3,
+          "pss_min": 154.71,
+          "pss_max": 157.19,
+          "process_peak_rss": 453.22
+        },
+        "optimized": {
+          "pss": 143.66,
+          "rss": 274.55,
+          "swap_pss": 0.28,
+          "pss_min": 140.85,
+          "pss_max": 148.11,
+          "process_peak_rss": 450.26
+        }
+      },
+      {
+        "fixture": "large",
+        "stage": "startup",
+        "baseline": {
+          "pss": 217.45,
+          "rss": 329.5,
+          "swap_pss": 4.44,
+          "pss_min": 148.16,
+          "pss_max": 261.38,
+          "process_peak_rss": 467.05
+        },
+        "optimized": {
+          "pss": 202.35,
+          "rss": 318.24,
+          "swap_pss": 3.22,
+          "pss_min": 138.88,
+          "pss_max": 246.69,
+          "process_peak_rss": 457.79
+        }
+      },
+      {
+        "fixture": "large",
+        "stage": "catalog",
+        "baseline": {
+          "pss": 157.38,
+          "rss": 278.66,
+          "swap_pss": 0.29,
+          "pss_min": 156.89,
+          "pss_max": 157.5,
+          "process_peak_rss": 497.05
+        },
+        "optimized": {
+          "pss": 151.53,
+          "rss": 275.9,
+          "swap_pss": 0.31,
+          "pss_min": 150.84,
+          "pss_max": 214.38,
+          "process_peak_rss": 493.56
+        }
+      },
+      {
+        "fixture": "large",
+        "stage": "history",
+        "baseline": {
+          "pss": 170.94,
+          "rss": 292.73,
+          "swap_pss": 0.29,
+          "pss_min": 160.9,
+          "pss_max": 171.66,
+          "process_peak_rss": 497.05
+        },
+        "optimized": {
+          "pss": 154.62,
+          "rss": 279.0,
+          "swap_pss": 0.31,
+          "pss_min": 153.65,
+          "pss_max": 163.59,
+          "process_peak_rss": 493.56
+        }
+      },
+      {
+        "fixture": "large",
+        "stage": "navigation",
+        "baseline": {
+          "pss": 153.6,
+          "rss": 273.59,
+          "swap_pss": 0.29,
+          "pss_min": 153.18,
+          "pss_max": 153.98,
+          "process_peak_rss": 497.05
+        },
+        "optimized": {
+          "pss": 142.38,
+          "rss": 266.67,
+          "swap_pss": 0.31,
+          "pss_min": 141.82,
+          "pss_max": 143.49,
+          "process_peak_rss": 493.56
+        }
+      },
+      {
+        "fixture": "large",
+        "stage": "scanner",
+        "baseline": {
+          "pss": 176.84,
+          "rss": 299.39,
+          "swap_pss": 0.29,
+          "pss_min": 175.37,
+          "pss_max": 177.88,
+          "process_peak_rss": 497.05
+        },
+        "optimized": {
+          "pss": 162.41,
+          "rss": 289.02,
+          "swap_pss": 0.29,
+          "pss_min": 160.98,
+          "pss_max": 164.21,
+          "process_peak_rss": 493.56
+        }
+      }
+    ],
+    "baseline_apk": {
+      "sha256": "41f00cc3fc834a424883121f59442ab8732df56f44d3a2e2b019ac434c11894a",
+      "bytes": 37630155
+    },
+    "optimized_apk": {
+      "sha256": "22e949e53dc110a1dbcb1e068f682f45a6319a83e33a775fda401cfccd8381ff",
+      "bytes": 36319435
+    }
+  },
+  "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+  "preserved_native_and_models": [
+    {
+      "entry": "base/assets/mlkit_barcode_models/barcode_ssd_mobilenet_v1_dmp25_quant.tflite",
+      "identical": true,
+      "sha256": "6c7b209f4256ca4521d86f83d00904ada1a6a443010698463b750d757fae15a4"
+    },
+    {
+      "entry": "base/assets/mlkit_barcode_models/oned_auto_regressor_mobile.tflite",
+      "identical": true,
+      "sha256": "8e07cd3b38da1ded3c07d6c81d06990cbdfa284c214557b94e106372e0497442"
+    },
+    {
+      "entry": "base/assets/mlkit_barcode_models/oned_feature_extractor_mobile.tflite",
+      "identical": true,
+      "sha256": "981c89dcca6aac10c7ff7304933747f6936292b6395d02ee944e6fbc73b3c92b"
+    },
+    {
+      "entry": "base/lib/arm64-v8a/libbarhopper_v3.so",
+      "identical": true,
+      "sha256": "ec09597e9eb3aee0eb55ae3366da0d4ba416f5aa35a1af0b3811f50ff46743a1"
+    },
+    {
+      "entry": "base/lib/arm64-v8a/libdartjni.so",
+      "identical": true,
+      "sha256": "d2e718908afae38d6d3856da55476002bc60600e41c6aba036cfa0fd6a90991d"
+    },
+    {
+      "entry": "base/lib/arm64-v8a/libflutter.so",
+      "identical": true,
+      "sha256": "86b660128f3a3b6220c32d4d637f8198b2083f60c36c55ff025d3dba1a64d0f8"
+    },
+    {
+      "entry": "base/lib/arm64-v8a/libimage_processing_util_jni.so",
+      "identical": true,
+      "sha256": "0292b063fafccf734472cbb59588e756c2dbca907c72021ba6fbf126385508a2"
+    },
+    {
+      "entry": "base/lib/arm64-v8a/libsurface_util_jni.so",
+      "identical": true,
+      "sha256": "a5c9d1928ea92ec7a94dff8cf666e7739cd734198b9f0ae1d4e28ea3c86516ba"
+    },
+    {
+      "entry": "base/lib/armeabi-v7a/libbarhopper_v3.so",
+      "identical": true,
+      "sha256": "b3c162c69e4906b816227ae116bfd8b9ff19cfdd58a3de0c9a9b110e030063e9"
+    },
+    {
+      "entry": "base/lib/armeabi-v7a/libdartjni.so",
+      "identical": true,
+      "sha256": "a2bfd70690037ddf14c84cf569006045a92acf8d48ca25fe73d618e4688cd4c0"
+    },
+    {
+      "entry": "base/lib/armeabi-v7a/libflutter.so",
+      "identical": true,
+      "sha256": "d96888c4a096874f949ff71fa490c54f38398462a19e28c7caccbb166cda7c5b"
+    },
+    {
+      "entry": "base/lib/armeabi-v7a/libimage_processing_util_jni.so",
+      "identical": true,
+      "sha256": "05973c0cf8e8dd281c8ec505c41814b78b740461056925bb41120594d7c35dcd"
+    },
+    {
+      "entry": "base/lib/armeabi-v7a/libsurface_util_jni.so",
+      "identical": true,
+      "sha256": "78eb0b10e91b819be97cb7daa8c97fb757fa6d07cb80ccb7e92c113b45bda9be"
+    },
+    {
+      "entry": "base/lib/x86_64/libbarhopper_v3.so",
+      "identical": true,
+      "sha256": "6c5deea87d962af008fd48c3229db13ab68eef2e9feeccb2df5b33a920c0579a"
+    },
+    {
+      "entry": "base/lib/x86_64/libdartjni.so",
+      "identical": true,
+      "sha256": "8584cf8d4085924b52c4534b7422add5e8a16b55bc691d45380b257ff2396085"
+    },
+    {
+      "entry": "base/lib/x86_64/libflutter.so",
+      "identical": true,
+      "sha256": "cdc3311b5dd2bce3bbf4b5c64d294aa936c2153012965b426862b91e14f1db3b"
+    },
+    {
+      "entry": "base/lib/x86_64/libimage_processing_util_jni.so",
+      "identical": true,
+      "sha256": "112703727717651e69e91f3ea2c3c2311737ee5809a909c9d342a811b6c7c069"
+    },
+    {
+      "entry": "base/lib/x86_64/libsurface_util_jni.so",
+      "identical": true,
+      "sha256": "e5311942b4fce0f7f2505d41150cf9921e558a6368929cb73127450f74dd4fe4"
+    }
+  ],
+  "functional_checks": {
+    "offline_decoder": true,
+    "indonesian_date": true,
+    "symbolization": true,
+    "package": "com.pujanggapos.pujangga_pos.footprintoffline",
+    "internet_permission": false
+  },
+  "camera_checks": {
+    "open": 1,
+    "background": 0,
+    "resumed": 1,
+    "closed": 0
+  },
+  "bounded_log_checks": {
+    "FATAL EXCEPTION": 0,
+    "Unhandled Exception": 0,
+    "SQLiteException": 0,
+    "RenderFlex overflowed": 0
+  },
+  "cleanup_checks": {
+    "qa_packages_removed": true,
+    "qa_forward_removed": true,
+    "unrelated_forwards_preserved": true,
+    "play_identity_preserved": true,
+    "installed_play_apk_checksums_preserved": true
+  },
+  "validation": {
+    "flutter_tests_passed": 99,
+    "python_tests_passed": 10,
+    "flutter_analyze_fatal_infos": "passed",
+    "workflow_yaml_parse": "passed"
+  },
+  "runtime_source_sha256": {
+    "lib/main.dart": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123",
+    "lib/core/utils/app_date_formatting.dart": "fe65cdbac93819be708c116c1ccb8902b0846e5c1d52357b1335183d4df1390e"
+  },
+  "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+  "size_remeasurement": {
+    "reason": "PR #44: capture baseline/candidate lockfile provenance directly",
+    "captured_at_utc": "2026-11-03T05:00:37.373750+00:00",
+    "baseline_revision_lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+    "candidate_revision_lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+    "same_raw_lockfile_before_after_both_builds": true,
+    "same_package_configuration_before_after_both_builds": true,
+    "original_ram_measurements_repeated": false,
+    "build_inputs": {
+      "baseline_revision": "a0a154e1541fa4435549806fbbb3bc19abaa3249",
+      "candidate_runtime_revision": "44909fe10d7d02d71eed4a128c705a48e28c2919",
+      "signing": "debug key for local measurement; no Play publishing",
+      "builds": {
+        "baseline": {
+          "before": {
+            "captured_at_utc": "2026-11-03T04:54:00.517726+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+          },
+          "after": {
+            "captured_at_utc": "2026-11-03T04:58:41.255734+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57e9170e4de39e925a44fdb153713f7a5d5231812189d82871bf10757df4fc0"
+          },
+          "arguments": [
+            "build",
+            "appbundle",
+            "--release",
+            "--no-pub"
+          ],
+          "bundle_sha256": "775daf7fd0537fea0bc92644b5fe9de25b9336377c8b6ccb475434ded072ffe0",
+          "bundle_bytes": 67736895
+        },
+        "optimized": {
+          "before": {
+            "captured_at_utc": "2026-11-03T04:58:41.520042+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+          },
+          "after": {
+            "captured_at_utc": "2026-11-03T05:00:09.843857+00:00",
+            "lockfile_sha256": "70449bcc95fcbd886082486654850cf3b8279233e15f9d6bc7d5be09867afc21",
+            "lockfile_lf_sha256": "3e53413c6258cb7364cab2bad3ced5564171fcbea023f16ac368ceea4e6717f9",
+            "package_config_sha256": "0d03fbda4f883b8e2e85e130c064e3122e062f4f89f0118dcc5bfda0c785308c",
+            "main_sha256": "f57c1f69aa4fcaa06207663be9d99423a816e6c3b036477e3091b8c045c48123"
+          },
+          "arguments": [
+            "build",
+            "appbundle",
+            "--release",
+            "--no-pub",
+            "--split-debug-info=build/footprint-v2/review-dart-symbols"
+          ],
+          "bundle_sha256": "d3846a7d691728ed2d9d915dac50dc6dc8688c055339613400b95a330779628c",
+          "bundle_bytes": 63378297
+        }
+      }
+    }
+  }
+}

@@ -35,12 +35,13 @@ salin device spec terlebih dahulu ke luar `build` dan pulihkan file yang sama:
 flutter pub get --enforce-lockfile
 mkdir -p build
 flutter --version --machine > build/flutter-version.json
-flutter build appbundle --release --no-pub
+flutter build appbundle --release --no-pub --split-debug-info=build/android-symbols
 python tools/android_size_report.py \
   --bundle build/app/outputs/bundle/release/app-release.aab \
   --bundletool /path/to/bundletool-all-1.18.3.jar \
   --device-spec build/device.json \
   --flutter-version-file build/flutter-version.json \
+  --dart-symbols build/android-symbols \
   --output build/android-size/after.json
 ```
 
@@ -55,7 +56,53 @@ selisih source runtime hanya perubahan optimasi. Untuk artefak CI lama gunakan
 `--source-revision <sha-ci>` dan jangan memasukkan metadata SDK build lokal.
 Status checkout dan hash lockfile dihilangkan untuk artefak eksternal tersebut.
 
+Untuk build lokal, `lockfile_sha256` mempertahankan hash byte asli dan
+`lockfile_lf_sha256` mencatat hash setelah CRLF dinormalisasi menjadi LF.
+Gunakan fingerprint LF untuk membandingkan isi lockfile Windows dan CI;
+catat juga hash sebelum/sesudah build untuk membuktikan input tidak berubah.
+Jika `--dart-symbols` diberikan, laporan wajib menemukan file simbol untuk
+setiap ABI yang memuat `libapp.so` dalam bundle. ABI yang hanya memuat library
+plugin tidak memerlukan simbol Dart. Simbol ABI yang hilang menggagalkan
+laporan sebelum JSON ditulis.
+
 ## CI dan publikasi
+
+Build rilis memisahkan informasi diagnostik Dart dengan `--split-debug-info`,
+tanpa `--obfuscate`. Simbol tidak dikirim ke perangkat. Pipeline menyimpan
+artefak `dart-symbols-<versi>-<commit>` selama 90 hari, berisi semua ABI dan
+`release.json` dengan checksum AAB serta setiap file simbol. Unduh dan arsipkan
+keduanya sebelum masa retensi berakhir, dan pertahankan selama versi tersebut
+masih digunakan. Jangan mencampur simbol dari build, versi, atau ABI berbeda.
+Untuk menerjemahkan stack trace, gunakan:
+
+```sh
+python tools/symbolize_dart.py --input stacktrace.txt \
+  --symbols app.android-arm64.symbols --output decoded.txt
+```
+
+Helper memakai flutter symbolize. Untuk snapshot terpadu Dart 3.13 pada SDK
+3.47.9, helper mempertahankan build ID dan alamat virtual, lalu menghilangkan
+header alamat muat yang memicu decoder lama mencari simbol isolate terpisah.
+Trace format lama diteruskan utuh. Uji perangkat membuktikan fungsi serta lokasi
+source dari exception QA dapat dipulihkan. Trace asli tetap disimpan oleh pemilik.
+
+Workflow pengukuran memakai flag build yang sama dan menyimpan simbol bersama
+artefak ukur. Laporan juga mencatat ukuran setiap library native dan total DEX;
+simbol di luar aplikasi tidak dihitung sebagai penghematan data pengguna/cache.
+
+Data tanggal produksi hanya mendaftarkan `id` (termasuk fallback `id_ID`) dan
+`en_US`, sesuai format Indonesia dan format default aplikasi. Saat memperbarui
+`intl`, regenerasi data dari dependency yang terkunci dan jalankan tes
+kesetaraan CLDR sebelum build:
+
+```sh
+dart run tools/generate_date_locales.dart
+dart format lib/core/utils/app_date_formatting.dart
+flutter test test/app_date_formatting_test.dart
+```
+
+Tes menggunakan data referensi seluruh locale dari `intl`; import referensi
+tersebut harus tetap berada di tools/test, bukan entrypoint produksi.
 
 Workflow manual **Android size measurement (no publishing)** membangun mode
 release dengan key pengukuran sekali pakai. Workflow ini tidak menggunakan
