@@ -103,6 +103,15 @@ class AppDatabase {
       await EmployeeCompensationHistory.createTable(db);
       await EmployeeCompensationHistory.seedMissing(db);
     }
+    if (oldVersion < 16) {
+      final columns = await db.rawQuery('PRAGMA table_info(sales_transactions)');
+      if (!columns.any((column) => column['name'] == 'checkout_id')) {
+        await db.execute(
+          'ALTER TABLE sales_transactions ADD COLUMN checkout_id TEXT',
+        );
+      }
+      await _createCheckoutIndex(db);
+    }
   }
 
   Future<void> _migrateToVersion14(Database db) async {
@@ -555,6 +564,7 @@ class AppDatabase {
       CREATE TABLE sales_transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         invoice_no TEXT NOT NULL,
+        checkout_id TEXT,
         transaction_date TEXT NOT NULL,
         subtotal_amount REAL NOT NULL DEFAULT 0,
         discount_amount REAL NOT NULL DEFAULT 0,
@@ -667,12 +677,17 @@ class AppDatabase {
   }
 
   Future<void> _createIndexes(Database db) async {
+    await _createCheckoutIndex(db);
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_transactions_invoice_no ON sales_transactions(invoice_no)',
     );
     await _createEmployeeIndexes(db);
     await _createOperationalIndexes(db);
   }
+
+  Future<void> _createCheckoutIndex(Database db) => db.execute(
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_sales_transactions_checkout_id ON sales_transactions(checkout_id)',
+  );
 
   Future<void> _createEmployeeIndexes(Database db) async {
     await db.execute(
