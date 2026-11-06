@@ -147,6 +147,12 @@ class AppRestoreService {
         }
       }
 
+      if (tableName == 'sales_transactions' && backupSchemaVersion < 16) {
+        for (final row in normalizedRows) {
+          row.putIfAbsent('checkout_id', () => null);
+        }
+      }
+
       if (backupSchemaVersion < 14) {
         for (final row in normalizedRows) {
           if (tableName == 'employees') {

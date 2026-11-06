@@ -17,6 +17,12 @@ class TransaksiBerhasilPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final receiptAsync = ref.watch(transaksiReceiptProvider(invoiceNumber));
 
+    void startNewTransaction() {
+      // Re-enter through a fresh catalog load, including after a failed refresh.
+      ref.invalidate(transaksiControllerProvider);
+      context.go(AppRoutes.transaction);
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
@@ -26,7 +32,7 @@ class TransaksiBerhasilPage extends ConsumerWidget {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF0D5C56)),
-          onPressed: () => context.go(AppRoutes.transaction),
+          onPressed: startNewTransaction,
         ),
         title: const Text(
           'Detail Transaksi',
@@ -114,9 +120,8 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(
-                                0xFFBEC9C6,
-                              ).withValues(alpha: 0.3),
+                              color: const Color(0xFFBEC9C6)
+                                  .withValues(alpha: 0.3),
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -157,9 +162,8 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(
-                                0xFFBEC9C6,
-                              ).withValues(alpha: 0.3),
+                              color: const Color(0xFFBEC9C6)
+                                  .withValues(alpha: 0.3),
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -249,9 +253,8 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: const Color(
-                                0xFF0D5C56,
-                              ).withValues(alpha: 0.3),
+                              color: const Color(0xFF0D5C56)
+                                  .withValues(alpha: 0.3),
                               width: 2,
                             ),
                             boxShadow: [
@@ -411,8 +414,7 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                             width: double.infinity,
                             height: 48,
                             child: FilledButton(
-                              onPressed: () =>
-                                  context.go(AppRoutes.transaction),
+                              onPressed: startNewTransaction,
                               style: FilledButton.styleFrom(
                                 backgroundColor: const Color(0xFF0D5C56),
                                 foregroundColor: Colors.white,
