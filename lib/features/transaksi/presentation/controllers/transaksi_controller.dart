@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/errors/app_exception.dart';
@@ -40,6 +41,9 @@ final transaksiReceiptProvider = FutureProvider.autoDispose
     });
 
 class TransaksiController extends AsyncNotifier<TransaksiState> {
+  bool _submitInProgress = false;
+  TransaksiSubmitRequest? _pendingRequest;
+
   @override
   Future<TransaksiState> build() async {
     final items = await ref
@@ -262,7 +266,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   void updateEmployee(int? employeeId) {
     final current = _currentState;
     if (current == null) return;
-    state = AsyncData(current.copyWith(employeeId: employeeId, resetEmployeeId: employeeId == null));
+    state = AsyncData(
+      current.copyWith(
+        employeeId: employeeId,
+        resetEmployeeId: employeeId == null,
+      ),
+    );
   }
 
   void updateCashPaid(double? value) {
@@ -275,6 +284,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   Future<TransaksiReceipt> submit() async {
+    if (_submitInProgress) {
+      throw const AppException(
+        'submit_in_progress',
+        'Transaksi sedang disimpan.',
+      );
+    }
     final current = _currentState;
     if (current == null) {
       throw const AppException(
@@ -297,30 +312,54 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       );
     }
 
+    final previous = _pendingRequest;
+    final request =
+        previous != null &&
+            identical(previous.items, current.cartItems) &&
+            previous.orderDiscountAmount == current.orderDiscountAmount &&
+            previous.taxAmount == current.taxAmount &&
+            previous.paymentMethod == current.paymentMethod &&
+            previous.cashPaidAmount ==
+                (current.paymentMethod == 'tunai'
+                    ? current.cashPaidAmount
+                    : null) &&
+            previous.employeeId == current.employeeId
+        ? previous
+        : TransaksiSubmitRequest(
+            items: current.cartItems,
+            orderDiscountAmount: current.orderDiscountAmount,
+            taxAmount: current.taxAmount,
+            paymentMethod: current.paymentMethod,
+            cashPaidAmount: current.paymentMethod == 'tunai'
+                ? current.cashPaidAmount
+                : null,
+            employeeId: current.employeeId,
+          );
+    _pendingRequest = request;
+    _submitInProgress = true;
     state = AsyncData(current.copyWith(isSubmitting: true));
 
+    final TransaksiReceipt receipt;
     try {
-      final receipt = await ref
+      receipt = await ref
           .read(transactionRepositoryProvider)
-          .saveTransaction(
-            TransaksiSubmitRequest(
-              items: current.cartItems,
-              orderDiscountAmount: current.orderDiscountAmount,
-              taxAmount: current.taxAmount,
-              paymentMethod: current.paymentMethod,
-              cashPaidAmount: current.paymentMethod == 'tunai'
-                  ? current.cashPaidAmount
-                  : null,
-              employeeId: current.employeeId,
-            ),
-          );
+          .saveTransaction(request);
+    } catch (_) {
+      if (ref.mounted) {
+        state = AsyncData(current.copyWith(isSubmitting: false));
+      }
+      _submitInProgress = false;
+      rethrow;
+    }
 
-      final refreshedItems = await ref
-          .read(transactionRepositoryProvider)
-          .getCatalogItems();
-      state = AsyncData(
-        _buildState(const TransaksiState(), catalogItems: refreshedItems),
-      );
+    // The sale is committed. No subsequent read may restore this checkout.
+    _pendingRequest = null;
+    if (!ref.mounted) {
+      _submitInProgress = false;
+      return receipt;
+    }
+    state = const AsyncData(TransaksiState());
+    try {
       ref.invalidate(transaksiReceiptProvider(receipt.invoiceNumber));
       ref.invalidate(stokControllerProvider);
       ref.invalidate(dashboardSummaryProvider);
@@ -329,10 +368,25 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       ref.invalidate(employeeReportProvider);
       ref.invalidate(expenseEntriesProvider);
       ref.invalidate(capitalMetricsProvider);
-      return receipt;
+      await refreshCatalog();
+    } finally {
+      _submitInProgress = false;
+    }
+    return receipt;
+  }
+
+  /// Retrying a catalog read never resubmits a committed sale.
+  Future<void> refreshCatalog() async {
+    try {
+      final items = await ref
+          .read(transactionRepositoryProvider)
+          .getCatalogItems();
+      if (!ref.mounted) return;
+      final current = state.asData?.value ?? const TransaksiState();
+      state = AsyncData(_buildState(current, catalogItems: items));
     } catch (_) {
-      state = AsyncData(current.copyWith(isSubmitting: false));
-      rethrow;
+      // Leave the committed checkout empty; a later refresh can recover.
+      // Stale stock must not be offered for the next checkout.
     }
   }
 
@@ -343,6 +397,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   TransaksiState? get _currentState {
+    if (_submitInProgress) return null;
     final current = state;
     return current is AsyncData<TransaksiState> ? current.value : null;
   }
@@ -382,7 +437,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       paymentMethod: paymentMethod,
       cashPaidAmount: cashPaidAmount,
       resetCashPaidAmount: resetCashPaidAmount,
-      isSubmitting: false,
+      isSubmitting: current.isSubmitting,
     );
 
     final normalizedQuery = nextState.searchQuery.trim().toLowerCase();
