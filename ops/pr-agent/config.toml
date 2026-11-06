@@ -1,0 +1,38 @@
+[config]
+model = "openai/responses/gpt-6.1-sol"
+model_weak = "openai/responses/gpt-6.1-sol"
+fallback_models = []
+custom_model_max_tokens = 64000
+max_model_tokens = 32000
+reasoning_effort = "medium"
+no_temperature_models = ["gpt-6.1-sol"]
+additional_reasoning_effort_models = ["gpt-6.1-sol"]
+response_language = "id-ID"
+num_retries = 1
+ai_timeout = 180
+use_repo_settings_file = false
+use_global_settings_file = false
+publish_output_progress = false
+output_run_details = true
+repo_context_files = ["AGENTS.md", "STITCH-FINAL-SCREENS.md", "USER-FLOW-Pujangga-POS.md", "PRD-Pujangga-POS.md"]
+
+[litellm]
+custom_llm_provider = "openai"
+force_streaming_custom_llm_provider = "openai"
+turn_off_message_logging = true
+
+[github_app]
+handle_pr_actions = ["opened", "reopened", "ready_for_review"]
+pr_commands = ["/review"]
+push_commands = ["/review"]
+handle_push_trigger = true
+feedback_on_draft_pr = false
+review_commands = []
+webhook_delivery_deduplication = true
+
+[pr_reviewer]
+publish_formal_review = true
+extra_instructions = "Tulis review dalam bahasa Indonesia. Utamakan bug yang dapat ditindaklanjuti, risiko transaksi ganda, konsistensi SQLite, dan regresi. Ikuti panduan repository dan desain canonical. Jangan mengarang hasil pengujian."
+
+[pr_questions]
+resolve_threads = false

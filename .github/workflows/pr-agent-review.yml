@@ -1,0 +1,102 @@
+name: PR-Agent review
+
+on:
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  agent-review:
+    name: Agent review
+    concurrency:
+      group: pr-agent-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      # This job only reads GitHub review metadata. It never checks out or runs PR code.
+      - name: Wait for the agent's verdict
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          REVIEWER_LOGIN: ${{ vars.PR_AGENT_BOT_LOGIN }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const login = process.env.REVIEWER_LOGIN;
+            if (!login || !login.endsWith('[bot]')) {
+              core.setFailed('Set repository variable PR_AGENT_BOT_LOGIN to the installed reviewer App bot login.');
+              return;
+            }
+            const marker = '<!-- pr-agent:formal-review:v1 -->';
+            const getPR = async () => (await github.rest.pulls.get({ owner, repo, pull_number })).data;
+            const initial = await getPR();
+            const sha = context.payload.pull_request?.head.sha ?? initial.head.sha;
+            // Review events can follow a valid approval without changing code.
+            // Commit identity and the latest /review trigger determine freshness.
+            let triggeredAt = 0;
+            const updateTrigger = async () => {
+              const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: pull_number, per_page: 100 });
+              for (const comment of comments) {
+                if (comment.user?.type !== 'Bot' && comment.body?.trim() === '/review') {
+                  triggeredAt = Math.max(triggeredAt, Date.parse(comment.created_at));
+                }
+              }
+            };
+            const latestVerdict = async () => {
+              const reviews = await github.paginate(github.rest.pulls.listReviews, { owner, repo, pull_number, per_page: 100 });
+              return reviews.filter(r => r.user?.login === login && r.commit_id === sha &&
+                r.body?.includes(marker) && Date.parse(r.submitted_at) >= triggeredAt)
+                .sort((a, b) => b.id - a.id)[0];
+            };
+            const summarize = async (status, url) => {
+              await core.summary.addHeading('Hasil review agen')
+                .addTable([
+                  [{ data: 'Status', header: true }, { data: 'Commit', header: true }],
+                  [status, sha]
+                ])
+                .addLink('Buka hasil review', url ?? initial.html_url)
+                .addRaw('\n\nPersetujuan agen berlaku untuk commit di atas. CI aplikasi, konflik, dan syarat branch protection tetap harus terpenuhi.\n')
+                .write();
+            };
+            for (let attempt = 0; attempt < 40; attempt++) {
+              // Re-read triggers while waiting: /review can arrive after the
+              // job starts, and a rerun keeps the original event payload.
+              await updateTrigger();
+              const current = await getPR();
+              if (current.state !== 'open' || current.draft || current.head.sha !== sha) {
+                core.setFailed('PR changed, closed, or became a draft. Wait for the review of the current commit.');
+                await summarize('Tidak berlaku: PR berubah');
+                return;
+              }
+              const latest = await latestVerdict();
+              if (latest && ['APPROVED', 'COMMENTED'].includes(latest.state)) {
+                // Check the head once more before reporting a successful gate.
+                const final = await getPR();
+                if (final.head.sha !== sha || final.state !== 'open' || final.draft) {
+                  core.setFailed('PR changed while reading the verdict.');
+                  await summarize('Tidak berlaku: PR berubah');
+                  return;
+                }
+                // A /review or dismissal can land after the first verdict read.
+                // Reconfirm its identity and state before completing this run.
+                await updateTrigger();
+                const confirmed = await latestVerdict();
+                if (!confirmed || confirmed.id !== latest.id || confirmed.state !== latest.state) continue;
+                if (latest.state === 'APPROVED') {
+                  await summarize('Disetujui: review lengkap tanpa temuan aktif', latest.html_url);
+                  core.info(`Agent approved commit ${sha}.`);
+                } else {
+                  await summarize('Perlu tindakan: review belum disetujui', latest.html_url);
+                  core.setFailed('The agent reported findings or an incomplete review. Read its review notes.');
+                }
+                return;
+              }
+              core.info(`Waiting for the agent verdict (${attempt + 1}/40).`);
+              await new Promise(resolve => setTimeout(resolve, 15000));
+            }
+            await summarize('Gagal: hasil review belum diterima');
+            core.setFailed('No current agent verdict arrived within 10 minutes. Check the reviewer service and retry /review.');
