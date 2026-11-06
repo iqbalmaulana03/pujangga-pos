@@ -83,7 +83,12 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
         Navigator.pop(bottomSheetContext);
       }
 
-      context.push('${AppRoutes.transactionSuccess}/${receipt.invoiceNumber}');
+      await context.push<void>(
+        '${AppRoutes.transactionSuccess}/${receipt.invoiceNumber}',
+      );
+      if (!mounted) return;
+      // Also covers system back and swipe-back from the receipt route.
+      await ref.read(transaksiControllerProvider.notifier).refreshCatalog();
     } catch (error) {
       if (!mounted) {
         return;
@@ -641,7 +646,45 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           ),
           // Active Catalog Grid
           Expanded(
-            child: state.filteredItems.isEmpty
+            child: state.isRefreshingCatalog
+                ? const Center(child: CircularProgressIndicator())
+                : state.catalogRefreshFailed
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.warning_amber_rounded,
+                            size: 48,
+                            color: Color(0xFFBA1A1A),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Gagal memuat katalog.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 14,
+                              color: Color(0xFF3F4947),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton(
+                            onPressed: () => ref
+                                .read(transaksiControllerProvider.notifier)
+                                .refreshCatalog(),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D5C56),
+                            ),
+                            child: const Text('Muat Ulang'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : state.filteredItems.isEmpty
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,

@@ -1,8 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
+import 'package:pujangga_pos/core/services/app_startup_service.dart';
+import 'package:pujangga_pos/features/karyawan/presentation/controllers/employee_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/domain/entities/app_settings.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import 'package:pujangga_pos/features/transaksi/domain/entities/transaksi_item.dart';
@@ -10,6 +15,8 @@ import 'package:pujangga_pos/features/transaksi/domain/entities/transaksi_receip
 import 'package:pujangga_pos/features/transaksi/domain/entities/transaksi_submit_request.dart';
 import 'package:pujangga_pos/features/transaksi/domain/repositories/transaction_repository.dart';
 import 'package:pujangga_pos/features/transaksi/presentation/controllers/transaksi_controller.dart';
+import 'package:pujangga_pos/features/transaksi/presentation/pages/transaksi_page.dart';
+import 'package:pujangga_pos/features/transaksi/presentation/pages/transaksi_berhasil_page.dart';
 
 const item = TransaksiItem(
   id: '1',
@@ -25,14 +32,18 @@ class FaultRepository implements TransactionRepository {
   int reads = 0;
   final requests = <TransaksiSubmitRequest>[];
   bool failRefresh = true;
+  bool emptyCatalog = false;
   bool failSave = false;
   Completer<void>? saveGate;
+  Completer<void>? refreshGate;
+  TransaksiReceipt? savedReceipt;
 
   @override
   Future<List<TransaksiItem>> getCatalogItems() async {
     reads++;
+    if (reads > 1) await refreshGate?.future;
     if (reads > 1 && failRefresh) throw StateError('Injected catalog fault');
-    return [item];
+    return emptyCatalog ? [] : [item];
   }
 
   @override
@@ -42,7 +53,7 @@ class FaultRepository implements TransactionRepository {
     requests.add(request);
     await saveGate?.future;
     if (failSave) throw StateError('Injected save fault');
-    return TransaksiReceipt(
+    return savedReceipt = TransaksiReceipt(
       invoiceNumber: 'INV-${requests.length}',
       createdAt: DateTime(2026),
       paymentMethod: request.paymentMethod,
@@ -58,10 +69,11 @@ class FaultRepository implements TransactionRepository {
 
   @override
   Future<TransaksiReceipt?> getReceiptByInvoice(String invoiceNumber) async =>
-      null;
+      savedReceipt;
 }
 
 void main() {
+  setUpAll(() => initializeDateFormatting('id_ID'));
   late FaultRepository repository;
   late ProviderContainer container;
 
@@ -70,6 +82,8 @@ void main() {
     repository = FaultRepository();
     container = ProviderContainer(
       overrides: [
+        businessProfileProvider.overrideWith((ref) async => null),
+        activeEmployeesProvider.overrideWith((ref) async => []),
         transactionRepositoryProvider.overrideWithValue(repository),
         appSettingsProvider.overrideWith(
           (ref) async => const AppSettings(
@@ -93,6 +107,108 @@ void main() {
     return controller;
   }
 
+  test('a genuinely empty catalog is not a refresh failure', () async {
+    repository.failRefresh = false;
+    repository.emptyCatalog = true;
+    await container.read(transaksiControllerProvider.notifier).refreshCatalog();
+    final state = container.read(transaksiControllerProvider).requireValue;
+    expect(state.catalogItems, isEmpty);
+    expect(state.catalogRefreshFailed, isFalse);
+    expect(state.isRefreshingCatalog, isFalse);
+    expect(repository.requests, isEmpty);
+  });
+
+  for (final wide in [false, true]) {
+    for (final failOnBack in [false, true]) {
+      testWidgets(
+        'system back reloads catalog; failed retry recovers without resaving '
+        '(wide=$wide, failOnBack=$failOnBack)',
+        (tester) async {
+          // All data providers use fakes; no runtime database is opened.
+          // 480 stays below the 720 breakpoint and accommodates receipt text
+          // rendered with Flutter's wider Ahem test font.
+          tester.view.physicalSize = Size(wide ? 1400 : 480, 1200);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          final router = GoRouter(
+            initialLocation: '/transaction',
+            routes: [
+              GoRoute(
+                path: '/transaction',
+                builder: (_, _) => const Scaffold(body: TransaksiPage()),
+              ),
+              GoRoute(
+                path: '/transaction/success/:invoiceNumber',
+                builder: (_, state) => TransaksiBerhasilPage(
+                  invoiceNumber: state.pathParameters['invoiceNumber']!,
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: MaterialApp.router(routerConfig: router),
+            ),
+          );
+          await tester.pumpAndSettle();
+          checkout();
+          await tester.pumpAndSettle();
+          if (!wide) {
+            await tester.tap(find.text('Keranjang'));
+            await tester.pumpAndSettle();
+          }
+          await tester.ensureVisible(find.text('Proses Pembayaran'));
+          await tester.tap(find.text('Proses Pembayaran'));
+          await tester.pumpAndSettle();
+          expect(find.byType(TransaksiBerhasilPage), findsOneWidget);
+          expect(repository.requests, hasLength(1));
+          expect(
+            container
+                .read(transaksiControllerProvider)
+                .requireValue
+                .catalogRefreshFailed,
+            isTrue,
+          );
+          final readsBeforeBack = repository.reads;
+          repository.failRefresh = failOnBack;
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+          expect(find.byType(TransaksiBerhasilPage), findsNothing);
+          expect(repository.reads, readsBeforeBack + 1);
+          if (failOnBack) {
+            expect(find.text('Gagal memuat katalog.'), findsOneWidget);
+            expect(
+              find.text('Katalog kosong atau tidak ditemukan.'),
+              findsNothing,
+            );
+            await tester.tap(find.text('Muat Ulang'));
+            await tester.pumpAndSettle();
+            expect(find.text('Gagal memuat katalog.'), findsOneWidget);
+            repository.failRefresh = false;
+            repository.refreshGate = Completer<void>();
+            await tester.tap(find.text('Muat Ulang'));
+            await tester.pump();
+            expect(find.byType(CircularProgressIndicator), findsOneWidget);
+            repository.refreshGate!.complete();
+            await tester.pumpAndSettle();
+          }
+          expect(find.text('Kopi'), findsOneWidget);
+          expect(find.text('Muat Ulang'), findsNothing);
+          final state = container
+              .read(transaksiControllerProvider)
+              .requireValue;
+          expect(state.cartItems, isEmpty);
+          expect(state.catalogRefreshFailed, isFalse);
+          expect(repository.requests, hasLength(1));
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
+
   test(
     'post-commit catalog failure returns receipt and retry only reads',
     () async {
@@ -103,6 +219,7 @@ void main() {
       expect(state.cartItems, isEmpty);
       expect(state.catalogItems, isEmpty);
       expect(state.isSubmitting, isFalse);
+      expect(state.catalogRefreshFailed, isTrue);
       await expectLater(controller.submit(), throwsA(isA<AppException>()));
       await controller
           .refreshCatalog(); // A second failed refresh is also safe.
@@ -110,6 +227,7 @@ void main() {
       await controller.refreshCatalog();
       state = container.read(transaksiControllerProvider).requireValue;
       expect(state.catalogItems, [item]);
+      expect(state.catalogRefreshFailed, isFalse);
       expect(state.cartItems, isEmpty);
       expect(repository.requests, hasLength(1));
       checkout();
