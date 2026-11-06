@@ -1,20 +1,24 @@
-# Review kode dengan Codex dan CodeRabbit
+# Review kode dengan PR-Agent, Codex, dan CodeRabbit
 
-CodeRabbit GitHub App melakukan review PR secara otomatis. Di `starfish-dev`,
+Untuk reviewer mandiri menggunakan server operator dan provider `codex-lb`,
+lihat [panduan PR-Agent](PR-AGENT.md). GitHub App dan route Cloudflare sudah aktif;
+komentar `/review` pada PR memicu reviewer mandiri tersebut.
+
+CodeRabbit GitHub App melakukan review PR secara otomatis. Di server operator,
 CodeRabbit CLI dan plugin Codex mendukung review dari terminal. Codex tetap memakai
 provider `codex-lb` dan model `gpt-6.1-sol`; CodeRabbit melakukan analisis melalui
 layanan dan kuota akun CodeRabbit sendiri.
 
 ## Isi token di server
 
-Masuk sebagai akun `pujangga` melalui alias SSH yang sudah dikonfigurasi:
+Masuk melalui alias SSH operator; ganti placeholder dengan lokasi privat yang sesuai:
 
 ```bash
-ssh starfish-dev
-nano /home/pujangga/.config/codex-coderabbit/credentials.env
+ssh <ssh-host>
+nano <credential-file>
 ```
 
-File privat tersebut sudah disiapkan dengan isi kosong:
+Siapkan file kredensial privat dengan nama variabel berikut:
 
 ```bash
 CODEX_LB_API_KEY=''
@@ -29,7 +33,7 @@ CODERABBIT_API_KEY=''
 Isi nilai di dalam tanda kutip tunggal. File harus tetap berizin `600`, direktori
 induknya `700`. Jangan memasukkan file atau nilai token ke Git, PR, atau chat.
 Pengaturan provider dan model tetap berada di
-`/home/pujangga/.codex/config.toml`; helper memuat token dari file privat saat
+`<provider-config>`; helper memuat token dari file privat saat
 dijalankan. Instalasi Codex dan Node yang sudah ada tetap digunakan.
 
 ## Login dan penggunaan terminal
@@ -39,20 +43,20 @@ meskipun PATH sesi SSH belum memuat Node dari NVM atau direktori `~/.local/bin`.
 
 ```bash
 # Memeriksa versi dan apakah token sudah diisi, tanpa mencetak nilainya.
-/home/pujangga/.local/bin/codex-coderabbit status
+<helper-path> status
 
 # Login CodeRabbit sekali setelah mengisi Agentic API key.
-/home/pujangga/.local/bin/codex-coderabbit login
+<helper-path> login
 ```
 
 Dari direktori Git yang ingin ditinjau, jalankan salah satu cara berikut:
 
 ```bash
 # Review perubahan branch terhadap main.
-/home/pujangga/.local/bin/codex-coderabbit review --base main
+<helper-path> review --base main
 
 # Buka Codex dengan provider codex-lb dan plugin CodeRabbit.
-/home/pujangga/.local/bin/codex-coderabbit codex
+<helper-path> codex
 ```
 
 Di sesi Codex, minta: `Review perubahan saya dengan CodeRabbit`. Minta perbaikan
@@ -69,7 +73,8 @@ ikuti persetujuan untuk command CodeRabbit sesuai
    `pujangga-pos`.
 4. Periksa izin aplikasi dan selesaikan **Install & Authorize**.
 5. Pada PR yang sudah ada, minta review dengan komentar `@coderabbitai review`.
-   PR baru yang bukan draft akan direview otomatis setelah aplikasi aktif.
+   Review otomatis mengikuti syarat repository dan paket CodeRabbit, termasuk
+   persyaratan jumlah bintang dan kuota akun.
 
 Konfigurasi `.coderabbit.yaml` meminta hasil dalam bahasa Indonesia melalui
 `tone_instructions`, karena schema resmi belum menerima `id-ID` pada field

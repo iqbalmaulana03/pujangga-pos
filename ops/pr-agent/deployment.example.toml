@@ -1,0 +1,6 @@
+# Copy to private/deployment.toml on the deployment host and fill in local values.
+# Never commit the completed file. Provider tokens remain in credential_file.
+webhook_url = "https://reviewer.example.com/api/v1/github_webhooks"
+app_name = "your-pr-reviewer"
+provider_config = "~/.codex/config.toml"
+credential_file = "~/.config/reviewer/credentials.env"
