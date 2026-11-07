@@ -48,15 +48,19 @@ class AppBackupService {
   Future<AppBackupFile> _createBackup() async {
     final db = await database.database();
     final generatedAt = DateTime.now();
-    final tables = <String, List<Map<String, Object?>>>{};
+    final tables = await db.transaction((txn) async {
+      final snapshot = <String, List<Map<String, Object?>>>{};
+      for (final table in backupTables) {
+        final rows = await txn.query(table);
+        snapshot[table] = rows
+            .map((row) => Map<String, Object?>.from(row))
+            .toList(growable: false);
+      }
+      return snapshot;
+    });
 
-    for (final table in backupTables) {
-      final rows = await db.query(table);
-      tables[table] = rows
-          .map((row) => Map<String, Object?>.from(row))
-          .toList(growable: false);
-    }
-
+    // Keep logo processing, serialization, and file I/O outside the snapshot
+    // transaction so sales can resume as soon as the table reads finish.
     Uint8List? logoBytes;
     final warnings = <String>[];
     final profiles = tables['business_profile']!;
