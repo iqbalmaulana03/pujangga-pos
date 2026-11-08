@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../services/employee_expense_service.dart';
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
+  ref.watch(datasetGenerationProvider);
   return ExpenseRepository(database: ref.watch(appDatabaseProvider));
 });
 

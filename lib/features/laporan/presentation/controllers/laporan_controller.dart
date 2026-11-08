@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/datasources/report_local_data_source.dart';
 import '../../data/repositories/report_repository_impl.dart';
 import '../../domain/entities/dashboard_summary.dart';
@@ -11,6 +12,7 @@ import '../../domain/entities/employee_report_summary.dart';
 import '../../domain/repositories/report_repository.dart';
 
 final reportLocalDataSourceProvider = Provider<ReportLocalDataSource>((ref) {
+  ref.watch(datasetGenerationProvider);
   return ReportLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 

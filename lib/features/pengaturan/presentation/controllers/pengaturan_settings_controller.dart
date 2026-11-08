@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../data/datasources/app_settings_local_data_source.dart';
 import '../../data/repositories/settings_repository_impl.dart';
@@ -9,6 +10,7 @@ import '../../domain/repositories/settings_repository.dart';
 
 final appSettingsLocalDataSourceProvider = Provider<AppSettingsLocalDataSource>(
   (ref) {
+    ref.watch(datasetGenerationProvider);
     return AppSettingsLocalDataSource(database: ref.watch(appDatabaseProvider));
   },
 );

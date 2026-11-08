@@ -8,6 +8,7 @@ import '../../features/setup_usaha/domain/repositories/business_profile_reposito
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'business_logo_service.dart';
+import 'dataset_generation.dart';
 
 final appLoggerProvider = Provider<Logger>((ref) {
   return AppLogger.bootstrap();
@@ -19,6 +20,7 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 final businessProfileLocalDataSourceProvider =
     Provider<BusinessProfileLocalDataSource>((ref) {
+      ref.watch(datasetGenerationProvider);
       return BusinessProfileLocalDataSource(
         database: ref.watch(appDatabaseProvider),
       );

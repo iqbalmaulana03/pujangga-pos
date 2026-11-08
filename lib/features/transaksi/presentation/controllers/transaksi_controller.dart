@@ -3,6 +3,7 @@ import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../data/datasources/transaction_local_data_source.dart';
@@ -17,6 +18,7 @@ import '../models/transaksi_state.dart';
 
 final transactionLocalDataSourceProvider = Provider<TransactionLocalDataSource>(
   (ref) {
+    ref.watch(datasetGenerationProvider);
     return TransactionLocalDataSource(database: ref.watch(appDatabaseProvider));
   },
 );
@@ -43,7 +45,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   @override
   Future<TransaksiState> build() async {
     final items = await ref
-        .read(transactionRepositoryProvider)
+        .watch(transactionRepositoryProvider)
         .getCatalogItems();
     return _buildState(
       const TransaksiState(catalogItems: []),

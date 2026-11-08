@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../stok/presentation/controllers/stok_controller.dart';
@@ -12,6 +13,7 @@ import '../../domain/repositories/riwayat_repository.dart';
 import '../models/riwayat_state.dart';
 
 final riwayatLocalDataSourceProvider = Provider<RiwayatLocalDataSource>((ref) {
+  ref.watch(datasetGenerationProvider);
   return RiwayatLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 
@@ -30,7 +32,7 @@ class RiwayatController extends AsyncNotifier<RiwayatState> {
   @override
   Future<RiwayatState> build() async {
     final transactions = await ref
-        .read(riwayatRepositoryProvider)
+        .watch(riwayatRepositoryProvider)
         .getTransactions();
     return _buildState(const RiwayatState(), allTransactions: transactions);
   }

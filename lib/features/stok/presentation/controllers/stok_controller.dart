@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/datasources/stock_local_data_source.dart';
 import '../../data/repositories/stock_repository_impl.dart';
 import '../../domain/entities/stock_adjustment_request.dart';
@@ -10,6 +11,7 @@ import '../../domain/repositories/stock_repository.dart';
 import '../models/stok_state.dart';
 
 final stockLocalDataSourceProvider = Provider<StockLocalDataSource>((ref) {
+  ref.watch(datasetGenerationProvider);
   return StockLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 
@@ -48,7 +50,7 @@ final stockMovementDetailProvider = FutureProvider.autoDispose
 class StokController extends AsyncNotifier<StokState> {
   @override
   Future<StokState> build() async {
-    final items = await ref.read(stockRepositoryProvider).getStockItems();
+    final items = await ref.watch(stockRepositoryProvider).getStockItems();
     return _buildState(const StokState(), allItems: items);
   }
 
