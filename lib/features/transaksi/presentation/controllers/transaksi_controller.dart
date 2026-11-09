@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/currency_formatter.dart';
 
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
@@ -448,8 +449,10 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       );
       final settings = ref.read(appSettingsProvider).asData?.value;
       final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
-      calculatedTax = ((subtotal - discount) * (taxRatePercent / 100.0))
-          .roundToDouble();
+      calculatedTax = CurrencyFormatter.round(
+        (subtotal - discount) * (taxRatePercent / 100.0),
+        currencyCode: settings?.currencyCode ?? 'IDR',
+      );
     }
 
     final nextState = current.copyWith(

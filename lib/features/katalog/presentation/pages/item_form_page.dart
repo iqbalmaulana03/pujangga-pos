@@ -206,15 +206,17 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           _skuController.text = item.sku ?? '';
           _barcodeController.text = item.barcode ?? '';
           _unitController.text = item.unitLabel ?? '';
-          _priceController.text = item.sellingPrice.toStringAsFixed(0);
+          _priceController.text = CurrencyFormatter.formatForInput(
+            item.sellingPrice,
+          );
           _stockController.text = QuantityFormatter.format(
             item.stockQuantity ?? 0,
           );
           _costController.text = item.costPrice != null
-              ? item.costPrice!.toStringAsFixed(0)
+              ? CurrencyFormatter.formatForInput(item.costPrice!)
               : '';
           _wholesalePriceController.text = item.wholesalePrice != null
-              ? item.wholesalePrice!.toStringAsFixed(0)
+              ? CurrencyFormatter.formatForInput(item.wholesalePrice!)
               : '';
           _wholesaleMinController.text = item.wholesaleMinQuantity != null
               ? '${item.wholesaleMinQuantity}'
@@ -589,7 +591,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                             const SizedBox(height: 8),
                             TextFormField(
                               controller: _priceController,
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               style: const TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 24,
@@ -687,7 +692,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                     ? 'Biaya harus berupa angka nol atau positif.'
                                     : null;
                               },
-                              keyboardType: TextInputType.number,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               style: const TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 24,
@@ -951,7 +959,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                         const SizedBox(height: 8),
                                         TextFormField(
                                           controller: _wholesalePriceController,
-                                          keyboardType: TextInputType.number,
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
                                           style: const TextStyle(
                                             fontFamily: 'Inter',
                                             fontSize: 16,
