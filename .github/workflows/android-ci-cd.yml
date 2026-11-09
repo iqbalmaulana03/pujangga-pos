@@ -41,6 +41,26 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Use Ubuntu SQLite for host tests
+        # Keep this job independent of GitHub release asset downloads. This
+        # ephemeral configuration does not affect Android or release builds.
+        run: |
+          python3 - <<'PY'
+          import ctypes
+          from pathlib import Path
+
+          library = Path('/usr/lib/x86_64-linux-gnu/libsqlite3.so.0').resolve(strict=True)
+          sqlite = ctypes.CDLL(str(library))
+          sqlite.sqlite3_libversion.restype = ctypes.c_char_p
+          print(f'Host SQLite: {library}, version {sqlite.sqlite3_libversion().decode()}')
+          pubspec = Path('pubspec.yaml')
+          with pubspec.open('a') as output:
+              output.write(
+                  '\nhooks:\n  user_defines:\n    sqlite3:\n'
+                  f'      source: system\n      name_linux: {library}\n'
+              )
+          PY
+
       - name: Get dependencies
         run: flutter pub get --enforce-lockfile
 
