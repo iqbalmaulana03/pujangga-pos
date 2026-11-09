@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,7 +9,9 @@ import 'package:pujangga_pos/core/constants/app_constants.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_payload_builder.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_restore_service.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/backup_input_limits.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
@@ -26,6 +29,9 @@ void main() {
       tempDir = await Directory.systemTemp.createTemp('pujangga_restore_test');
       await databaseFactory.setDatabasesPath(tempDir.path);
       database = AppDatabase();
+      // All SQLite calls (including service validation and tearDown reset)
+      // resolve through the FFI factory to this newly created directory.
+      expect(path.dirname(await database.databasePath()), tempDir.path);
       service = AppRestoreService(database: database, logger: Logger.root);
     });
 
@@ -35,6 +41,78 @@ void main() {
         await tempDir.delete(recursive: true);
       }
     });
+
+    test(
+      'resource-limit rejections leave every live table unchanged',
+      () async {
+        final db = await database.database();
+        await db.update('app_settings', {'receipt_footer': 'Data tetap utuh'});
+        Future<Map<String, Object>> snapshot() async => {
+          for (final table in AppBackupService.backupTables)
+            table: await db.query(table),
+        };
+        final before = await snapshot();
+        final inputs = [
+          '{"x":${'[' * 1000}0${']' * 1000}}',
+          jsonEncode({'x': 'a' * (BackupInputLimits.maxStringLength + 1)}),
+          jsonEncode({
+            'tables': {'items': List.filled(BackupInputLimits.maxRows + 1, {})},
+          }),
+          ' ' * (BackupInputLimits.maxBytes + 1),
+        ];
+        final file = File(path.join(tempDir.path, 'oversized.json'));
+        for (final input in inputs) {
+          await file.writeAsString(input);
+          await expectLater(
+            service.inspectBackupFile(file.path),
+            throwsA(
+              isA<AppException>().having(
+                (e) => e.code,
+                'code',
+                'backup_limit_exceeded',
+              ),
+            ),
+          );
+          expect(await snapshot(), before);
+        }
+      },
+    );
+
+    test(
+      'main event loop continues while worker inspects a 20 MiB file',
+      () async {
+        final file = File(path.join(tempDir.path, 'large.json'));
+        await file.writeAsString('{}${' ' * (BackupInputLimits.maxBytes - 2)}');
+        var ticks = 0;
+        var maxGap = Duration.zero;
+        final watch = Stopwatch()..start();
+        var previous = Duration.zero;
+        final timer = Timer.periodic(const Duration(milliseconds: 1), (_) {
+          final now = watch.elapsed;
+          final gap = now - previous;
+          if (gap > maxGap) maxGap = gap;
+          previous = now;
+          ticks++;
+        });
+        try {
+          await expectLater(
+            service.inspectBackupFile(file.path),
+            throwsA(
+              isA<AppException>().having(
+                (e) => e.code,
+                'code',
+                'backup_incompatible',
+              ),
+            ),
+          );
+        } finally {
+          timer.cancel();
+        }
+        expect(ticks, greaterThan(3));
+        // A coarse regression guard for the host event loop, not a device FPS benchmark.
+        expect(maxGap, lessThan(const Duration(milliseconds: 250)));
+      },
+    );
 
     test(
       'membaca file backup valid dan menghasilkan kandidat restore',
