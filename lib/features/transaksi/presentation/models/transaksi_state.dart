@@ -48,7 +48,7 @@ class TransaksiState {
   }
 
   bool get canSubmit {
-    if (cartItems.isEmpty || totalAmount < 0) {
+    if (isSubmitting || cartItems.isEmpty || totalAmount < 0) {
       return false;
     }
 
