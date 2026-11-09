@@ -10,7 +10,6 @@ import '../../domain/repositories/catalog_repository.dart';
 import '../models/katalog_state.dart';
 
 final catalogLocalDataSourceProvider = Provider<CatalogLocalDataSource>((ref) {
-  ref.watch(datasetGenerationProvider);
   return CatalogLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 
@@ -27,12 +26,14 @@ final katalogControllerProvider =
 
 final catalogItemProvider = FutureProvider.autoDispose
     .family<CatalogItem?, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(catalogRepositoryProvider).getItemById(itemId);
     });
 
 class KatalogController extends AsyncNotifier<KatalogState> {
   @override
   Future<KatalogState> build() async {
+    ref.watch(datasetGenerationProvider);
     final items = await ref.watch(catalogRepositoryProvider).getItems();
     return _buildState(const KatalogState(), allItems: items);
   }

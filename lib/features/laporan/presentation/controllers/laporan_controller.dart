@@ -12,7 +12,6 @@ import '../../domain/entities/employee_report_summary.dart';
 import '../../domain/repositories/report_repository.dart';
 
 final reportLocalDataSourceProvider = Provider<ReportLocalDataSource>((ref) {
-  ref.watch(datasetGenerationProvider);
   return ReportLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 
@@ -25,6 +24,7 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
 final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((
   ref,
 ) {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(reportRepositoryProvider).getDashboardSummary();
 });
 
@@ -40,6 +40,7 @@ final customReportRangeProvider =
 
 final salesReportSnapshotByPeriodProvider = FutureProvider.autoDispose
     .family<SalesReportSnapshot, ReportPeriod>((ref, period) {
+      ref.watch(datasetGenerationProvider);
       final customRange = ref.watch(customReportRangeProvider);
       return ref
           .watch(reportRepositoryProvider)
@@ -55,11 +56,13 @@ final salesReportSnapshotProvider =
 final capitalMetricsProvider = FutureProvider.autoDispose<CapitalMetrics>((
   ref,
 ) {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(reportRepositoryProvider).getCapitalMetrics();
 });
 
 final employeeReportProvider = FutureProvider.autoDispose
     .family<List<EmployeeReportSummary>, (DateTime, DateTime)>((ref, range) {
+      ref.watch(datasetGenerationProvider);
       return ref
           .watch(reportLocalDataSourceProvider)
           .getEmployeeReport(start: range.$1, end: range.$2);

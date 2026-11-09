@@ -6,7 +6,6 @@ import '../../../../core/services/dataset_generation.dart';
 import '../services/employee_expense_service.dart';
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
-  ref.watch(datasetGenerationProvider);
   return ExpenseRepository(database: ref.watch(appDatabaseProvider));
 });
 
@@ -125,6 +124,7 @@ class ExpenseRepository {
 
 final expenseEntriesProvider = FutureProvider.autoDispose
     .family<List<Map<String, Object?>>, (DateTime, DateTime)>((ref, range) {
+      ref.watch(datasetGenerationProvider);
       return ref
           .watch(expenseRepositoryProvider)
           .getExpenses(range.$1, range.$2);
@@ -132,6 +132,7 @@ final expenseEntriesProvider = FutureProvider.autoDispose
 
 final employeeSalaryForMonthProvider = FutureProvider.autoDispose
     .family<double?, (int, DateTime)>((ref, selection) {
+      ref.watch(datasetGenerationProvider);
       return ref
           .watch(expenseRepositoryProvider)
           .salaryForMonth(selection.$1, selection.$2);

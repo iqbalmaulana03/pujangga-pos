@@ -13,7 +13,6 @@ import '../../domain/repositories/riwayat_repository.dart';
 import '../models/riwayat_state.dart';
 
 final riwayatLocalDataSourceProvider = Provider<RiwayatLocalDataSource>((ref) {
-  ref.watch(datasetGenerationProvider);
   return RiwayatLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 
@@ -31,6 +30,7 @@ final riwayatControllerProvider =
 class RiwayatController extends AsyncNotifier<RiwayatState> {
   @override
   Future<RiwayatState> build() async {
+    ref.watch(datasetGenerationProvider);
     final transactions = await ref
         .watch(riwayatRepositoryProvider)
         .getTransactions();

@@ -20,7 +20,6 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 final businessProfileLocalDataSourceProvider =
     Provider<BusinessProfileLocalDataSource>((ref) {
-      ref.watch(datasetGenerationProvider);
       return BusinessProfileLocalDataSource(
         database: ref.watch(appDatabaseProvider),
       );
@@ -46,10 +45,12 @@ final appStartupServiceProvider = Provider<AppStartupService>((ref) {
 });
 
 final appStartupProvider = FutureProvider<AppStartupState>((ref) async {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(appStartupServiceProvider).load();
 });
 
 final businessProfileProvider = FutureProvider<BusinessProfile?>((ref) async {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(businessProfileRepositoryProvider).getProfile();
 });
 

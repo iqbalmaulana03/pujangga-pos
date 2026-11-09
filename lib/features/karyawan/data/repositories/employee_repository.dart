@@ -2,11 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/services/app_startup_service.dart';
-import '../../../../core/services/dataset_generation.dart';
 import '../../domain/entities/employee.dart';
 
 final employeeRepositoryProvider = Provider<EmployeeRepository>((ref) {
-  ref.watch(datasetGenerationProvider);
   return EmployeeRepository(database: ref.watch(appDatabaseProvider));
 });
 

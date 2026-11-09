@@ -11,7 +11,6 @@ import '../../domain/repositories/stock_repository.dart';
 import '../models/stok_state.dart';
 
 final stockLocalDataSourceProvider = Provider<StockLocalDataSource>((ref) {
-  ref.watch(datasetGenerationProvider);
   return StockLocalDataSource(database: ref.watch(appDatabaseProvider));
 });
 
@@ -28,28 +27,33 @@ final stokControllerProvider =
 
 final stockItemProvider = FutureProvider.autoDispose.family<StockItem?, String>(
   (ref, itemId) {
+    ref.watch(datasetGenerationProvider);
     return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
   },
 );
 
 final stockMovementsProvider = FutureProvider.autoDispose
     .family<List<StockMovement>, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
 final stockItemDetailProvider = FutureProvider.autoDispose
     .family<StockItem?, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
     });
 
 final stockMovementDetailProvider = FutureProvider.autoDispose
     .family<List<StockMovement>, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
 class StokController extends AsyncNotifier<StokState> {
   @override
   Future<StokState> build() async {
+    ref.watch(datasetGenerationProvider);
     final items = await ref.watch(stockRepositoryProvider).getStockItems();
     return _buildState(const StokState(), allItems: items);
   }

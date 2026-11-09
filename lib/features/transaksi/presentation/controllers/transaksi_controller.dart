@@ -19,7 +19,6 @@ import '../models/transaksi_state.dart';
 
 final transactionLocalDataSourceProvider = Provider<TransactionLocalDataSource>(
   (ref) {
-    ref.watch(datasetGenerationProvider);
     return TransactionLocalDataSource(database: ref.watch(appDatabaseProvider));
   },
 );
@@ -37,6 +36,7 @@ final transaksiControllerProvider =
 
 final transaksiReceiptProvider = FutureProvider.autoDispose
     .family<TransaksiReceipt?, String>((ref, invoiceNumber) {
+      ref.watch(datasetGenerationProvider);
       return ref
           .watch(transactionRepositoryProvider)
           .getReceiptByInvoice(invoiceNumber);
@@ -48,6 +48,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
 
   @override
   Future<TransaksiState> build() async {
+    ref.watch(datasetGenerationProvider);
     final items = await ref
         .watch(transactionRepositoryProvider)
         .getCatalogItems();

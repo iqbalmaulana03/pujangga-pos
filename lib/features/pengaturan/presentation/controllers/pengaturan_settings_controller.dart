@@ -10,7 +10,6 @@ import '../../domain/repositories/settings_repository.dart';
 
 final appSettingsLocalDataSourceProvider = Provider<AppSettingsLocalDataSource>(
   (ref) {
-    ref.watch(datasetGenerationProvider);
     return AppSettingsLocalDataSource(database: ref.watch(appDatabaseProvider));
   },
 );
@@ -22,6 +21,7 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 });
 
 final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
+  ref.watch(datasetGenerationProvider);
   final settings = await ref.watch(settingsRepositoryProvider).getSettings();
   final resolved =
       settings ??
