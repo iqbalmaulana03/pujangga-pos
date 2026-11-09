@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
+import 'package:pujangga_pos/core/constants/app_constants.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/features/karyawan/data/repositories/employee_repository.dart';
@@ -79,6 +80,80 @@ void main() {
       database: database,
     ).getEmployees()).single.id;
   }
+
+  test('checkout retry persists one sale, stock movement and commission', () async {
+    final db = await database.database();
+    final line = await item('product', 40000);
+    final employeeId = await employee('all');
+    final source = TransactionLocalDataSource(database: database);
+    final request = TransaksiSubmitRequest(
+      items: [line],
+      orderDiscountAmount: 0,
+      taxAmount: 0,
+      paymentMethod: 'qris',
+      employeeId: employeeId,
+    );
+    final receipts = await Future.wait([
+      source.saveTransaction(request),
+      source.saveTransaction(request),
+    ]);
+    expect(receipts[0].invoiceNumber, receipts[1].invoiceNumber);
+    expect(receipts[1].commissionAmount, 10000);
+    expect(await db.query('sales_transactions'), hasLength(1));
+    expect(await db.query('sales_transaction_items'), hasLength(1));
+    expect(await db.query('stock_movements'), hasLength(1));
+    expect(await db.query('expenses'), hasLength(1));
+    expect((await db.query('items')).single['stock_qty'], 99);
+    // Enforce the key at storage level even for writes outside this repository.
+    final row =
+        Map<String, Object?>.from((await db.query('sales_transactions')).single)
+          ..remove('id')
+          ..['invoice_no'] = 'INV-other';
+    await expectLater(
+      db.insert('sales_transactions', row),
+      throwsA(isA<DatabaseException>()),
+    );
+  });
+
+  test(
+    'version 15 migrates historical sales and permits new idempotent sales',
+    () async {
+      final db = await database.database();
+      final line = await item('product', 40000);
+      final source = TransactionLocalDataSource(database: database);
+      final receipt = await source.saveTransaction(
+        TransaksiSubmitRequest(
+          items: [line],
+          orderDiscountAmount: 0,
+          taxAmount: 0,
+          paymentMethod: 'qris',
+        ),
+      );
+      await db.execute('DROP INDEX idx_sales_transactions_checkout_id');
+      await db.execute(
+        'ALTER TABLE sales_transactions DROP COLUMN checkout_id',
+      );
+      await db.setVersion(15);
+      await db.close();
+      database = AppDatabase();
+      final migrated = await database.database();
+      expect(await migrated.getVersion(), AppConstants.databaseVersion);
+      final historical = (await migrated.query('sales_transactions')).single;
+      expect(historical['invoice_no'], receipt.invoiceNumber);
+      expect(historical['checkout_id'], isNull);
+      final request = TransaksiSubmitRequest(
+        items: [line],
+        orderDiscountAmount: 0,
+        taxAmount: 0,
+        paymentMethod: 'qris',
+      );
+      final migratedSource = TransactionLocalDataSource(database: database);
+      await migratedSource.saveTransaction(request);
+      await migratedSource.saveTransaction(request);
+      expect(await migrated.query('sales_transactions'), hasLength(2));
+      expect((await migrated.query('items')).single['stock_qty'], 98);
+    },
+  );
 
   for (final inactive in [false, true]) {
     test(
@@ -250,7 +325,7 @@ void main() {
       await db.close();
       database = AppDatabase();
       final upgraded = await database.database();
-      expect(await upgraded.getVersion(), 15);
+      expect(await upgraded.getVersion(), AppConstants.databaseVersion);
       expect(
         (await EmployeeRepository(
           database: database,
@@ -272,7 +347,7 @@ void main() {
     },
   );
 
-  for (final version in [12, 13, 14]) {
+  for (final version in [12, 13, 14, 15, 16]) {
     test(
       'backup schema $version preserves employees and snapshot on restore',
       () async {
@@ -294,6 +369,12 @@ void main() {
             table,
           )).map((r) => Map<String, Object?>.from(r)).toList();
         }
+        if (version < 16) {
+          for (final row in tables['sales_transactions']!) {
+            row.remove('checkout_id');
+          }
+        }
+        final checkoutId = tables['sales_transactions']!.single['checkout_id'];
         if (version < 14) {
           for (final row in tables['employees']!) {
             row.remove('commission_scope');
@@ -340,6 +421,10 @@ void main() {
         );
         final candidate = await restore.inspectBackupFile(file.path);
         await restore.restoreBackup(candidate);
+        expect(
+          (await db.query('sales_transactions')).single['checkout_id'],
+          checkoutId,
+        );
         final employees = await EmployeeRepository(
           database: database,
         ).getEmployees();
@@ -347,7 +432,7 @@ void main() {
         if (version > 12) {
           expect(
             employees.single.commissionScope,
-            version == 14 ? 'service' : 'all',
+            version >= 14 ? 'service' : 'all',
           );
           expect(
             (await db.query('sales_transactions')).single['commission_amount'],
