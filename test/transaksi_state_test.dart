@@ -64,6 +64,11 @@ void main() {
 
     expect(paidState.canSubmit, isTrue);
     expect(paidState.changeAmount, 10000);
+    expect(paidState.copyWith(isSubmitting: true).canSubmit, isFalse);
+    expect(
+      paidState.copyWith(paymentMethod: 'qris', isSubmitting: true).canSubmit,
+      isFalse,
+    );
   });
 
   test('menghitung penjualan dan sisa stok dengan kuantitas pecahan', () {

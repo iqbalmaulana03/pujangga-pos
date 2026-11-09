@@ -15,6 +15,7 @@ import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../../karyawan/presentation/controllers/employee_controller.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
+import '../../domain/entities/transaksi_receipt.dart';
 import '../../../../shared/widgets/barcode_scanner_page.dart';
 import '../controllers/transaksi_controller.dart';
 import '../models/transaksi_state.dart';
@@ -65,30 +66,13 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
 
   Future<void> _submitTransaction({BuildContext? bottomSheetContext}) async {
     final controller = ref.read(transaksiControllerProvider.notifier);
+    final cartRoute = bottomSheetContext == null
+        ? null
+        : ModalRoute.of(bottomSheetContext);
 
+    final TransaksiReceipt receipt;
     try {
-      final receipt = await controller.submit();
-      if (!mounted) {
-        return;
-      }
-
-      _cashController.clear();
-      _searchController.clear();
-      ref.invalidate(dashboardSummaryProvider);
-      ref.invalidate(salesReportSnapshotProvider);
-      ref.invalidate(stokControllerProvider);
-      ref.invalidate(riwayatControllerProvider);
-
-      if (bottomSheetContext != null && bottomSheetContext.mounted) {
-        Navigator.pop(bottomSheetContext);
-      }
-
-      await context.push<void>(
-        '${AppRoutes.transactionSuccess}/${receipt.invoiceNumber}',
-      );
-      if (!mounted) return;
-      // Also covers system back and swipe-back from the receipt route.
-      await ref.read(transaksiControllerProvider.notifier).refreshCatalog();
+      receipt = await controller.submit();
     } catch (error) {
       if (!mounted) {
         return;
@@ -99,7 +83,31 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           : 'Transaksi gagal disimpan. Coba lagi.';
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(message)));
+      return;
     }
+    if (!mounted) return;
+
+    _cashController.clear();
+    _searchController.clear();
+    ref.invalidate(dashboardSummaryProvider);
+    ref.invalidate(salesReportSnapshotProvider);
+    ref.invalidate(stokControllerProvider);
+    ref.invalidate(riwayatControllerProvider);
+
+    if (cartRoute != null) {
+      // Clearing a committed cart may already have popped this sheet while
+      // catalog refresh was pending. Never pop the route underneath it.
+      if (cartRoute.isCurrent) cartRoute.navigator?.pop();
+      await cartRoute.completed;
+      if (!mounted) return;
+    }
+
+    await context.push<void>(
+      '${AppRoutes.transactionSuccess}/${receipt.invoiceNumber}',
+    );
+    if (!mounted) return;
+    // Also covers system back and swipe-back from the receipt route.
+    await ref.read(transaksiControllerProvider.notifier).refreshCatalog();
   }
 
   Future<void> _editItemDiscount(
@@ -450,6 +458,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   liveState,
                   scrollController: scrollController,
                   isBottomSheet: true,
+                  bottomSheetContext: context,
                 );
               },
             );
@@ -871,6 +880,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     TransaksiState state, {
     ScrollController? scrollController,
     required bool isBottomSheet,
+    BuildContext? bottomSheetContext,
   }) {
     return Container(
       color: Colors.white,
@@ -942,7 +952,11 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
             ),
           ),
           // calculations & checkout panel
-          _buildCartCheckoutSummary(state, isBottomSheet: isBottomSheet),
+          _buildCartCheckoutSummary(
+            state,
+            isBottomSheet: isBottomSheet,
+            bottomSheetContext: bottomSheetContext,
+          ),
         ],
       ),
     );
@@ -1101,6 +1115,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
   Widget _buildCartCheckoutSummary(
     TransaksiState state, {
     required bool isBottomSheet,
+    BuildContext? bottomSheetContext,
   }) {
     final isCash = state.paymentMethod == 'tunai';
 
@@ -1476,7 +1491,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               onPressed: state.isSubmitting || !state.canSubmit
                   ? null
                   : () => _submitTransaction(
-                      bottomSheetContext: isBottomSheet ? context : null,
+                      bottomSheetContext: bottomSheetContext,
                     ),
               icon: const Icon(Icons.payments_outlined, size: 20),
               label: Text(

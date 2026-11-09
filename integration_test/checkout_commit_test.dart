@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pujangga_pos/app/app.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
+import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
 import 'package:pujangga_pos/core/utils/app_date_formatting.dart';
 import 'package:pujangga_pos/features/karyawan/data/repositories/employee_repository.dart';
@@ -38,10 +40,15 @@ class _CatalogFaultRepository implements TransactionRepository {
   int saves = 0;
   int reads = 0;
   TransaksiSubmitRequest? lastRequest;
+  final attempts = <TransaksiSubmitRequest>[];
+  Completer<void>? saveGate;
+  Completer<void>? refreshGate;
+  bool failNextSave = false;
 
   @override
   Future<List<TransaksiItem>> getCatalogItems() async {
     reads++;
+    await refreshGate?.future;
     if (failCatalog) throw StateError('E2E injected catalog read failure');
     return delegate.getCatalogItems();
   }
@@ -50,8 +57,14 @@ class _CatalogFaultRepository implements TransactionRepository {
   Future<TransaksiReceipt> saveTransaction(
     TransaksiSubmitRequest request,
   ) async {
-    saves++;
+    attempts.add(request);
     lastRequest = request;
+    await saveGate?.future;
+    if (failNextSave) {
+      failNextSave = false;
+      throw StateError('E2E injected failure before persistence');
+    }
+    saves++;
     final receipt = await delegate.saveTransaction(request);
     failCatalog = failAfterCommit;
     return receipt;
@@ -136,14 +149,17 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    debugPrint('E2E_STEP: startup settled');
     await tester.tap(find.text('Transaksi').last);
     await tester.pumpAndSettle();
+    debugPrint('E2E_STEP: transaction tab');
 
-    Future<void> checkout() async {
+    Future<void> checkout({bool exerciseLock = false}) async {
       await tester.tap(find.text('E2E Kopi').first);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Keranjang'));
       await tester.pumpAndSettle();
+      debugPrint('E2E_STEP: cart opened');
       final employees = find.byType(DropdownButtonFormField<int?>);
       await tester.ensureVisible(employees);
       await tester.tap(employees);
@@ -154,7 +170,132 @@ void main() {
       await tester.tap(find.text('QRIS'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Proses Pembayaran'));
+      if (exerciseLock) {
+        repository.saveGate = Completer<void>();
+        repository.failNextSave = true;
+      }
       await tester.tap(find.text('Proses Pembayaran'));
+      debugPrint('E2E_STEP: payment tapped');
+      if (exerciseLock) {
+        // Real UI starts submit; pause only the repository boundary so input
+        // and repeated submissions race against a deterministic pending save.
+        await tester.pump();
+        final controller = container.read(transaksiControllerProvider.notifier);
+        final pending = container
+            .read(transaksiControllerProvider)
+            .requireValue;
+        expect(pending.isSubmitting, isTrue);
+        expect(pending.canSubmit, isFalse);
+        expect(
+          tester
+              .widget<FilledButton>(
+                find.ancestor(
+                  of: find.text('Memproses...'),
+                  matching: find.byType(FilledButton),
+                ),
+              )
+              .onPressed,
+          isNull,
+        );
+        await tester.tap(find.text('Tunai'));
+        await tester.pump();
+        controller.updateCashPaid(20000);
+        controller.clearCart();
+        controller.updateEmployee(null);
+        controller.updateSearch('changed while saving');
+        controller.updateFilter('jasa');
+        expect(
+          container.read(transaksiControllerProvider).requireValue,
+          same(pending),
+        );
+        await expectLater(controller.submit(), throwsA(isA<AppException>()));
+        expect(repository.attempts, hasLength(1));
+        expect(await db.query('sales_transactions'), isEmpty);
+        repository.saveGate!.complete();
+        await tester.pumpAndSettle();
+        debugPrint('E2E_STEP: failed save settled');
+        final failed = container.read(transaksiControllerProvider).requireValue;
+        expect(failed.isSubmitting, isFalse);
+        expect(failed.canSubmit, isTrue);
+        expect(failed.cartItems, same(pending.cartItems));
+        expect(failed.employeeId, pending.employeeId);
+        expect(failed.paymentMethod, 'qris');
+        expect(await db.query('sales_transactions'), isEmpty);
+        expect(await db.query('stock_movements'), isEmpty);
+        expect(
+          await db.query('expenses', where: "source_type = 'commission'"),
+          isEmpty,
+        );
+        expect((await db.query('items')).single['stock_qty'], 10);
+        expect(
+          find.text('Transaksi gagal disimpan. Coba lagi.'),
+          findsOneWidget,
+        );
+        // Keep rendering while the expected error toast expires, just as on
+        // device. A single long pump can stall navigator/overlay transitions.
+        final toastDeadline = DateTime.now().add(const Duration(seconds: 10));
+        while (find
+                .text('Transaksi gagal disimpan. Coba lagi.')
+                .evaluate()
+                .isNotEmpty &&
+            DateTime.now().isBefore(toastDeadline)) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+        expect(find.text('Transaksi gagal disimpan. Coba lagi.'), findsNothing);
+        debugPrint(
+          'E2E_STEP: failure preserved cart and ledger; retry after toast',
+        );
+
+        repository.saveGate = Completer<void>();
+        repository.refreshGate = Completer<void>();
+        await tester.tap(find.text('Proses Pembayaran'));
+        await tester.pump();
+        expect(repository.attempts, hasLength(2));
+        expect(repository.attempts.last, same(repository.attempts.first));
+        repository.saveGate!.complete();
+        final deadline = DateTime.now().add(const Duration(seconds: 20));
+        while (!container
+                .read(transaksiControllerProvider)
+                .requireValue
+                .isRefreshingCatalog &&
+            DateTime.now().isBefore(deadline)) {
+          await tester.pump(const Duration(milliseconds: 100));
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+        final refreshing = container
+            .read(transaksiControllerProvider)
+            .requireValue;
+        expect(refreshing.isRefreshingCatalog, isTrue);
+        expect(refreshing.isSubmitting, isTrue);
+        expect(refreshing.canSubmit, isFalse);
+        expect(refreshing.cartItems, isEmpty);
+        controller.addItem(
+          (await repository.delegate.getCatalogItems()).single,
+        );
+        controller.updatePaymentMethod('tunai');
+        expect(
+          container.read(transaksiControllerProvider).requireValue,
+          same(refreshing),
+        );
+        await expectLater(controller.submit(), throwsA(isA<AppException>()));
+        expect(repository.attempts, hasLength(2));
+        expect(await db.query('sales_transactions'), hasLength(1));
+        debugPrint(
+          'E2E_STEP: same-key retry committed once; refresh still locked',
+        );
+        repository.refreshGate!.complete();
+        repository.refreshGate = null;
+        repository.saveGate = null;
+      }
+      // A completed gate resumes async SQLite/provider work before navigation
+      // schedules its next frame. pumpAndSettle alone can return in that gap.
+      final receiptDeadline = DateTime.now().add(const Duration(seconds: 20));
+      while (find.byType(TransaksiBerhasilPage).evaluate().isEmpty &&
+          DateTime.now().isBefore(receiptDeadline)) {
+        await tester.pump(const Duration(milliseconds: 100));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
       await tester.pumpAndSettle();
       expect(find.byType(TransaksiBerhasilPage), findsOneWidget);
       expect(find.text('Transaksi gagal disimpan. Coba lagi.'), findsNothing);
@@ -178,7 +319,12 @@ void main() {
       );
     }
 
-    await checkout();
+    try {
+      await checkout(exerciseLock: true);
+    } catch (error, stack) {
+      debugPrint('E2E_CHECKOUT_FAILURE: $error\n$stack');
+      rethrow;
+    }
     await verifyLedger(1);
     expect(repository.saves, 1);
     final firstRequest = repository.lastRequest!;
