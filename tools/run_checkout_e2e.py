@@ -24,8 +24,28 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     adb = [args.adb, '-s', args.device]
     subprocess.run(adb + ['get-state'], check=True, capture_output=True)
+    production = 'com.pujanggapos.pujangga_pos'
+
+    def production_installed():
+        packages = subprocess.check_output(
+            adb + ['shell', 'pm', 'list', 'packages', production], text=True)
+        return f'package:{production}' in packages.splitlines()
+
+    before = production_installed()
+    (output / 'package-inventory.txt').write_text(
+        f'production_before={before}\n', encoding='utf-8')
+    # On a clean checkout Flutter may cache the unsuffixed namespace before
+    # building, then uninstall that package after running the debug APK.
+    # Build first so package discovery reads the actual debug manifest, and
+    # independently disable Flutter's automatic uninstall.
+    with (output / 'preflight-build.log').open('w', encoding='utf-8') as log:
+        subprocess.run(
+            [args.flutter, 'build', 'apk', '--debug', '--no-pub',
+             '--target', 'integration_test/checkout_commit_test.dart'],
+            cwd=root, stdout=log, stderr=subprocess.STDOUT, check=True)
     command = [args.flutter, 'test', 'integration_test/checkout_commit_test.dart',
-               '-d', args.device, '--no-pub', '--reporter', 'expanded']
+               '-d', args.device, '--no-pub', '--no-uninstall',
+               '--reporter', 'expanded']
     # Batch entrypoints are launched through cmd by Windows, without shell=True.
     process = subprocess.Popen(command, cwd=root, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT, text=True,
@@ -60,6 +80,11 @@ def main():
         if process.poll() is None:
             process.terminate()
             process.wait(timeout=15)
+        after = production_installed()
+        with (output / 'package-inventory.txt').open('a', encoding='utf-8') as log:
+            log.write(f'production_after={after}\n')
+        if before and not after:
+            raise RuntimeError('Production package disappeared during the run')
 
 
 if __name__ == '__main__':
