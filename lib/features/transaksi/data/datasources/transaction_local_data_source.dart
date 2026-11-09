@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
@@ -34,6 +35,20 @@ class TransactionLocalDataSource {
     final db = await database.database();
 
     return db.transaction((txn) async {
+      // Read and write under the same SQLite transaction, before any effects.
+      final existing = await txn.query(
+        'sales_transactions',
+        columns: ['invoice_no'],
+        where: 'checkout_id = ?',
+        whereArgs: [request.checkoutId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        return (await _getReceiptByInvoice(
+          txn,
+          existing.single['invoice_no'] as String,
+        ))!;
+      }
       final createdAt = DateTime.now();
       final createdAtIso = createdAt.toIso8601String();
       final invoiceNumber = await _generateInvoiceNumber(txn, createdAt);
@@ -140,6 +155,7 @@ class TransactionLocalDataSource {
       }
 
       final transactionId = await txn.insert('sales_transactions', {
+        'checkout_id': request.checkoutId,
         'invoice_no': invoiceNumber,
         'transaction_date': createdAtIso,
         'subtotal_amount': subtotalAmount,
@@ -293,6 +309,13 @@ class TransactionLocalDataSource {
 
   Future<TransaksiReceipt?> getReceiptByInvoice(String invoiceNumber) async {
     final db = await database.database();
+    return _getReceiptByInvoice(db, invoiceNumber);
+  }
+
+  Future<TransaksiReceipt?> _getReceiptByInvoice(
+    DatabaseExecutor db,
+    String invoiceNumber,
+  ) async {
     final transactions = await db.query(
       'sales_transactions',
       where: 'invoice_no = ?',

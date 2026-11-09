@@ -3,5 +3,5 @@ class AppConstants {
   static const appVersion = 'v1.2.5+6';
   static const applicationId = 'com.pujanggapos.pujangga_pos';
   static const databaseName = 'pujangga_pos.db';
-  static const databaseVersion = 15;
+  static const databaseVersion = 16;
 }
