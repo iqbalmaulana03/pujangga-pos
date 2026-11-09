@@ -383,16 +383,32 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
 
   /// Retrying a catalog read never resubmits a committed sale.
   Future<void> refreshCatalog() async {
+    final before = state.asData?.value;
+    if (before == null || before.isRefreshingCatalog) return;
+    state = AsyncData(before.copyWith(isRefreshingCatalog: true));
     try {
       final items = await ref
           .read(transactionRepositoryProvider)
           .getCatalogItems();
       if (!ref.mounted) return;
       final current = state.asData?.value ?? const TransaksiState();
-      state = AsyncData(_buildState(current, catalogItems: items));
+      state = AsyncData(
+        _buildState(
+          current,
+          catalogItems: items,
+        ).copyWith(catalogRefreshFailed: false, isRefreshingCatalog: false),
+      );
     } catch (_) {
-      // Leave the committed checkout empty; a later refresh can recover.
-      // Stale stock must not be offered for the next checkout.
+      if (!ref.mounted) return;
+      final current = state.asData?.value ?? const TransaksiState();
+      state = AsyncData(
+        current.copyWith(
+          catalogItems: [],
+          filteredItems: [],
+          catalogRefreshFailed: true,
+          isRefreshingCatalog: false,
+        ),
+      );
     }
   }
 

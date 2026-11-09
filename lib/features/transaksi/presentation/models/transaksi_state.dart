@@ -13,6 +13,8 @@ class TransaksiState {
     this.taxAmount = 0,
     this.cashPaidAmount,
     this.isSubmitting = false,
+    this.catalogRefreshFailed = false,
+    this.isRefreshingCatalog = false,
     this.employeeId,
   });
 
@@ -26,6 +28,8 @@ class TransaksiState {
   final double taxAmount;
   final double? cashPaidAmount;
   final bool isSubmitting;
+  final bool catalogRefreshFailed;
+  final bool isRefreshingCatalog;
   final int? employeeId;
 
   double get subtotalAmount =>
@@ -67,6 +71,8 @@ class TransaksiState {
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
     bool? isSubmitting,
+    bool? catalogRefreshFailed,
+    bool? isRefreshingCatalog,
     int? employeeId,
     bool resetEmployeeId = false,
   }) {
@@ -83,6 +89,8 @@ class TransaksiState {
           ? null
           : cashPaidAmount ?? this.cashPaidAmount,
       isSubmitting: isSubmitting ?? this.isSubmitting,
+      catalogRefreshFailed: catalogRefreshFailed ?? this.catalogRefreshFailed,
+      isRefreshingCatalog: isRefreshingCatalog ?? this.isRefreshingCatalog,
       employeeId: resetEmployeeId ? null : employeeId ?? this.employeeId,
     );
   }
