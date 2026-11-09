@@ -47,7 +47,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = if (
+                providers.environmentVariable("PUJANGGA_BACKUP_E2E").orNull == "1"
+            ) ".pr60e2e" else ".debug"
             versionNameSuffix = "-debug"
         }
         release {

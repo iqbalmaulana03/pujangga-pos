@@ -82,6 +82,9 @@ void main() {
     repository = FaultRepository();
     container = ProviderContainer(
       overrides: [
+        appDatabaseProvider.overrideWith(
+          (ref) => throw StateError('No runtime database in checkout tests'),
+        ),
         businessProfileProvider.overrideWith((ref) async => null),
         activeEmployeesProvider.overrideWith((ref) async => []),
         transactionRepositoryProvider.overrideWithValue(repository),
@@ -116,6 +119,66 @@ void main() {
     expect(state.catalogRefreshFailed, isFalse);
     expect(state.isRefreshingCatalog, isFalse);
     expect(repository.requests, isEmpty);
+  });
+
+  testWidgets('mobile checkout closes its cart route only once during refresh', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(480, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final router = GoRouter(
+      initialLocation: '/transaction',
+      routes: [
+        GoRoute(
+          path: '/transaction',
+          builder: (_, _) => const Scaffold(body: TransaksiPage()),
+        ),
+        GoRoute(
+          path: '/transaction/success/:invoiceNumber',
+          builder: (_, state) => TransaksiBerhasilPage(
+            invoiceNumber: state.pathParameters['invoiceNumber']!,
+          ),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+    checkout();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keranjang'));
+    await tester.pumpAndSettle();
+    repository.refreshGate = Completer<void>();
+    await tester.ensureVisible(find.text('Proses Pembayaran'));
+    await tester.tap(find.text('Proses Pembayaran'));
+    // Commit clears the cart and starts dismissing the sheet while the catalog
+    // read is still pending. Complete that read during the dismissal animation.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(
+      container
+          .read(transaksiControllerProvider)
+          .requireValue
+          .isRefreshingCatalog,
+      isTrue,
+    );
+    repository.refreshGate!.complete();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(TransaksiBerhasilPage), findsOneWidget);
+    expect(repository.requests, hasLength(1));
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(TransaksiPage), findsOneWidget);
+    expect(find.byType(TransaksiBerhasilPage), findsNothing);
+    expect(repository.requests, hasLength(1));
   });
 
   for (final wide in [false, true]) {

@@ -360,7 +360,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       _submitInProgress = false;
       return receipt;
     }
-    state = const AsyncData(TransaksiState());
+    state = const AsyncData(TransaksiState(isSubmitting: true));
     try {
       ref.invalidate(transaksiReceiptProvider(receipt.invoiceNumber));
       ref.invalidate(stokControllerProvider);
@@ -373,6 +373,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       await refreshCatalog();
     } finally {
       _submitInProgress = false;
+      if (ref.mounted) {
+        final latest = state.asData?.value;
+        if (latest != null) {
+          state = AsyncData(latest.copyWith(isSubmitting: false));
+        }
+      }
     }
     return receipt;
   }
