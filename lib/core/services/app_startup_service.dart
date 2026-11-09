@@ -8,6 +8,7 @@ import '../../features/setup_usaha/domain/repositories/business_profile_reposito
 import '../database/app_database.dart';
 import 'app_logger.dart';
 import 'business_logo_service.dart';
+import 'dataset_generation.dart';
 
 final appLoggerProvider = Provider<Logger>((ref) {
   return AppLogger.bootstrap();
@@ -44,10 +45,12 @@ final appStartupServiceProvider = Provider<AppStartupService>((ref) {
 });
 
 final appStartupProvider = FutureProvider<AppStartupState>((ref) async {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(appStartupServiceProvider).load();
 });
 
 final businessProfileProvider = FutureProvider<BusinessProfile?>((ref) async {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(businessProfileRepositoryProvider).getProfile();
 });
 

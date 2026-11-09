@@ -4,6 +4,7 @@ import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../data/datasources/transaction_local_data_source.dart';
@@ -35,6 +36,7 @@ final transaksiControllerProvider =
 
 final transaksiReceiptProvider = FutureProvider.autoDispose
     .family<TransaksiReceipt?, String>((ref, invoiceNumber) {
+      ref.watch(datasetGenerationProvider);
       return ref
           .watch(transactionRepositoryProvider)
           .getReceiptByInvoice(invoiceNumber);
@@ -46,8 +48,9 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
 
   @override
   Future<TransaksiState> build() async {
+    ref.watch(datasetGenerationProvider);
     final items = await ref
-        .read(transactionRepositoryProvider)
+        .watch(transactionRepositoryProvider)
         .getCatalogItems();
     return _buildState(
       const TransaksiState(catalogItems: []),

@@ -3,9 +3,9 @@ import '../../../../core/services/business_logo_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/services/app_reset_service.dart';
 import 'pengaturan_backup_controller.dart';
-import 'pengaturan_settings_controller.dart';
 
 final appResetServiceProvider = Provider<AppResetService>((ref) {
   return AppResetService(
@@ -29,9 +29,7 @@ class PengaturanResetController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await ref.read(appResetServiceProvider).resetAppData();
 
-      ref.invalidate(appStartupProvider);
-      ref.invalidate(businessProfileProvider);
-      ref.invalidate(appSettingsProvider);
+      ref.read(datasetGenerationProvider.notifier).advance();
       ref.invalidate(pengaturanBackupControllerProvider);
     });
   }

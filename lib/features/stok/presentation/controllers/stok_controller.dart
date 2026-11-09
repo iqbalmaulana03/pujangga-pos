@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/datasources/stock_local_data_source.dart';
 import '../../data/repositories/stock_repository_impl.dart';
 import '../../domain/entities/stock_adjustment_request.dart';
@@ -26,29 +27,34 @@ final stokControllerProvider =
 
 final stockItemProvider = FutureProvider.autoDispose.family<StockItem?, String>(
   (ref, itemId) {
+    ref.watch(datasetGenerationProvider);
     return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
   },
 );
 
 final stockMovementsProvider = FutureProvider.autoDispose
     .family<List<StockMovement>, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
 final stockItemDetailProvider = FutureProvider.autoDispose
     .family<StockItem?, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(stockRepositoryProvider).getStockItemById(itemId);
     });
 
 final stockMovementDetailProvider = FutureProvider.autoDispose
     .family<List<StockMovement>, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(stockRepositoryProvider).getStockMovements(itemId);
     });
 
 class StokController extends AsyncNotifier<StokState> {
   @override
   Future<StokState> build() async {
-    final items = await ref.read(stockRepositoryProvider).getStockItems();
+    ref.watch(datasetGenerationProvider);
+    final items = await ref.watch(stockRepositoryProvider).getStockItems();
     return _buildState(const StokState(), allItems: items);
   }
 

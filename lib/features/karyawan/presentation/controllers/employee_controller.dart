@@ -1,14 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/repositories/employee_repository.dart';
 import '../../domain/entities/employee.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 final employeesProvider = FutureProvider.autoDispose<List<Employee>>((ref) {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(employeeRepositoryProvider).getEmployees();
 });
 
 final activeEmployeesProvider = FutureProvider<List<Employee>>((ref) async {
+  ref.watch(datasetGenerationProvider);
   final employees = await ref.watch(employeeRepositoryProvider).getEmployees();
   return employees.where((employee) => employee.isActive).toList();
 });

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/datasources/report_local_data_source.dart';
 import '../../data/repositories/report_repository_impl.dart';
 import '../../domain/entities/dashboard_summary.dart';
@@ -23,6 +24,7 @@ final reportRepositoryProvider = Provider<ReportRepository>((ref) {
 final dashboardSummaryProvider = FutureProvider.autoDispose<DashboardSummary>((
   ref,
 ) {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(reportRepositoryProvider).getDashboardSummary();
 });
 
@@ -38,6 +40,7 @@ final customReportRangeProvider =
 
 final salesReportSnapshotByPeriodProvider = FutureProvider.autoDispose
     .family<SalesReportSnapshot, ReportPeriod>((ref, period) {
+      ref.watch(datasetGenerationProvider);
       final customRange = ref.watch(customReportRangeProvider);
       return ref
           .watch(reportRepositoryProvider)
@@ -53,11 +56,13 @@ final salesReportSnapshotProvider =
 final capitalMetricsProvider = FutureProvider.autoDispose<CapitalMetrics>((
   ref,
 ) {
+  ref.watch(datasetGenerationProvider);
   return ref.watch(reportRepositoryProvider).getCapitalMetrics();
 });
 
 final employeeReportProvider = FutureProvider.autoDispose
     .family<List<EmployeeReportSummary>, (DateTime, DateTime)>((ref, range) {
+      ref.watch(datasetGenerationProvider);
       return ref
           .watch(reportLocalDataSourceProvider)
           .getEmployeeReport(start: range.$1, end: range.$2);

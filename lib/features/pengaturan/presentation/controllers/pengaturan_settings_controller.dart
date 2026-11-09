@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../data/datasources/app_settings_local_data_source.dart';
 import '../../data/repositories/settings_repository_impl.dart';
@@ -20,6 +21,7 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 });
 
 final appSettingsProvider = FutureProvider<AppSettings>((ref) async {
+  ref.watch(datasetGenerationProvider);
   final settings = await ref.watch(settingsRepositoryProvider).getSettings();
   final resolved =
       settings ??

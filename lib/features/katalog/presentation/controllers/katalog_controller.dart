@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
 import '../../data/datasources/catalog_local_data_source.dart';
 import '../../data/repositories/catalog_repository_impl.dart';
@@ -25,13 +26,15 @@ final katalogControllerProvider =
 
 final catalogItemProvider = FutureProvider.autoDispose
     .family<CatalogItem?, String>((ref, itemId) {
+      ref.watch(datasetGenerationProvider);
       return ref.watch(catalogRepositoryProvider).getItemById(itemId);
     });
 
 class KatalogController extends AsyncNotifier<KatalogState> {
   @override
   Future<KatalogState> build() async {
-    final items = await ref.read(catalogRepositoryProvider).getItems();
+    ref.watch(datasetGenerationProvider);
+    final items = await ref.watch(catalogRepositoryProvider).getItems();
     return _buildState(const KatalogState(), allItems: items);
   }
 

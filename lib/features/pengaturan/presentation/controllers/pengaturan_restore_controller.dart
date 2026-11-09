@@ -3,12 +3,12 @@ import '../../../../core/services/business_logo_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
+import '../../../../core/services/dataset_generation.dart';
 import '../../data/services/app_restore_service.dart';
 import '../../data/services/backup_file_picker_service.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'pengaturan_backup_controller.dart';
 import 'pengaturan_reset_controller.dart';
-import 'pengaturan_settings_controller.dart';
 
 final backupFilePickerServiceProvider = Provider<BackupFilePickerService>((
   ref,
@@ -64,9 +64,7 @@ class PengaturanRestoreController
     try {
       await ref.read(appRestoreServiceProvider).restoreBackup(candidate);
 
-      ref.invalidate(appStartupProvider);
-      ref.invalidate(businessProfileProvider);
-      ref.invalidate(appSettingsProvider);
+      ref.read(datasetGenerationProvider.notifier).advance();
       ref.invalidate(pengaturanBackupControllerProvider);
       ref.invalidate(pengaturanResetControllerProvider);
 
