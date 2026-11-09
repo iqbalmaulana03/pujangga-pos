@@ -52,6 +52,38 @@ void main() {
     final isIdr = currency == 'IDR';
     final symbol = isIdr ? 'Rp' : r'$';
 
+    test('$currency rounds half units despite binary representation error', () {
+      final factor = isIdr ? 1 : 100;
+      for (final sign in [1, -1]) {
+        // 1.45 * 10% * 100 is 14.499999999999998 in binary doubles.
+        expect(
+          CurrencyFormatter.round(
+            sign * 1.45 * 0.1 * (isIdr ? 100 : 1),
+            currencyCode: currency,
+          ),
+          sign * 15 / factor,
+        );
+        expect(
+          CurrencyFormatter.round(
+            sign * 14.499999 / factor,
+            currencyCode: currency,
+          ),
+          sign * 14 / factor,
+        );
+        expect(
+          CurrencyFormatter.round(
+            sign * 14.500001 / factor,
+            currencyCode: currency,
+          ),
+          sign * 15 / factor,
+        );
+        expect(
+          CurrencyFormatter.round(sign * 14 / factor, currencyCode: currency),
+          sign * 14 / factor,
+        );
+      }
+    });
+
     testWidgets('$currency name-only edit preserves all three prices', (
       tester,
     ) async {
@@ -176,6 +208,19 @@ void main() {
           container.read(transaksiControllerProvider).requireValue.taxAmount,
           0,
         );
+        const halfCentItem = TransaksiItem(
+          id: 'half-cent',
+          name: 'Teh',
+          category: 'Minuman',
+          itemType: 'barang',
+          sellingPrice: 1.45,
+          stockQuantity: 10,
+          isActive: true,
+        );
+        controller.addItem(halfCentItem);
+        state = container.read(transaksiControllerProvider).requireValue;
+        expect(state.taxAmount, isIdr ? 0 : 0.15);
+        expect(state.totalAmount, closeTo(isIdr ? 1.45 : 1.60, 1e-10));
       },
     );
 
