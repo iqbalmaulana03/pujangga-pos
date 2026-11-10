@@ -225,9 +225,9 @@ def main():
                     image = adb('exec-out', 'screencap', '-p').stdout
                     if not image.startswith(b'\x89PNG\r\n\x1a\n'):
                         raise RuntimeError('Invalid screenshot response')
-                    target = artifacts / f'{marker.group(1)}.png'
-                    target.write_bytes(image)
-                    print(f'E2E_CAPTURE: {target.name}, bytes={len(image)}', flush=True)
+                    screenshot_path = artifacts / f'{marker.group(1)}.png'
+                    screenshot_path.write_bytes(image)
+                    print(f'E2E_CAPTURE: {screenshot_path.name}, bytes={len(image)}', flush=True)
                 native = re.search(r'E2E_NATIVE_PICKER: (\S+)', line)
                 if native:
                     try:
