@@ -47,3 +47,8 @@ struktur sangat dalam, logo, serta perbandingan seluruh tabel pada database FFI
 di direktori sementara. Tes heartbeat event loop selama inspeksi file 20 MiB
 merupakan pemeriksaan respons host yang kasar, bukan pengukuran FPS/memori atau
 jaminan performa pada seluruh perangkat Android.
+
+E2E pada Redmi Note 11 Pro / Android 13 telah lulus pada 10 November 2026,
+termasuk dua pemilihan file native, penolakan tanpa perubahan database,
+kontrol positif tepat 20 MiB dengan 5.001 item, respons UI selama inspeksi,
+restore, dan pembukaan ulang SQLite. Lihat [hasil dan batas interpretasi](verification/PR64-RESTORE-LIMITS-E2E.md).
