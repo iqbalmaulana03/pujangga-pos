@@ -1,0 +1,16 @@
+{
+  "exit_code": 0,
+  "native_file_selections": 2,
+  "native_errors": [],
+  "test_package": "com.pujanggapos.pujangga_pos.pr64e2e",
+  "apk_sha256": "79e5485447d4de142a7ba40b4370a9a82b4cbdab3d7721688276a1d08dc5b1d9",
+  "scenario": "integration_test/restore_limits_test.dart",
+  "source_revision": "478a6c1a0965680cf986cea1d5eb42d76c93fd22",
+  "memory_samples": 237,
+  "peak_pss_kib": 523319,
+  "automatic_uninstall": false,
+  "main_package_unchanged": true,
+  "debug_package_unchanged": true,
+  "test_package_removed": true,
+  "shared_folder_removed": true
+}

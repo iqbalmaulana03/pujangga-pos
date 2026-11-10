@@ -1,4 +1,4 @@
-"""Run PR62's isolated Android restore test, including the native file picker."""
+"""Run isolated Android restore tests, including the native file picker."""
 
 import argparse
 import hashlib
@@ -9,6 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 import xml.etree.ElementTree as ET
 
@@ -16,6 +17,7 @@ import xml.etree.ElementTree as ET
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--device', required=True, help='adb device serial')
+    parser.add_argument('--suite', choices=['validation', 'limits'], default='validation')
     parser.add_argument('--flutter', default=shutil.which('flutter'))
     parser.add_argument('--adb', default=shutil.which('adb'))
     parser.add_argument('--aapt2', default=shutil.which('aapt2'))
@@ -25,15 +27,23 @@ def main():
     if hasattr(sys.stdout, 'reconfigure'):
         sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     root = Path(__file__).resolve().parents[1]
-    artifacts = root / 'build' / 'pr62-e2e'
+    limits = args.suite == 'limits'
+    tag = 'PR64' if limits else 'PR62'
+    target = 'integration_test/restore_limits_test.dart' if limits else 'integration_test/restore_validation_test.dart'
+    fixture_names = {'limit-bytes.json', 'valid-large.json'} if limits else {'invalid-date.json', 'valid-schema-16.json'}
+    artifacts = root / 'build' / f'{tag.lower()}-e2e'
     artifacts.mkdir(parents=True, exist_ok=True)
-    package = 'com.pujanggapos.pujangga_pos.pr62e2e'
-    folder = f'000-PR62-E2E-{time.time_ns()}'
+    package = f'com.pujanggapos.pujangga_pos.{tag.lower()}e2e'
+    folder = f'000-{tag}-E2E-{time.time_ns()}'
     shared = f'/sdcard/{folder}'
     ui_dump = f'/data/local/tmp/{folder}.xml'
     copied = []
     native_selections = 0
     native_errors = []
+    memory_samples = []
+    sample_stop = threading.Event()
+    sampler = None
+    process = None
 
     def adb(*arguments, check=True, timeout=15):
         return subprocess.run([args.adb, '-s', args.device, *arguments],
@@ -44,6 +54,21 @@ def main():
         numbers = list(map(int, re.findall(r'\d+', node.attrib['bounds'])))
         left, top, right, bottom = numbers
         adb('shell', 'input', 'tap', str((left + right) // 2), str((top + bottom) // 2))
+
+    def sample_memory():
+        # Record only aggregate test-process memory, never app rows or user data.
+        while not sample_stop.is_set():
+            try:
+                output = adb('shell', 'dumpsys', 'meminfo', package).stdout.decode(errors='replace')
+                pss = re.search(r'TOTAL PSS:\s+(\d+)', output)
+                rss = re.search(r'TOTAL RSS:\s+(\d+)', output)
+                if pss:
+                    memory_samples.append({'monotonic': round(time.monotonic(), 3),
+                        'pss_kib': int(pss.group(1)),
+                        'rss_kib': int(rss.group(1)) if rss else None})
+            except (subprocess.SubprocessError, OSError):
+                pass
+            sample_stop.wait(0.25)
 
     storage_names = {'internal storage', 'penyimpanan internal'}
     for prop in ['ro.product.model', 'ro.product.marketname']:
@@ -66,10 +91,8 @@ def main():
     def choose_native_file(source):
         # Export only this test's private synthetic fixture. Never enumerate or
         # read another app's data, or log the names of other DocumentsUI files.
-        prefix = f'/data/user/0/{package}/cache/restore-validation-'
-        if not source.startswith(prefix) or Path(source).name not in {
-            'invalid-date.json', 'valid-schema-16.json'
-        }:
+        prefix = f'/data/user/0/{package}/cache/restore-'
+        if not source.startswith(prefix) or Path(source).name not in fixture_names:
             raise RuntimeError('Unexpected fixture path; refusing to copy')
         content = adb('exec-out', 'run-as', package, 'cat', source).stdout
         json.loads(content)
@@ -145,26 +168,30 @@ def main():
 
     if adb('get-state').stdout.strip() != b'device':
         raise RuntimeError('Requested adb device is not ready')
+    if adb('shell', 'pm', 'path', package, check=False).stdout.strip():
+        raise RuntimeError('Test package already exists; refusing to overwrite or clean another run')
     if adb('shell', 'test', '-e', shared, check=False).returncode != 1:
         raise RuntimeError('Cannot establish ownership of disposable shared folder')
     adb('shell', 'mkdir', shared)
     main_package = 'com.pujanggapos.pujangga_pos'
     main_paths_before = adb('shell', 'pm', 'path', main_package, check=False).stdout
+    debug_package = main_package + '.debug'
+    debug_paths_before = adb('shell', 'pm', 'path', debug_package, check=False).stdout
     result = 1
     try:
         env = os.environ.copy()
-        env['PUJANGGA_RESTORE_E2E'] = '1'
+        env['PUJANGGA_RESTORE_LIMITS_E2E' if limits else 'PUJANGGA_RESTORE_E2E'] = '1'
+        define = f'--dart-define={tag}_NATIVE_PICKER=true'
         command = [args.flutter, 'test', '--no-pub', '--no-uninstall',
-                   'integration_test/restore_validation_test.dart', '-d', args.device,
-                   '--dart-define=PR62_NATIVE_PICKER=true', '--reporter', 'expanded']
+                   target, '-d', args.device, define, '--reporter', 'expanded']
         print(f'E2E_RUN: isolated package {package}; native picker enabled', flush=True)
         with (artifacts / 'android-e2e.log').open('w', encoding='utf-8') as log:
             # Flutter resolves its teardown package before the test build. On a
             # clean checkout it can fall back to the main namespace. Prebuild
             # and verify the actual ID, and disable Flutter's automatic uninstall.
             prebuild = [args.flutter, 'build', 'apk', '--debug', '--no-pub',
-                        '--target=integration_test/restore_validation_test.dart',
-                        '--target-platform=android-arm64', '--dart-define=PR62_NATIVE_PICKER=true']
+                        f'--target={target}',
+                        '--target-platform=android-arm64', define]
             builder = subprocess.Popen(prebuild, cwd=root, env=env,
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        text=True, encoding='utf-8', errors='replace')
@@ -179,6 +206,8 @@ def main():
             if actual_id != package:
                 raise RuntimeError('Preflight APK package mismatch; refusing to install')
             print(f'E2E_PREFLIGHT: verified APK ID={actual_id}; automatic uninstall disabled', flush=True)
+            sampler = threading.Thread(target=sample_memory, daemon=True)
+            sampler.start()
             process = subprocess.Popen(command, cwd=root, env=env,
                                        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                        text=True, encoding='utf-8', errors='replace')
@@ -188,12 +217,17 @@ def main():
                 print(line.rstrip(), flush=True)
                 marker = re.search(r'E2E_SCREENSHOT: ([a-z0-9-]+)', line)
                 if marker:
+                    activity = adb('shell', 'dumpsys', 'activity', 'activities').stdout.decode(errors='replace')
+                    resumed = [row for row in activity.splitlines()
+                               if 'mResumedActivity' in row or 'topResumedActivity' in row]
+                    if not any(package + '/' in row for row in resumed):
+                        raise RuntimeError('Refusing screenshot outside the test package')
                     image = adb('exec-out', 'screencap', '-p').stdout
                     if not image.startswith(b'\x89PNG\r\n\x1a\n'):
                         raise RuntimeError('Invalid screenshot response')
-                    target = artifacts / f'{marker.group(1)}.png'
-                    target.write_bytes(image)
-                    print(f'E2E_CAPTURE: {target.name}, bytes={len(image)}', flush=True)
+                    screenshot_path = artifacts / f'{marker.group(1)}.png'
+                    screenshot_path.write_bytes(image)
+                    print(f'E2E_CAPTURE: {screenshot_path.name}, bytes={len(image)}', flush=True)
                 native = re.search(r'E2E_NATIVE_PICKER: (\S+)', line)
                 if native:
                     try:
@@ -209,6 +243,13 @@ def main():
         if native_selections != 2 or native_errors:
             result = 1
     finally:
+        if process is not None and process.poll() is None:
+            process.terminate()
+            process.wait(timeout=15)
+        sample_stop.set()
+        if sampler:
+            sampler.join(timeout=20)
+        (artifacts / 'memory.json').write_text(json.dumps(memory_samples, indent=2) + '\n', encoding='utf-8')
         # Each removed path was created by this invocation; no recursive delete
         # or cleanup of the user's shared storage or application packages is used.
         for remote in copied:
@@ -222,7 +263,8 @@ def main():
             adb('uninstall', package)
         test_removed = not adb('shell', 'pm', 'path', package, check=False).stdout.strip()
         main_unchanged = adb('shell', 'pm', 'path', main_package, check=False).stdout == main_paths_before
-        if not (shared_removed and test_removed and main_unchanged):
+        debug_unchanged = adb('shell', 'pm', 'path', debug_package, check=False).stdout == debug_paths_before
+        if not (shared_removed and test_removed and main_unchanged and debug_unchanged):
             result = 1
         apk = root / 'build' / 'app' / 'outputs' / 'flutter-apk' / 'app-debug.apk'
         summary = {
@@ -231,9 +273,13 @@ def main():
             'native_errors': native_errors,
             'test_package': package,
             'apk_sha256': hashlib.sha256(apk.read_bytes()).hexdigest() if apk.exists() else None,
-            'scenario': 'integration_test/restore_validation_test.dart',
+            'scenario': target,
+            'source_revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
+            'memory_samples': len(memory_samples),
+            'peak_pss_kib': max((s['pss_kib'] for s in memory_samples), default=None),
             'automatic_uninstall': False,
             'main_package_unchanged': main_unchanged,
+            'debug_package_unchanged': debug_unchanged,
             'test_package_removed': test_removed,
             'shared_folder_removed': shared_removed,
         }
