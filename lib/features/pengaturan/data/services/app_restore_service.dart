@@ -15,6 +15,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'app_backup_payload_builder.dart';
 import 'app_backup_service.dart';
+import 'backup_encryption.dart';
 
 class AppRestoreService {
   AppRestoreService({
@@ -27,7 +28,10 @@ class AppRestoreService {
   final Logger logger;
   final BusinessLogoService? logoService;
 
-  Future<AppBackupRestoreCandidate> inspectBackupFile(String filePath) async {
+  Future<AppBackupRestoreCandidate> inspectBackupFile(
+    String filePath, {
+    String? password,
+  }) async {
     final file = File(filePath);
     if (!await file.exists()) {
       throw const AppException(
@@ -37,7 +41,11 @@ class AppRestoreService {
     }
 
     final raw = await file.readAsString();
-    final decoded = jsonDecode(raw);
+    var decoded = jsonDecode(raw);
+    if (decoded is Map<String, dynamic> &&
+        decoded['format'] == BackupEncryption.format) {
+      decoded = jsonDecode(await BackupEncryption.decrypt(decoded, password));
+    }
     if (decoded is! Map<String, dynamic>) {
       throw const AppException(
         'backup_invalid',

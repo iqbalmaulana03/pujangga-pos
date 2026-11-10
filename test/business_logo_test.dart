@@ -125,7 +125,7 @@ void main() {
       logoService: logos,
       backupDirectoryProvider: () async =>
           Directory(p.join(temp.path, 'backup')),
-    ).createBackup();
+    ).createBackup(password: null);
     return AppRestoreService(
       database: database,
       logger: Logger.root,
@@ -445,7 +445,7 @@ void main() {
       logger: Logger.root,
       logoService: logos,
       backupDirectoryProvider: () async => temp,
-    ).createBackup();
+    ).createBackup(password: null);
     expect(backup.warnings, isNotEmpty);
     expect(
       jsonDecode(

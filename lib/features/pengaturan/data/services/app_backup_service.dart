@@ -10,6 +10,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/services/business_logo_service.dart';
 import '../../domain/entities/app_backup_file.dart';
 import 'app_backup_payload_builder.dart';
+import 'backup_encryption.dart';
 
 typedef BackupDirectoryProvider = Future<Directory> Function();
 
@@ -42,10 +43,13 @@ class AppBackupService {
     'employee_compensation_periods',
   ];
 
-  Future<AppBackupFile> createBackup() =>
-      (logoService ?? BusinessLogoService()).synchronized(_createBackup);
+  // A null password is an explicit request for a legacy plaintext export.
+  Future<AppBackupFile> createBackup({required String? password}) =>
+      (logoService ?? BusinessLogoService()).synchronized(
+        () => _createBackup(password),
+      );
 
-  Future<AppBackupFile> _createBackup() async {
+  Future<AppBackupFile> _createBackup(String? password) async {
     final db = await database.database();
     final generatedAt = DateTime.now();
     final tables = await db.transaction((txn) async {
@@ -89,12 +93,15 @@ class AppBackupService {
     await targetDirectory.create(recursive: true);
 
     final fileName =
-        'pujangga_pos_backup_${_formatTimestamp(generatedAt)}.json';
+        'pujangga_pos_backup_${_formatTimestamp(generatedAt)}_${DateTime.now().microsecondsSinceEpoch}${password == null ? '' : '_encrypted'}.json';
     final file = File(path.join(targetDirectory.path, fileName));
 
-    await file.writeAsString(
-      const JsonEncoder.withIndent('  ').convert(payload),
-    );
+    final plaintext = const JsonEncoder.withIndent('  ').convert(payload);
+    // Never write an intermediate plaintext file for encrypted exports.
+    final content = password == null
+        ? plaintext
+        : await BackupEncryption.encrypt(plaintext, password);
+    await file.writeAsString(content, flush: true);
 
     logger.info('Backup exported to ${file.path}');
 

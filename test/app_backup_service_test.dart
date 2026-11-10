@@ -114,7 +114,7 @@ void main() {
         return Directory(path.join(temporary.path, 'backup-${fileNumber++}'));
       },
     );
-    final backup = service.createBackup();
+    final backup = service.createBackup(password: null);
     await itemsRead.future;
     final writer = _ObservedDatabase(
       db,
@@ -159,7 +159,7 @@ void main() {
       logger: Logger('backup-test'),
       backupDirectoryProvider: () async =>
           Directory(path.join(temporary.path, 'after-sale')),
-    ).createBackup();
+    ).createBackup(password: null);
     await verifyRestored(after.filePath, sold: true);
   });
 
@@ -185,7 +185,10 @@ void main() {
           return Directory(path.join(temporary.path, 'failed-backup'));
         },
       );
-      await expectLater(service.createBackup(), throwsA(same(failure)));
+      await expectLater(
+        service.createBackup(password: null),
+        throwsA(same(failure)),
+      );
       expect(directoryRequested, isFalse);
       expect(
         await temporary.list().where((f) => f.path.endsWith('.json')).toList(),
