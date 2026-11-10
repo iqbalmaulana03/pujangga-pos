@@ -89,7 +89,9 @@ menjalankan regresi PR #62 dengan paket `.pr62e2e`.
 
 - [Ringkasan runner dan identitas APK](pr64-restore-limits-e2e/result.json)
 - [Metrik inspeksi](pr64-restore-limits-e2e/inspection-metrics.json)
-- [Sampel memori proses tes](pr64-restore-limits-e2e/memory.json)
+- [Ringkasan statistik dari 237 sampel memori](pr64-restore-limits-e2e/memory.json),
+  termasuk hash SHA-256 sampel mentah. Sampel lengkap tersedia lokal di
+  `build/pr64-e2e/memory.json`; ringkasan menjaga lampiran review tetap ringkas.
 - [Kejadian verifikasi](pr64-restore-limits-e2e/events.txt)
 - [Pesan penolakan byte](pr64-restore-limits-e2e/01-byte-limit-rejected.png)
 - [Konfirmasi backup besar](pr64-restore-limits-e2e/02-valid-large-confirmation.png)
