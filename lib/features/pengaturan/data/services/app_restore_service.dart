@@ -15,6 +15,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'app_backup_payload_builder.dart';
 import 'app_backup_service.dart';
+import 'backup_data_validator.dart';
 
 class AppRestoreService {
   AppRestoreService({
@@ -88,7 +89,8 @@ class AppRestoreService {
     }
 
     final generatedAt = DateTime.tryParse(generatedAtRaw?.toString() ?? '');
-    if (generatedAt == null) {
+    if (generatedAt == null ||
+        !BackupDataValidator.isValidDate(generatedAtRaw.toString())) {
       throw const AppException(
         'backup_invalid',
         'Waktu pembuatan backup tidak valid.',
@@ -436,6 +438,7 @@ class AppRestoreService {
         }
       }
     }
+    const BackupDataValidator().validate(tables);
   }
 
   bool _matchesSqliteType(String declaredType, Object value) {
