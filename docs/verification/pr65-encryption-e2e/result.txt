@@ -1,0 +1,4 @@
+exit_code=0
+shares=2
+native_picker=True
+Android test: 01:40 +1: All tests passed!
