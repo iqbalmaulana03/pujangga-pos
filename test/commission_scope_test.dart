@@ -8,6 +8,7 @@ import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/features/karyawan/data/repositories/employee_repository.dart';
 import 'package:pujangga_pos/features/laporan/data/datasources/report_local_data_source.dart';
+import 'package:pujangga_pos/features/laporan/data/repositories/report_repository_impl.dart';
 import 'package:pujangga_pos/features/laporan/domain/entities/report_period.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_payload_builder.dart';
@@ -225,15 +226,15 @@ void main() {
         // 60k service + 90k product, no tax in commission base.
         expect(receipt.commissionAmount, expected);
         expect(receipt.commissionScope, scope);
-        final home = await ReportLocalDataSource(
-          database: database,
+        final home = await ReportRepositoryImpl(
+          localDataSource: ReportLocalDataSource(database: database),
         ).getDashboardSummary();
         expect(home.marginToday, 130000);
         expect(home.marginTodayIsComplete, isTrue);
         expect(home.commissionExpensesToday, expected);
         expect(home.netProfitToday, 130000 - expected);
-        final report = await ReportLocalDataSource(
-          database: database,
+        final report = await ReportRepositoryImpl(
+          localDataSource: ReportLocalDataSource(database: database),
         ).getSalesReportSnapshot(period: ReportPeriod.harian);
         expect(report.commissionExpenses, expected);
         expect(report.netProfit, home.netProfitToday);
@@ -292,8 +293,8 @@ void main() {
       expect(historical.commissionPercent, 10);
       expect(historical.commissionAmount, 30000);
       expect(await db.query('sales_transaction_items', orderBy: 'id'), before);
-      final home = await ReportLocalDataSource(
-        database: database,
+      final home = await ReportRepositoryImpl(
+        localDataSource: ReportLocalDataSource(database: database),
       ).getDashboardSummary();
       expect(home.marginTodayIsComplete, isFalse);
       expect(home.totalExpensesToday, 30000);

@@ -64,7 +64,7 @@ final employeeReportProvider = FutureProvider.autoDispose
     .family<List<EmployeeReportSummary>, (DateTime, DateTime)>((ref, range) {
       ref.watch(datasetGenerationProvider);
       return ref
-          .watch(reportLocalDataSourceProvider)
+          .watch(reportRepositoryProvider)
           .getEmployeeReport(start: range.$1, end: range.$2);
     });
 
