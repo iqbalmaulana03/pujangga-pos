@@ -1,0 +1,29 @@
+{
+  "implementation_revision": "2a798e83c69696aff8631650323f96eca1e57f01",
+  "build_base_revision": "4390e68f1c67221b892cbb20c74b72a192a536d6",
+  "date": "2026-11-11",
+  "device_model": "Xiaomi 2201116TG",
+  "android": "13",
+  "flutter": "3.47.9",
+  "package": "com.pujanggapos.pujangga_pos.pr67e2e",
+  "apk_sha256": "b2e0a476fa82575f53882b52c696c75244302400beb8baec1ec1e1ad42d52e7c",
+  "exit_code": 0,
+  "passed_tests": 3,
+  "failed_tests": 0,
+  "currencies": [
+    "IDR",
+    "USD",
+    "SGD"
+  ],
+  "validated_checkouts": 24,
+  "validated_reopens": 3,
+  "cleanups": 3,
+  "overflow_count": 0,
+  "source_git_blobs": {
+    "lib/features/transaksi/presentation/pages/transaksi_page.dart": "4952522e89f1835b1edffb939d44189268d5dd82",
+    "integration_test/automatic_tax_test.dart": "f395a4fce737a76088bee9c1a02ae2465ad9a924",
+    "test/transaction_commit_refresh_test.dart": "db12a78fe9125072761368ccc44529b49f0880d7",
+    "tools/run_tax_e2e.py": "54a973bb2e07f8716257b7c441abb27f143bb5f7",
+    "android/app/build.gradle.kts": "69e71195d143884eb6ef626d124fd9d8533b0608"
+  }
+}
