@@ -50,6 +50,12 @@ android {
             applicationIdSuffix = if (
                 providers.environmentVariable("PUJANGGA_ENCRYPTION_E2E").orNull == "1"
             ) ".pr65e2e" else if (
+                providers.environmentVariable("PUJANGGA_RESTORE_LIMITS_E2E").orNull == "1"
+            ) ".pr64e2e" else if (
+                providers.environmentVariable("PUJANGGA_CURRENCY_E2E").orNull == "1"
+            ) ".pr63e2e" else if (
+                providers.environmentVariable("PUJANGGA_RESTORE_E2E").orNull == "1"
+            ) ".pr62e2e" else if (
                 providers.environmentVariable("PUJANGGA_DATASET_E2E").orNull == "1"
             ) ".pr61e2e" else if (
                 providers.environmentVariable("PUJANGGA_BACKUP_E2E").orNull == "1"

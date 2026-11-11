@@ -15,6 +15,7 @@ import 'package:pujangga_pos/core/services/business_logo_service.dart';
 import 'package:pujangga_pos/core/utils/app_date_formatting.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_file_picker_service.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/backup_input_limits.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_backup_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_restore_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/pages/pengaturan_page.dart';
@@ -62,6 +63,16 @@ void main() {
       debugPrint('E2E_ISOLATION: ${directory.path}');
       var db = await database.database();
       final stamp = DateTime.now().toIso8601String();
+      final categories = db.batch();
+      for (var i = 0; i < 500; i++) {
+        categories.insert('categories', {
+          'name': 'PR65 Synthetic Category $i',
+          'item_type': 'product',
+          'created_at': stamp,
+          'updated_at': stamp,
+        });
+      }
+      await categories.commit(noResult: true);
       await db.insert('business_profile', {
         'business_name': 'PR65 Synthetic Shop',
         'business_type': 'retail',
@@ -288,6 +299,10 @@ void main() {
       final expected = await snapshot();
       final encrypted = await exportUI(encrypted: true);
       final raw = await File(encrypted).readAsString();
+      expect(
+        (jsonDecode(raw)['ciphertext'] as String).length,
+        greaterThan(BackupInputLimits.maxStringLength),
+      );
       for (final value in [
         'PR65 Synthetic Shop',
         'PR65 Synthetic Employee',

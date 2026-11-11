@@ -11,6 +11,7 @@ import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_servic
 import 'package:pujangga_pos/features/pengaturan/data/services/app_restore_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_encryption.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_file_picker_service.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/backup_input_limits.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_restore_controller.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -275,6 +276,75 @@ void main() {
         isNotNull,
       );
     });
+
+    test(
+      'ciphertext beyond ordinary string budget restores a valid dataset',
+      () async {
+        final db = await source.database();
+        final batch = db.batch();
+        final stamp = DateTime.utc(2026, 11, 11).toIso8601String();
+        for (var i = 0; i < 1000; i++) {
+          batch.insert('categories', {
+            'name': 'Synthetic category $i',
+            'item_type': 'product',
+            'created_at': stamp,
+            'updated_at': stamp,
+          });
+        }
+        await batch.commit(noResult: true);
+        final file = await backup.createBackup(password: _password);
+        final envelope =
+            jsonDecode(await File(file.filePath).readAsString()) as Map;
+        expect(
+          (envelope['ciphertext'] as String).length,
+          greaterThan(BackupInputLimits.maxStringLength),
+        );
+        final candidate = await restore.inspectBackupFile(
+          file.filePath,
+          password: _password,
+        );
+        expect(candidate.recordCounts['categories'], 1000);
+        await restore.restoreBackup(candidate);
+        expect((await snapshot())['categories'], await db.query('categories'));
+      },
+    );
+
+    test(
+      'authenticated payload still enforces depth, strings, and row budgets',
+      () async {
+        final before = await snapshot();
+        final values = [
+          {'x': 'a' * (BackupInputLimits.maxStringLength + 1)},
+          {
+            'x': List.generate(
+              BackupInputLimits.maxDepth + 1,
+              (_) => 0,
+            ).fold<Object>(0, (inner, _) => [inner]),
+          },
+          {
+            'tables': {
+              'extra': List.filled(
+                BackupInputLimits.maxRows + 1,
+                <String, Object?>{},
+              ),
+            },
+          },
+        ];
+        for (final value in values) {
+          final file = File(
+            path.join(temporary.path, 'bounded-encrypted.json'),
+          );
+          await file.writeAsString(
+            await BackupEncryption.encrypt(jsonEncode(value), _password),
+          );
+          await expectLater(
+            restore.inspectBackupFile(file.path, password: _password),
+            throwsA(_error('backup_limit_exceeded')),
+          );
+          expect(await snapshot(), before);
+        }
+      },
+    );
 
     test('weak password produces no backup file', () async {
       await expectLater(

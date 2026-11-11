@@ -1,0 +1,19 @@
+E2E_PASS: USD name-only UI edit persisted price=1.5 cost=0.65 wholesale=1.25
+E2E_PASS: USD PR63 Satu qty=1 SQLite subtotal=1.0 tax=0.1 total=1.1 invoice=INV-20261110-095606-000449
+E2E_PASS: USD PR63 Batas qty=1 SQLite subtotal=1.45 tax=0.15 total=1.6 invoice=INV-20261110-095613-000914
+E2E_PASS: USD PR63 Kopi Baru qty=2 SQLite subtotal=2.5 tax=0.25 total=2.75 invoice=INV-20261110-095621-000531
+E2E_PASS: USD reopened SQLite: 3 sales, prices/stock/settings retained, integrity=ok, foreign_keys=ok
+E2E_CLEANUP: USD isolated database removed
+E2E_PASS: SGD name-only UI edit persisted price=1.5 cost=0.65 wholesale=1.25
+E2E_PASS: SGD PR63 Satu qty=1 SQLite subtotal=1.0 tax=0.1 total=1.1 invoice=INV-20261110-095702-000983
+E2E_PASS: SGD PR63 Batas qty=1 SQLite subtotal=1.45 tax=0.15 total=1.6 invoice=INV-20261110-095709-000611
+E2E_PASS: SGD PR63 Kopi Baru qty=2 SQLite subtotal=2.5 tax=0.25 total=2.75 invoice=INV-20261110-095717-000550
+E2E_PASS: SGD reopened SQLite: 3 sales, prices/stock/settings retained, integrity=ok, foreign_keys=ok
+E2E_CLEANUP: SGD isolated database removed
+E2E_PASS: IDR name-only UI edit persisted price=1500.0 cost=650.0 wholesale=1250.0
+E2E_PASS: IDR PR63 Satu qty=1 SQLite subtotal=1000.0 tax=100.0 total=1100.0 invoice=INV-20261110-095758-000992
+E2E_PASS: IDR PR63 Batas qty=1 SQLite subtotal=1450.0 tax=145.0 total=1595.0 invoice=INV-20261110-095805-000293
+E2E_PASS: IDR PR63 Kopi Baru qty=2 SQLite subtotal=2500.0 tax=250.0 total=2750.0 invoice=INV-20261110-095812-000300
+E2E_PASS: IDR reopened SQLite: 3 sales, prices/stock/settings retained, integrity=ok, foreign_keys=ok
+E2E_CLEANUP: IDR isolated database removed
+02:51 +3: All tests passed!

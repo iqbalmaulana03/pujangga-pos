@@ -4,6 +4,7 @@ import '../../../../core/services/business_logo_service.dart';
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:logging/logging.dart';
 import 'package:sqflite/sqflite.dart';
@@ -15,7 +16,9 @@ import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'app_backup_payload_builder.dart';
 import 'app_backup_service.dart';
+import 'backup_data_validator.dart';
 import 'backup_encryption.dart';
+import 'backup_input_limits.dart';
 
 class AppRestoreService {
   AppRestoreService({
@@ -32,215 +35,17 @@ class AppRestoreService {
     String filePath, {
     String? password,
   }) async {
+    final parsed = await _inspectInWorker(filePath, password);
     final file = File(filePath);
-    if (!await file.exists()) {
-      throw const AppException(
-        'backup_not_found',
-        'File backup tidak ditemukan di perangkat.',
-      );
-    }
-
-    final raw = await file.readAsString();
-    var decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic> &&
-        decoded['format'] == BackupEncryption.format) {
-      decoded = jsonDecode(await BackupEncryption.decrypt(decoded, password));
-    }
-    if (decoded is! Map<String, dynamic>) {
-      throw const AppException(
-        'backup_invalid',
-        'Format file backup tidak valid.',
-      );
-    }
-
-    final format = decoded['format'];
-    final formatVersion = decoded['format_version'];
-    final databaseInfo = decoded['database'];
-    final schemaVersion = databaseInfo is Map<String, dynamic>
-        ? databaseInfo['schema_version']
-        : null;
-    final backupSchemaVersion = schemaVersion is num
-        ? schemaVersion.toInt()
-        : null;
-    final tablesData = decoded['tables'];
-    final tableCountsData = decoded['table_counts'];
-    final generatedAtRaw = decoded['generated_at'];
-
-    if (format != AppBackupPayloadBuilder.backupFormat ||
-        !const [
-          2,
-          AppBackupPayloadBuilder.backupFormatVersion,
-        ].contains(formatVersion)) {
-      throw const AppException(
-        'backup_incompatible',
-        'File backup tidak kompatibel dengan aplikasi ini.',
-      );
-    }
-
-    if (databaseInfo is! Map<String, dynamic> ||
-        databaseInfo['name'] != AppConstants.databaseName ||
-        backupSchemaVersion == null ||
-        backupSchemaVersion < 12 ||
-        backupSchemaVersion > AppConstants.databaseVersion) {
-      throw const AppException(
-        'backup_incompatible',
-        'Schema backup tidak kompatibel dengan versi aplikasi saat ini.',
-      );
-    }
-
-    if (tablesData is! Map<String, dynamic>) {
-      throw const AppException(
-        'backup_invalid',
-        'Data tabel pada file backup tidak valid.',
-      );
-    }
-
-    final generatedAt = DateTime.tryParse(generatedAtRaw?.toString() ?? '');
-    if (generatedAt == null) {
-      throw const AppException(
-        'backup_invalid',
-        'Waktu pembuatan backup tidak valid.',
-      );
-    }
-
-    final recordCounts = <String, int>{};
-    final tables = <String, List<Map<String, Object?>>>{};
-
-    for (final tableName in AppBackupService.backupTables) {
-      final tableRows = tablesData[tableName];
-      if (tableName == EmployeeCompensationHistory.table &&
-          backupSchemaVersion < 15) {
-        tables[tableName] = [];
-        recordCounts[tableName] = 0;
-        continue;
-      }
-      if (tableName == 'employees' && tableRows == null) {
-        tables[tableName] = const [];
-        recordCounts[tableName] = 0;
-        continue;
-      }
-      if (tableRows is! List) {
-        throw AppException(
-          'backup_invalid',
-          'Tabel $tableName tidak ditemukan atau tidak valid pada file backup.',
-        );
-      }
-
-      final normalizedRows = <Map<String, Object?>>[];
-      for (final row in tableRows) {
-        if (row is! Map) {
-          throw AppException(
-            'backup_invalid',
-            'Data baris pada tabel $tableName tidak valid.',
-          );
-        }
-
-        normalizedRows.add(
-          row.map(
-            (key, value) => MapEntry(key.toString(), _normalizeValue(value)),
-          ),
-        );
-      }
-
-      if (tableName == 'app_settings' &&
-          backupSchemaVersion < AppConstants.databaseVersion) {
-        for (final row in normalizedRows) {
-          row.putIfAbsent('auto_print_receipt', () => 1);
-        }
-      }
-
-      if (tableName == 'items' && backupSchemaVersion < 12) {
-        for (final row in normalizedRows) {
-          row.putIfAbsent('barcode', () => null);
-        }
-      }
-
-      if (tableName == 'sales_transactions' && backupSchemaVersion < 16) {
-        for (final row in normalizedRows) {
-          row.putIfAbsent('checkout_id', () => null);
-        }
-      }
-
-      if (backupSchemaVersion < 14) {
-        for (final row in normalizedRows) {
-          if (tableName == 'employees') {
-            row.putIfAbsent('commission_scope', () => 'all');
-          } else if (tableName == 'sales_transactions') {
-            row.putIfAbsent('commission_scope_snapshot', () => 'all');
-          }
-        }
-      }
-      if (backupSchemaVersion < 13) {
-        final defaults = switch (tableName) {
-          'sales_transactions' => <String, Object?>{
-            'employee_id': null,
-            'employee_name_snapshot': null,
-            'compensation_type_snapshot': null,
-            'commission_percent_snapshot': null,
-            'monthly_salary_snapshot': null,
-            'commission_amount': 0,
-          },
-          'expenses' => <String, Object?>{
-            'source_type': null,
-            'source_id': null,
-            'employee_id': null,
-            'period_key': null,
-          },
-          _ => <String, Object?>{},
-        };
-        for (final row in normalizedRows) {
-          for (final entry in defaults.entries) {
-            row.putIfAbsent(entry.key, () => entry.value);
-          }
-        }
-      }
-
-      tables[tableName] = normalizedRows;
-      recordCounts[tableName] = normalizedRows.length;
-    }
-
-    if (tableCountsData is! Map) {
-      throw const AppException(
-        'backup_invalid',
-        'Jumlah data tabel pada file backup tidak valid.',
-      );
-    }
-    for (final tableName in AppBackupService.backupTables) {
-      final expected = tableCountsData[tableName];
-      if (tableName == EmployeeCompensationHistory.table &&
-          backupSchemaVersion < 15) {
-        continue;
-      }
-      if (tableName == 'employees' && expected == null) {
-        continue;
-      }
-      if (expected is! num || expected.toInt() != recordCounts[tableName]) {
-        throw AppException(
-          'backup_invalid',
-          'Jumlah data tabel $tableName tidak konsisten pada file backup.',
-        );
-      }
-    }
-
-    if (backupSchemaVersion < 15) {
-      tables[EmployeeCompensationHistory.table] = [
-        for (final employee in tables['employees']!)
-          {
-            'id': employee['id'],
-            ...EmployeeCompensationHistory.snapshot(
-              employee,
-              validFrom: employee['effective_from'] as String,
-            ),
-          },
-      ];
-      recordCounts[EmployeeCompensationHistory.table] =
-          tables[EmployeeCompensationHistory.table]!.length;
-    }
+    final tables = parsed.tables;
+    final recordCounts = parsed.recordCounts;
+    final generatedAt = parsed.generatedAt;
+    final formatVersion = parsed.formatVersion;
     Uint8List? logoBytes;
     final warnings = <String>[];
     final profiles = tables['business_profile']!;
     if (formatVersion == 3) {
-      final assets = decoded['assets'];
+      final assets = parsed.assets;
       if (assets is! Map || !assets.containsKey('business_logo')) {
         throw const AppException(
           'backup_invalid',
@@ -395,6 +200,7 @@ class AppRestoreService {
       );
     }
 
+    final schemas = <String, List<Map<String, Object?>>>{};
     for (final tableName in AppBackupService.backupTables) {
       final definitions = await db.rawQuery('PRAGMA table_info($tableName)');
       if (definitions.isEmpty) {
@@ -403,77 +209,298 @@ class AppRestoreService {
           'Skema tabel $tableName tidak tersedia.',
         );
       }
-      final columns = <String, Map<String, Object?>>{
-        for (final definition in definitions)
-          definition['name'] as String: definition,
-      };
+      schemas[tableName] = definitions;
+    }
+    await _validateInWorker(tables, schemas);
+  }
+}
 
-      for (final row in tables[tableName]!) {
-        if (row.length != columns.length ||
-            row.keys.any((key) => !columns.containsKey(key))) {
-          throw AppException(
-            'backup_invalid',
-            'Kolom pada data tabel $tableName tidak sesuai skema.',
-          );
+// Only the file path and optional password cross into the worker: never capture the service,
+// database connection, logger, or Flutter image service in an isolate closure.
+typedef _ParsedBackup = ({
+  Object? assets,
+  Map<String, List<Map<String, Object?>>> tables,
+  Map<String, int> recordCounts,
+  DateTime generatedAt,
+  Object? formatVersion,
+});
+
+Future<_ParsedBackup> _readBackup(String filePath, String? password) async {
+  var decoded = await BackupInputLimits.read(
+    filePath,
+    allowEncryptedEnvelope: true,
+  );
+  if (decoded['format'] == BackupEncryption.format) {
+    // Authenticate before parsing the payload, then enforce every ordinary
+    // restore budget (depth, strings, tokens, rows) on the decrypted JSON too.
+    decoded = BackupInputLimits.decode(
+      await BackupEncryption.decrypt(decoded, password),
+    );
+  }
+  final format = decoded['format'];
+  final formatVersion = decoded['format_version'];
+  final databaseInfo = decoded['database'];
+  final schemaVersion = databaseInfo is Map<String, dynamic>
+      ? databaseInfo['schema_version']
+      : null;
+  final backupSchemaVersion = schemaVersion is num
+      ? schemaVersion.toInt()
+      : null;
+  final tablesData = decoded['tables'];
+  final tableCountsData = decoded['table_counts'];
+  final generatedAtRaw = decoded['generated_at'];
+
+  if (format != AppBackupPayloadBuilder.backupFormat ||
+      !const [
+        2,
+        AppBackupPayloadBuilder.backupFormatVersion,
+      ].contains(formatVersion)) {
+    throw const AppException(
+      'backup_incompatible',
+      'File backup tidak kompatibel dengan aplikasi ini.',
+    );
+  }
+
+  if (databaseInfo is! Map<String, dynamic> ||
+      databaseInfo['name'] != AppConstants.databaseName ||
+      backupSchemaVersion == null ||
+      backupSchemaVersion < 12 ||
+      backupSchemaVersion > AppConstants.databaseVersion) {
+    throw const AppException(
+      'backup_incompatible',
+      'Schema backup tidak kompatibel dengan versi aplikasi saat ini.',
+    );
+  }
+
+  if (tablesData is! Map<String, dynamic>) {
+    throw const AppException(
+      'backup_invalid',
+      'Data tabel pada file backup tidak valid.',
+    );
+  }
+
+  final generatedAt = DateTime.tryParse(generatedAtRaw?.toString() ?? '');
+  if (generatedAt == null ||
+      !BackupDataValidator.isValidDate(generatedAtRaw.toString())) {
+    throw const AppException(
+      'backup_invalid',
+      'Waktu pembuatan backup tidak valid.',
+    );
+  }
+
+  final recordCounts = <String, int>{};
+  final tables = <String, List<Map<String, Object?>>>{};
+
+  for (final tableName in AppBackupService.backupTables) {
+    final tableRows = tablesData[tableName];
+    if (tableName == EmployeeCompensationHistory.table &&
+        backupSchemaVersion < 15) {
+      tables[tableName] = [];
+      recordCounts[tableName] = 0;
+      continue;
+    }
+    if (tableName == 'employees' && tableRows == null) {
+      tables[tableName] = const [];
+      recordCounts[tableName] = 0;
+      continue;
+    }
+    if (tableRows is! List) {
+      throw AppException(
+        'backup_invalid',
+        'Tabel $tableName tidak ditemukan atau tidak valid pada file backup.',
+      );
+    }
+
+    final normalizedRows = <Map<String, Object?>>[];
+    for (final row in tableRows) {
+      if (row is! Map) {
+        throw AppException(
+          'backup_invalid',
+          'Data baris pada tabel $tableName tidak valid.',
+        );
+      }
+
+      normalizedRows.add(
+        row.map((key, value) => MapEntry(key.toString(), value)),
+      );
+    }
+
+    if (tableName == 'app_settings' &&
+        backupSchemaVersion < AppConstants.databaseVersion) {
+      for (final row in normalizedRows) {
+        row.putIfAbsent('auto_print_receipt', () => 1);
+      }
+    }
+
+    if (tableName == 'items' && backupSchemaVersion < 12) {
+      for (final row in normalizedRows) {
+        row.putIfAbsent('barcode', () => null);
+      }
+    }
+
+    if (tableName == 'sales_transactions' && backupSchemaVersion < 16) {
+      for (final row in normalizedRows) {
+        row.putIfAbsent('checkout_id', () => null);
+      }
+    }
+
+    if (backupSchemaVersion < 14) {
+      for (final row in normalizedRows) {
+        if (tableName == 'employees') {
+          row.putIfAbsent('commission_scope', () => 'all');
+        } else if (tableName == 'sales_transactions') {
+          row.putIfAbsent('commission_scope_snapshot', () => 'all');
         }
+      }
+    }
+    if (backupSchemaVersion < 13) {
+      final defaults = switch (tableName) {
+        'sales_transactions' => <String, Object?>{
+          'employee_id': null,
+          'employee_name_snapshot': null,
+          'compensation_type_snapshot': null,
+          'commission_percent_snapshot': null,
+          'monthly_salary_snapshot': null,
+          'commission_amount': 0,
+        },
+        'expenses' => <String, Object?>{
+          'source_type': null,
+          'source_id': null,
+          'employee_id': null,
+          'period_key': null,
+        },
+        _ => <String, Object?>{},
+      };
+      for (final row in normalizedRows) {
+        for (final entry in defaults.entries) {
+          row.putIfAbsent(entry.key, () => entry.value);
+        }
+      }
+    }
 
-        for (final entry in row.entries) {
-          final definition = columns[entry.key]!;
-          final value = entry.value;
-          final isRequired =
-              (definition['notnull'] as num).toInt() == 1 ||
-              (definition['pk'] as num).toInt() > 0;
-          if (value == null) {
-            if (isRequired) {
-              throw AppException(
-                'backup_invalid',
-                'Kolom wajib ${entry.key} pada tabel $tableName kosong.',
-              );
-            }
-            continue;
-          }
+    tables[tableName] = normalizedRows;
+    recordCounts[tableName] = normalizedRows.length;
+  }
 
-          final declaredType = (definition['type'] as String).toUpperCase();
-          final validType = _matchesSqliteType(declaredType, value);
-          if (!validType) {
+  if (tableCountsData is! Map) {
+    throw const AppException(
+      'backup_invalid',
+      'Jumlah data tabel pada file backup tidak valid.',
+    );
+  }
+  for (final tableName in AppBackupService.backupTables) {
+    final expected = tableCountsData[tableName];
+    if (tableName == EmployeeCompensationHistory.table &&
+        backupSchemaVersion < 15) {
+      continue;
+    }
+    if (tableName == 'employees' && expected == null) {
+      continue;
+    }
+    if (expected is! num || expected.toInt() != recordCounts[tableName]) {
+      throw AppException(
+        'backup_invalid',
+        'Jumlah data tabel $tableName tidak konsisten pada file backup.',
+      );
+    }
+  }
+
+  if (backupSchemaVersion < 15) {
+    tables[EmployeeCompensationHistory.table] = [
+      for (final employee in tables['employees']!)
+        {
+          'id': employee['id'],
+          ...EmployeeCompensationHistory.snapshot(
+            employee,
+            validFrom: employee['effective_from'] as String,
+          ),
+        },
+    ];
+    recordCounts[EmployeeCompensationHistory.table] =
+        tables[EmployeeCompensationHistory.table]!.length;
+  }
+
+  return (
+    assets: decoded['assets'],
+    tables: tables,
+    recordCounts: recordCounts,
+    generatedAt: generatedAt,
+    formatVersion: formatVersion,
+  );
+}
+
+Future<_ParsedBackup> _inspectInWorker(String filePath, String? password) =>
+    Isolate.run(() => _readBackup(filePath, password));
+
+Future<void> _validateInWorker(
+  Map<String, List<Map<String, Object?>>> tables,
+  Map<String, List<Map<String, Object?>>> schemas,
+) => Isolate.run(() => _validateRows(tables, schemas));
+
+void _validateRows(
+  Map<String, List<Map<String, Object?>>> tables,
+  Map<String, List<Map<String, Object?>>> schemas,
+) {
+  for (final tableName in AppBackupService.backupTables) {
+    final definitions = schemas[tableName]!;
+    final columns = <String, Map<String, Object?>>{
+      for (final definition in definitions)
+        definition['name'] as String: definition,
+    };
+
+    for (final row in tables[tableName]!) {
+      if (row.length != columns.length ||
+          row.keys.any((key) => !columns.containsKey(key))) {
+        throw AppException(
+          'backup_invalid',
+          'Kolom pada data tabel $tableName tidak sesuai skema.',
+        );
+      }
+
+      for (final entry in row.entries) {
+        final definition = columns[entry.key]!;
+        final value = entry.value;
+        final isRequired =
+            (definition['notnull'] as num).toInt() == 1 ||
+            (definition['pk'] as num).toInt() > 0;
+        if (value == null) {
+          if (isRequired) {
             throw AppException(
               'backup_invalid',
-              'Tipe nilai kolom ${entry.key} pada tabel $tableName tidak valid.',
+              'Kolom wajib ${entry.key} pada tabel $tableName kosong.',
             );
           }
+          continue;
+        }
+
+        final declaredType = (definition['type'] as String).toUpperCase();
+        final validType = _matchesSqliteType(declaredType, value);
+        if (!validType) {
+          throw AppException(
+            'backup_invalid',
+            'Tipe nilai kolom ${entry.key} pada tabel $tableName tidak valid.',
+          );
         }
       }
     }
   }
+  const BackupDataValidator().validate(tables);
+}
 
-  bool _matchesSqliteType(String declaredType, Object value) {
-    if (value is num && !value.isFinite) return false;
-    if (declaredType.contains('INT')) {
-      return value is num && value == value.toInt();
-    }
-    if (declaredType.contains('REAL') ||
-        declaredType.contains('FLOA') ||
-        declaredType.contains('DOUB')) {
-      return value is num;
-    }
-    if (declaredType.contains('CHAR') ||
-        declaredType.contains('CLOB') ||
-        declaredType.contains('TEXT')) {
-      return value is String;
-    }
-    return value is num || value is String || value is List<int>;
+bool _matchesSqliteType(String declaredType, Object value) {
+  if (value is num && !value.isFinite) return false;
+  if (declaredType.contains('INT')) {
+    return value is num && value == value.toInt();
   }
-
-  Object? _normalizeValue(Object? value) {
-    if (value is List) {
-      return value.map(_normalizeValue).toList(growable: false);
-    }
-    if (value is Map) {
-      return value.map(
-        (key, nestedValue) =>
-            MapEntry(key.toString(), _normalizeValue(nestedValue)),
-      );
-    }
-    return value;
+  if (declaredType.contains('REAL') ||
+      declaredType.contains('FLOA') ||
+      declaredType.contains('DOUB')) {
+    return value is num;
   }
+  if (declaredType.contains('CHAR') ||
+      declaredType.contains('CLOB') ||
+      declaredType.contains('TEXT')) {
+    return value is String;
+  }
+  return value is num || value is String || value is List<int>;
 }

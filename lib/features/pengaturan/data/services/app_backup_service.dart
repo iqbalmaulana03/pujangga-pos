@@ -11,6 +11,7 @@ import '../../../../core/services/business_logo_service.dart';
 import '../../domain/entities/app_backup_file.dart';
 import 'app_backup_payload_builder.dart';
 import 'backup_encryption.dart';
+import 'backup_input_limits.dart';
 
 typedef BackupDirectoryProvider = Future<Directory> Function();
 
@@ -101,6 +102,12 @@ class AppBackupService {
     final content = password == null
         ? plaintext
         : await BackupEncryption.encrypt(plaintext, password);
+    if (password != null &&
+        utf8.encode(content).length > BackupInputLimits.maxBytes) {
+      // Base64 overhead counts toward the same file budget as legacy imports.
+      // Do not report a successful export that this app cannot import.
+      BackupInputLimits.exceeded('ukuran 20 MiB');
+    }
     await file.writeAsString(content, flush: true);
 
     logger.info('Backup exported to ${file.path}');

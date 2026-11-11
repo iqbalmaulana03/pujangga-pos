@@ -1,0 +1,20 @@
+E2E_PASS: UI checkout wrote one native SQLite sale and stock=9
+E2E_METRICS: {"file":"limit-bytes.json","elapsed_ms":101,"timer_ticks":1,"max_timer_gap_ms":86,"frame_count":1,"worst_build_us":5367,"worst_raster_us":5196}
+E2E_PASS: limit-bytes rejected in UI; all tables + sequences identical; bytes=20971521
+E2E_METRICS: {"file":"limit-depth.json","elapsed_ms":232,"timer_ticks":2,"max_timer_gap_ms":219,"frame_count":1,"worst_build_us":22562,"worst_raster_us":4726}
+E2E_PASS: limit-depth rejected in UI; all tables + sequences identical; bytes=200007
+E2E_METRICS: {"file":"limit-string.json","elapsed_ms":192,"timer_ticks":1,"max_timer_gap_ms":190,"frame_count":0,"worst_build_us":0,"worst_raster_us":0}
+E2E_PASS: limit-string rejected in UI; all tables + sequences identical; bytes=65545
+E2E_METRICS: {"file":"limit-rows.json","elapsed_ms":162,"timer_ticks":3,"max_timer_gap_ms":137,"frame_count":1,"worst_build_us":1901,"worst_raster_us":8928}
+E2E_PASS: limit-rows rejected in UI; all tables + sequences identical; bytes=150021
+E2E_METRICS: {"file":"limit-complexity.json","elapsed_ms":590,"timer_ticks":40,"max_timer_gap_ms":108,"frame_count":6,"worst_build_us":60555,"worst_raster_us":7269}
+E2E_PASS: limit-complexity rejected in UI; all tables + sequences identical; bytes=2000009
+E2E_PASS: history + detail + daily report: 1 sale, revenue=10000
+E2E_METRICS: {"file":"pujangga_pos_backup_20261110102424.json","elapsed_ms":365,"timer_ticks":16,"max_timer_gap_ms":113,"frame_count":4,"worst_build_us":64002,"worst_raster_us":11463}
+E2E_PASS: tampered candidate rejected at confirmation; data unchanged
+E2E_METRICS: {"file":"valid-large.json","elapsed_ms":1972,"timer_ticks":180,"max_timer_gap_ms":51,"frame_count":11,"worst_build_us":5757,"worst_raster_us":16842}
+E2E_PASS: exact 20 MiB backup restored through UI: 5001 items, 1 sale, integrity OK, FK clean
+E2E_PASS: history + detail + daily report: 1 sale, revenue=10000
+E2E_PASS: history + detail + daily report: 1 sale, revenue=10000
+E2E_PASS: app/provider/database reopen preserved every row; history and report healthy
+E2E_PACKAGE_CHECK: main_unchanged=True, test_removed=True, shared_removed=True

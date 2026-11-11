@@ -1,0 +1,19 @@
+{
+  "source": "adb dumpsys meminfo com.pujanggapos.pujangga_pos.pr64e2e",
+  "scope": "whole debug E2E run; includes test runtime, fixture generation, picker, inspection and restore",
+  "sample_count": 237,
+  "sample_span_seconds": 128.117,
+  "pss_kib": {
+    "first": 29513,
+    "last": 432578,
+    "min": 29513,
+    "max": 523319,
+    "mean": 438253.81
+  },
+  "rss_kib": {
+    "min": 88584,
+    "max": 630160
+  },
+  "raw_samples_sha256": "d14a1a0647b72269a5cd156fb39055489067af8108b9498b57f9bd7a4110db56",
+  "raw_samples_local_path": "build/pr64-e2e/memory.json"
+}

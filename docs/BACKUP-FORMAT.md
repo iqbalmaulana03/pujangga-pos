@@ -37,7 +37,9 @@ pujangga_pos_encrypted_backup:1:AES-256-GCM:PBKDF2-HMAC-SHA256:600000
 
 Parameter dan panjang field harus sesuai versi ini sebelum KDF dijalankan. Versi
 baru harus memiliki definisi tersendiri; file tidak dapat meminta jumlah iterasi
-sewenang-wenang. Batas payload terenkripsi adalah 64 MiB sebelum Base64. KDF dan
+sewenang-wenang. Setelah integrasi batas restore #51, ukuran seluruh file tetap
+maksimal 20 MiB, termasuk overhead Base64 pada envelope terenkripsi. Ekspor
+terenkripsi yang melewati batas ini ditolak sebelum file ditulis. KDF dan
 enkripsi/dekripsi berjalan pada isolate agar tidak memblokir UI. Implementasi
 memakai paket `cryptography`, termasuk sumber acak aman dari paket tersebut.
 
@@ -46,6 +48,10 @@ Autentikasi harus berhasil sebelum payload diparsing atau database dibuka untuk
 inspeksi. Kata sandi salah dan manipulasi ciphertext/tag/salt/nonce menghasilkan
 pesan yang sama. Ekspor terenkripsi langsung menulis envelope, tanpa file polos
 sementara; kata sandi tidak dimasukkan ke envelope, state controller, atau log.
+Envelope dan plaintext yang telah diautentikasi sama-sama diperiksa di worker
+inspeksi. Batas kedalaman, kompleksitas, panjang nilai, dan jumlah baris tetap
+berlaku pada plaintext. Pengecualian panjang hanya berlaku bagi field ciphertext
+di root envelope yang formatnya sesuai, tetap di bawah anggaran ukuran file.
 
 ## Verifikasi
 
