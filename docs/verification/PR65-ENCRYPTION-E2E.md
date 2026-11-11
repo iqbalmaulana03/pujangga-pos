@@ -1,5 +1,39 @@
 # PR #65 — E2E backup terenkripsi pada Android
 
+## Verifikasi integrasi main — hasil terbaru
+
+**Lulus pada `0078311f8f15cfe81408eec841c81aaf099a9a23`: `01:50 +1: All tests passed!`, exit code 0.**
+Run perangkat 11 November 2026 15:09–15:11 WIB mengulang seluruh rangkaian di
+bawah dengan tambahan 500 kategori sintetis. Harness memastikan ciphertext
+melebihi 65.536 karakter dan seluruh tabel tujuan tetap identik setelah restore
+dan reopen. Dua Sharesheet dan pemilih dokumen native kembali terverifikasi.
+
+Revisi ini menggabungkan main `02462a8f9ef68f2a9f4701ca42bd5d6ed1bffa29`.
+Konflik layanan restore diselesaikan dengan mempertahankan worker inspeksi,
+validasi data, dan anggaran input dari #49/#51. File terenkripsi tetap dibatasi
+20 MiB termasuk Base64; ekspor yang melampaui batas ditolak sebelum penulisan.
+Hanya ciphertext di root envelope berformat sesuai mendapat pengecualian batas
+string biasa; payload setelah autentikasi diperiksa ulang dengan seluruh batas
+JSON biasa. Ini mencegah enkripsi menjadi jalan pintas bagi batas restore.
+
+Suite lokal setelah integrasi: 212 tes lulus; setelah tambahan regresi khusus
+pengecualian ciphertext, seluruh 12 tes input-budget juga lulus. Analisis Flutter
+tanpa temuan. CI `Analyze and test` pada revisi integrasi menjalankan kembali
+suite terbaru dan sukses (run `42984435082`); reviewer otomatis menyetujui revisi
+yang sama. Hasil integrasi diuji sebelum PR di-merge; tidak ada merge ke main
+atau deployment produksi dalam pekerjaan ini.
+
+Artefak lokal run ulang: `build/encryption-e2e-integrated/`. SHA-256 APK:
+`078fc9cd6f205a4176db69af8eee7f3c5e5e7f701352a9868dd7ba13c025b1ee`.
+Metadata aplikasi utama sebelum/sesudah tetap identik, direktori database uji
+dan file Downloads milik run tidak ditemukan pada inventaris ADB akhir.
+Screenshot tersamarkan serta `result.txt` pada laporan ini telah diganti dengan
+bukti run integrasi terbaru. Pemilih dokumen dari run sebelumnya kembali berada
+di depan setelah instalasi; setelah PID uji dipastikan tidak ada, paket uji
+diluncurkan melalui ADB agar runner yang menunggu dapat memulai tes.
+
+## Run awal sebelum integrasi
+
 **Hasil: lulus, `01:40 +1: All tests passed!`, exit code 0.**
 
 Pengujian selesai 11 November 2026, 14:54–14:56 WIB. Revisi kode produk yang
