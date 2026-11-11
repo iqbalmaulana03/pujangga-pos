@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/features/laporan/data/datasources/report_local_data_source.dart';
+import 'package:pujangga_pos/features/laporan/data/repositories/report_repository_impl.dart';
 import 'package:pujangga_pos/features/laporan/domain/entities/report_period.dart';
 import 'package:pujangga_pos/features/transaksi/data/datasources/transaction_local_data_source.dart';
 import 'package:pujangga_pos/features/transaksi/domain/entities/transaksi_cart_item.dart';
@@ -87,7 +88,7 @@ void main() {
       'monthly_salary': 2500000, 'effective_from': DateTime(now.year, now.month, 1).toIso8601String(),
       'created_at': nowIso, 'updated_at': nowIso,
     });
-    final source = ReportLocalDataSource(database: database);
+    final source = ReportRepositoryImpl(localDataSource: ReportLocalDataSource(database: database));
     final start = DateTime(now.year, now.month);
     final end = DateTime(now.year, now.month + 1);
     await source.getSalesReportSnapshot(period: ReportPeriod.bulanan, reference: now);
@@ -119,7 +120,7 @@ void main() {
     expect((await db.query('expenses')).single['amount'], 3000000);
     expect((await db.query('expenses')).single['employee_id'], id);
     await expectLater(repository.addExpense(amount: 1, category: 'Gaji Karyawan', date: now, employeeId: id), throwsStateError);
-    await ReportLocalDataSource(database: database).getSalesReportSnapshot(period: ReportPeriod.bulanan, reference: now);
+    await ReportRepositoryImpl(localDataSource: ReportLocalDataSource(database: database)).getSalesReportSnapshot(period: ReportPeriod.bulanan, reference: now);
     expect(await db.query('expenses'), hasLength(1));
     await expectLater(repository.addExpense(amount: 1, category: 'Gaji Karyawan', date: now), throwsArgumentError);
   });

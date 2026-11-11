@@ -106,7 +106,7 @@ void main() {
         backupDirectoryProvider: () async =>
             Directory(path.join(directory.path, 'b')),
       );
-      final datasetB = await backup.createBackup();
+      final datasetB = await backup.createBackup(password: null);
       final fixtureDb = await fixture.database();
       await fixtureDb.delete('employee_compensation_periods');
       await fixtureDb.delete('employees');
@@ -116,7 +116,7 @@ void main() {
         backupDirectoryProvider: () async =>
             Directory(path.join(directory.path, 'empty')),
       );
-      final datasetEmpty = await emptyBackup.createBackup();
+      final datasetEmpty = await emptyBackup.createBackup(password: null);
       final picker = _FixturePicker();
       late ProviderContainer container;
       addTearDown(() async {

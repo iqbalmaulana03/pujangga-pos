@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/features/laporan/data/datasources/report_local_data_source.dart';
+import 'package:pujangga_pos/features/laporan/data/repositories/report_repository_impl.dart';
 import 'package:pujangga_pos/features/laporan/domain/entities/report_period.dart';
 import 'package:pujangga_pos/features/pengeluaran/data/repositories/expense_repository.dart';
 import 'package:pujangga_pos/features/riwayat/data/datasources/riwayat_local_data_source.dart';
@@ -109,7 +110,9 @@ void main() {
         category: 'Operasional',
         date: day.subtract(const Duration(days: 1)),
       );
-      final reports = ReportLocalDataSource(database: database);
+      final reports = ReportRepositoryImpl(
+        localDataSource: ReportLocalDataSource(database: database),
+      );
       // Home must work before any monthly report or expense list has been opened.
       final home = await reports.getDashboardSummary(reference: now);
       expect(home.marginToday, 100000); // 200k - 20k discounts - 80k COGS
@@ -201,7 +204,9 @@ void main() {
       await ExpenseRepository(
         database: database,
       ).addExpense(amount: 10000, category: 'Operasional', date: now);
-      final reports = ReportLocalDataSource(database: database);
+      final reports = ReportRepositoryImpl(
+        localDataSource: ReportLocalDataSource(database: database),
+      );
       final home = await reports.getDashboardSummary(reference: now);
       final report = await reports.getSalesReportSnapshot(
         period: ReportPeriod.harian,

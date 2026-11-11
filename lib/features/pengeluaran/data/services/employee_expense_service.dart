@@ -13,21 +13,38 @@ class EmployeeExpenseService {
   final AppDatabase database;
   final DateTime Function() now;
 
-  Future<void> ensureMonthlySalaries(DateTime start, DateTime end) async {
+  /// Reconcile all liabilities due now, regardless of the requested report.
+  /// Seed legacy history and accrue every effective month in one transaction.
+  Future<void> reconcile() async {
+    final reference = now();
     final db = await database.database();
-    await db.transaction((txn) => _ensureMonthlySalaries(txn, start, end));
+    await db.transaction((txn) async {
+      await EmployeeCompensationHistory.seedMissing(txn);
+      final rows = await txn.rawQuery('''
+        SELECT MIN(valid_from) AS first_period
+        FROM ${EmployeeCompensationHistory.table}
+        WHERE is_active = 1 AND compensation_type = 'monthly_salary'
+      ''');
+      final first = rows.single['first_period'] as String?;
+      if (first == null) return;
+      await _ensureMonthlySalaries(
+        txn,
+        DateTime.parse(first),
+        DateTime(reference.year, reference.month + 1),
+        reference,
+      );
+    });
   }
 
   Future<void> _ensureMonthlySalaries(
     DatabaseExecutor db,
     DateTime start,
     DateTime end,
+    DateTime currentTime,
   ) async {
-    await EmployeeCompensationHistory.seedMissing(db);
     final employees = await db.rawQuery(
       'SELECT DISTINCT employee_id FROM ${EmployeeCompensationHistory.table}',
     );
-    final currentTime = now();
     var cursor = DateTime(start.year, start.month);
     while (cursor.isBefore(end) && !cursor.isAfter(currentTime)) {
       final period =

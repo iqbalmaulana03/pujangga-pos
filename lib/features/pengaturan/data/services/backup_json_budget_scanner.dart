@@ -4,9 +4,10 @@ part of 'backup_input_limits.dart';
 /// are decoded to recognize tables and logo paths, including escaped keys.
 /// The standard decoder remains responsible for final JSON validation.
 class _BackupJsonBudgetScanner {
-  _BackupJsonBudgetScanner(this.raw);
+  _BackupJsonBudgetScanner(this.raw, {this.allowEncryptedEnvelope = false});
 
   final String raw;
+  final bool allowEncryptedEnvelope;
   var offset = 0;
   var units = 0;
   var rows = 0;
@@ -72,8 +73,12 @@ class _BackupJsonBudgetScanner {
           path[0] == 'assets' &&
           path[1] == 'business_logo' &&
           path[2] == 'data_base64';
+      final ciphertext =
+          allowEncryptedEnvelope && path.length == 1 && path[0] == 'ciphertext';
       _string(
-        logo
+        ciphertext
+            ? BackupInputLimits.maxBytes
+            : logo
             ? BackupInputLimits.maxLogoLength
             : BackupInputLimits.maxStringLength,
       );

@@ -1,5 +1,4 @@
 import '../../../../core/database/app_database.dart';
-import '../../../pengeluaran/data/services/employee_expense_service.dart';
 import '../../domain/entities/dashboard_summary.dart';
 import '../../domain/entities/item_sales_summary.dart';
 import '../../domain/entities/report_period.dart';
@@ -154,9 +153,6 @@ class ReportLocalDataSource {
 
   Future<DashboardSummary> getDashboardSummary({DateTime? reference}) async {
     final range = ReportPeriod.harian.resolveRange(reference);
-    await EmployeeExpenseService(
-      database: database,
-    ).ensureMonthlySalaries(range.start, range.endExclusive);
     final revenue = await getRevenueForRange(range.start, range.endExclusive);
     final previousDayStart = range.start.subtract(const Duration(days: 1));
     final previousDayRevenue = await getRevenueForRange(
@@ -242,9 +238,6 @@ class ReportLocalDataSource {
     ReportRange? customRange,
   }) async {
     final range = customRange ?? period.resolveRange(reference);
-    await EmployeeExpenseService(
-      database: database,
-    ).ensureMonthlySalaries(range.start, range.endExclusive);
     final revenue = await getRevenueForRange(range.start, range.endExclusive);
     final transactionCount = await getTransactionCountForRange(
       range.start,

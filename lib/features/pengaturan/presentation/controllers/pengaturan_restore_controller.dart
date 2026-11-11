@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/services/dataset_generation.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../data/services/app_restore_service.dart';
 import '../../data/services/backup_file_picker_service.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
@@ -35,7 +36,9 @@ class PengaturanRestoreController
   @override
   Future<AppBackupRestoreCandidate?> build() async => null;
 
-  Future<AppBackupRestoreCandidate?> pickBackupFile() async {
+  Future<AppBackupRestoreCandidate?> pickBackupFile({
+    Future<String?> Function()? requestPassword,
+  }) async {
     state = const AsyncLoading();
 
     try {
@@ -47,9 +50,22 @@ class PengaturanRestoreController
         return null;
       }
 
-      final candidate = await ref
-          .read(appRestoreServiceProvider)
-          .inspectBackupFile(path);
+      final service = ref.read(appRestoreServiceProvider);
+      AppBackupRestoreCandidate candidate;
+      try {
+        candidate = await service.inspectBackupFile(path);
+      } on AppException catch (error) {
+        if (error.code != 'backup_password_required' ||
+            requestPassword == null) {
+          rethrow;
+        }
+        final password = await requestPassword();
+        if (password == null) {
+          state = const AsyncData(null);
+          return null;
+        }
+        candidate = await service.inspectBackupFile(path, password: password);
+      }
       state = AsyncData(candidate);
       return candidate;
     } catch (error, stackTrace) {
