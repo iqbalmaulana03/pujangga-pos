@@ -121,6 +121,57 @@ void main() {
     expect(repository.requests, isEmpty);
   });
 
+  for (final wide in [false, true]) {
+    testWidgets('cash checkout remains reachable with keyboard (wide=$wide)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = Size(wide ? 1400 : 480, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      final controller = container.read(transaksiControllerProvider.notifier);
+      controller.addItem(item);
+      controller.updateItemDiscount(item.id, 1000);
+      controller.updateOrderDiscount(1000);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: Scaffold(body: TransaksiPage())),
+        ),
+      );
+      await tester.pumpAndSettle();
+      if (!wide) {
+        await tester.tap(find.text('Keranjang'));
+        await tester.pumpAndSettle();
+      }
+      expect(tester.takeException(), isNull);
+      // Model a real software keyboard constraining the viewport. Checkout and
+      // item controls must remain reachable without hiding render exceptions.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 350);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final pay = find.text('Proses Pembayaran');
+      await tester.ensureVisible(pay);
+      await tester.pumpAndSettle();
+      expect(pay.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('Uang Pas'));
+      await tester.tap(find.text('Uang Pas'));
+      await tester.pumpAndSettle();
+      expect(
+        container.read(transaksiControllerProvider).requireValue.canSubmit,
+        isTrue,
+      );
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byIcon(Icons.percent).last);
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.percent).last.hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets('mobile checkout closes its cart route only once during refresh', (
     tester,
   ) async {

@@ -884,57 +884,64 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
   }) {
     return Container(
       color: Colors.white,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      // Share the sheet's scroll controller across items and checkout. A fixed
+      // checkout panel can exceed the viewport while the keyboard is visible.
+      child: CustomScrollView(
+        controller: scrollController,
+        slivers: [
           // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Keranjang Transaksi',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF191C1C),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Keranjang Transaksi',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF191C1C),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Pelanggan Walk-in',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        color: const Color(0xFF3F4947).withValues(alpha: 0.8),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Pelanggan Walk-in',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: const Color(0xFF3F4947).withValues(alpha: 0.8),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                IconButton(
-                  onPressed: () {
-                    ref.read(transaksiControllerProvider.notifier).clearCart();
-                  },
-                  tooltip: 'Hapus Semua',
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    color: Color(0xFFBA1A1A),
+                    ],
                   ),
-                ),
-              ],
+                  IconButton(
+                    onPressed: () {
+                      ref
+                          .read(transaksiControllerProvider.notifier)
+                          .clearCart();
+                    },
+                    tooltip: 'Hapus Semua',
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: Color(0xFFBA1A1A),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE1E3E1)),
+          const SliverToBoxAdapter(
+            child: Divider(height: 1, thickness: 1, color: Color(0xFFE1E3E1)),
+          ),
           // Items List
-          Expanded(
-            child: ListView.builder(
-              controller: scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverList.builder(
               itemCount: state.cartItems.length,
               itemBuilder: (context, index) {
                 final cartItem = state.cartItems[index];
@@ -951,11 +958,18 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               },
             ),
           ),
-          // calculations & checkout panel
-          _buildCartCheckoutSummary(
-            state,
-            isBottomSheet: isBottomSheet,
-            bottomSheetContext: bottomSheetContext,
+          // Keep checkout at the bottom when there is room; let it scroll with
+          // the items when cash fields, discounts, or the keyboard need space.
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: _buildCartCheckoutSummary(
+                state,
+                isBottomSheet: isBottomSheet,
+                bottomSheetContext: bottomSheetContext,
+              ),
+            ),
           ),
         ],
       ),
@@ -1147,6 +1161,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Calculations rows
