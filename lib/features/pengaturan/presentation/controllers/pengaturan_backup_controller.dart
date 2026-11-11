@@ -23,11 +23,13 @@ class PengaturanBackupController extends AsyncNotifier<AppBackupFile?> {
   @override
   Future<AppBackupFile?> build() async => null;
 
-  Future<AppBackupFile> createBackup() async {
+  Future<AppBackupFile> createBackup({required String? password}) async {
     state = const AsyncLoading();
 
     try {
-      final backup = await ref.read(appBackupServiceProvider).createBackup();
+      final backup = await ref
+          .read(appBackupServiceProvider)
+          .createBackup(password: password);
       state = AsyncData(backup);
       return backup;
     } catch (error, stackTrace) {

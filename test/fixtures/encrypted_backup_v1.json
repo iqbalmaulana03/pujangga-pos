@@ -1,0 +1,11 @@
+{
+  "format": "pujangga_pos_encrypted_backup",
+  "format_version": 1,
+  "cipher": "AES-256-GCM",
+  "kdf": "PBKDF2-HMAC-SHA256",
+  "iterations": 600000,
+  "salt": "AAECAwQFBgcICQoLDA0ODw==",
+  "nonce": "AAECAwQFBgcICQoL",
+  "ciphertext": "aiqIa1ugpi1TcdT0vbpJ6GME8B7aUIgnVc4HFLc=",
+  "tag": "QxdpuMAQTto/gW4gstNFjQ=="
+}

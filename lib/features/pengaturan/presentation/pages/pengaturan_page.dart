@@ -19,6 +19,7 @@ import '../controllers/pengaturan_reset_controller.dart';
 import '../controllers/pengaturan_restore_controller.dart';
 import '../controllers/pengaturan_sales_report_export_controller.dart';
 import '../controllers/pengaturan_settings_controller.dart';
+import '../widgets/backup_password_dialog.dart';
 
 class PengaturanPage extends ConsumerStatefulWidget {
   const PengaturanPage({super.key});
@@ -110,12 +111,17 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   }
 
   Future<void> _handleCreateBackup() async {
+    final protection = await showDialog<BackupProtection>(
+      context: context,
+      builder: (_) => const BackupPasswordDialog(creating: true),
+    );
+    if (!mounted || protection == null) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     try {
       final backup = await ref
           .read(pengaturanBackupControllerProvider.notifier)
-          .createBackup();
+          .createBackup(password: protection.password);
 
       if (!mounted) {
         return;
@@ -227,7 +233,16 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     try {
       final candidate = await ref
           .read(pengaturanRestoreControllerProvider.notifier)
-          .pickBackupFile();
+          .pickBackupFile(
+            requestPassword: () async {
+              if (!mounted) return null;
+              final protection = await showDialog<BackupProtection>(
+                context: context,
+                builder: (_) => const BackupPasswordDialog(creating: false),
+              );
+              return protection?.password;
+            },
+          );
 
       if (!mounted || candidate == null) {
         return;

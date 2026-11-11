@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import '../../../../core/errors/app_exception.dart';
+import 'backup_encryption.dart';
 
 part 'backup_json_budget_scanner.dart';
 
@@ -24,7 +25,10 @@ abstract final class BackupInputLimits {
 
   /// Called only inside the inspection worker. Both stat and the bounded read
   /// are necessary: the file can grow after stat completes.
-  static Future<Map<String, dynamic>> read(String filePath) async {
+  static Future<Map<String, dynamic>> read(
+    String filePath, {
+    bool allowEncryptedEnvelope = false,
+  }) async {
     final file = File(filePath);
     if (!await file.exists()) {
       throw const AppException(
@@ -39,11 +43,37 @@ abstract final class BackupInputLimits {
       bytes.add(chunk);
     }
     try {
-      final raw = utf8.decode(bytes.takeBytes());
-      _BackupJsonBudgetScanner(raw).scan();
+      return decode(
+        utf8.decode(bytes.takeBytes()),
+        allowEncryptedEnvelope: allowEncryptedEnvelope,
+      );
+    } on FormatException {
+      throw const AppException(
+        'backup_invalid',
+        'Format file backup tidak valid.',
+      );
+    }
+  }
+
+  /// Also used for authenticated plaintext; never bypass the JSON budgets.
+  static Map<String, dynamic> decode(
+    String raw, {
+    bool allowEncryptedEnvelope = false,
+  }) {
+    if (utf8.encode(raw).length > maxBytes) exceeded('ukuran 20 MiB');
+    try {
+      _BackupJsonBudgetScanner(
+        raw,
+        allowEncryptedEnvelope: allowEncryptedEnvelope,
+      ).scan();
       final decoded = jsonDecode(raw);
       if (decoded is! Map<String, dynamic>) {
         throw const FormatException();
+      }
+      if (allowEncryptedEnvelope &&
+          decoded['format'] != BackupEncryption.format) {
+        // A legacy/unknown format must not borrow the ciphertext exception.
+        _BackupJsonBudgetScanner(raw).scan();
       }
       return decoded;
     } on FormatException {

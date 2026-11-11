@@ -233,7 +233,7 @@ void main() {
     // so a real checkout from the UI reaches the SQLite queue between tables.
     final concurrentBackup = container
         .read(pengaturanBackupControllerProvider.notifier)
-        .createBackup();
+        .createBackup(password: null);
     await waitFor(() => readReached.isCompleted, 'backup read items');
     armSale = true;
     await tester.tap(find.text('Proses Pembayaran'));

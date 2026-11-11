@@ -17,6 +17,7 @@ import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'app_backup_payload_builder.dart';
 import 'app_backup_service.dart';
 import 'backup_data_validator.dart';
+import 'backup_encryption.dart';
 import 'backup_input_limits.dart';
 
 class AppRestoreService {
@@ -30,8 +31,11 @@ class AppRestoreService {
   final Logger logger;
   final BusinessLogoService? logoService;
 
-  Future<AppBackupRestoreCandidate> inspectBackupFile(String filePath) async {
-    final parsed = await _inspectInWorker(filePath);
+  Future<AppBackupRestoreCandidate> inspectBackupFile(
+    String filePath, {
+    String? password,
+  }) async {
+    final parsed = await _inspectInWorker(filePath, password);
     final file = File(filePath);
     final tables = parsed.tables;
     final recordCounts = parsed.recordCounts;
@@ -211,7 +215,7 @@ class AppRestoreService {
   }
 }
 
-// Only the file path crosses into the worker: never capture the service,
+// Only the file path and optional password cross into the worker: never capture the service,
 // database connection, logger, or Flutter image service in an isolate closure.
 typedef _ParsedBackup = ({
   Object? assets,
@@ -221,8 +225,18 @@ typedef _ParsedBackup = ({
   Object? formatVersion,
 });
 
-Future<_ParsedBackup> _readBackup(String filePath) async {
-  final decoded = await BackupInputLimits.read(filePath);
+Future<_ParsedBackup> _readBackup(String filePath, String? password) async {
+  var decoded = await BackupInputLimits.read(
+    filePath,
+    allowEncryptedEnvelope: true,
+  );
+  if (decoded['format'] == BackupEncryption.format) {
+    // Authenticate before parsing the payload, then enforce every ordinary
+    // restore budget (depth, strings, tokens, rows) on the decrypted JSON too.
+    decoded = BackupInputLimits.decode(
+      await BackupEncryption.decrypt(decoded, password),
+    );
+  }
   final format = decoded['format'];
   final formatVersion = decoded['format_version'];
   final databaseInfo = decoded['database'];
@@ -415,8 +429,8 @@ Future<_ParsedBackup> _readBackup(String filePath) async {
   );
 }
 
-Future<_ParsedBackup> _inspectInWorker(String filePath) =>
-    Isolate.run(() => _readBackup(filePath));
+Future<_ParsedBackup> _inspectInWorker(String filePath, String? password) =>
+    Isolate.run(() => _readBackup(filePath, password));
 
 Future<void> _validateInWorker(
   Map<String, List<Map<String, Object?>>> tables,

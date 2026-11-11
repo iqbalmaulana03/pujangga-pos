@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_input_limits.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/backup_encryption.dart';
 
 void main() {
   late Directory directory;
@@ -74,6 +75,38 @@ void main() {
     );
     await expectLater(BackupInputLimits.read(file.path), limitError);
   });
+
+  test(
+    'only an encrypted root ciphertext receives the bounded string exception',
+    () async {
+      final large = 'a' * (BackupInputLimits.maxStringLength + 1);
+      await file.writeAsString(
+        jsonEncode({'format': BackupEncryption.format, 'ciphertext': large}),
+      );
+      expect(
+        await BackupInputLimits.read(file.path, allowEncryptedEnvelope: true),
+        contains('ciphertext'),
+      );
+      await expectLater(BackupInputLimits.read(file.path), limitError);
+      await file.writeAsString(
+        jsonEncode({'format': 'pujangga_pos_backup', 'ciphertext': large}),
+      );
+      await expectLater(
+        BackupInputLimits.read(file.path, allowEncryptedEnvelope: true),
+        limitError,
+      );
+      await file.writeAsString(
+        jsonEncode({
+          'format': BackupEncryption.format,
+          'nested': {'ciphertext': large},
+        }),
+      );
+      await expectLater(
+        BackupInputLimits.read(file.path, allowEncryptedEnvelope: true),
+        limitError,
+      );
+    },
+  );
 
   test('logo exception preserves the existing base64 allowance', () async {
     final logo = 'A' * BackupInputLimits.maxLogoLength;
