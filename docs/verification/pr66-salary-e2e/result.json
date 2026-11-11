@@ -1,5 +1,5 @@
 {
-  "source_revision": "c284c89892a4d7f2317cea24cfa643e57efc72e5",
+  "source_revision": "da57e860838bbf738e0e3c525c8318de528a8e00",
   "package": "com.pujanggapos.pujangga_pos.pr66e2e",
   "android": "13",
   "model": "2201116TG",
@@ -22,7 +22,7 @@
   ],
   "apk_identity": "package: name='com.pujanggapos.pujangga_pos.pr66e2e' versionCode='6' versionName='1.2.5-debug' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
   "exit_code": 0,
-  "apk_sha256": "bf2295c361e076a8bd805a8bd1e6deb83cf0d66c3a28986f82458093f45bbdaa",
+  "apk_sha256": "cfffcfae887dd2eb6d5379e4d35314eede4829508a5511d9c32bee10ae6b03bd",
   "test_package_removed": true,
   "protected_package_paths_unchanged": true
 }

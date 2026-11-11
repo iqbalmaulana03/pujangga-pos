@@ -5,16 +5,19 @@ Hasil: **LULUS**, 11 November 2026. Tiga skenario Android selesai dengan
 
 ## Revisi, perangkat, dan isolasi
 
-- Implementasi yang diuji: `c284c89892a4d7f2317cea24cfa643e57efc72e5`.
-  Tambahan harness hanya mencakup integration test, runner, dan suffix paket debug;
-  kode bisnis `lib/` tidak diubah untuk E2E.
+- Revisi integrasi yang diuji: `da57e860838bbf738e0e3c525c8318de528a8e00`,
+  setelah sinkronisasi `main` pada `e5d2b601a5f7a327f3bb0494351cb2432e19c77e`.
+  Perbaikan gaji berasal dari `c284c89892a4d7f2317cea24cfa643e57efc72e5`;
+  harness berasal dari `7dff5c3035dcadb9f696b103a44d9c0f0cf2226e`.
+  Konflik integrasi hanya pada suffix paket E2E Gradle; kedua suffix `.pr65e2e`
+  dan `.pr66e2e` dipertahankan. Kode bisnis tidak diubah untuk kebutuhan harness.
 - Redmi 2201116TG, Android 13; Flutter 3.47.9 / Dart 3.13.7 / Java 17;
-  APK debug arm64. Run sukses berlangsung sekitar 2 menit 36 detik setelah instalasi.
+  APK debug arm64. Run integrasi sukses berlangsung sekitar 2 menit 35 detik setelah instalasi.
 - Paket `com.pujanggapos.pujangga_pos.pr66e2e` diverifikasi dari manifest APK
   sebelum instalasi. Runner menolak paket tes yang sudah ada dan menonaktifkan
   uninstall otomatis Flutter.
 - SHA-256 APK yang diuji:
-  `bf2295c361e076a8bd805a8bd1e6deb83cf0d66c3a28986f82458093f45bbdaa`.
+  `cfffcfae887dd2eb6d5379e4d35314eede4829508a5511d9c32bee10ae6b03bd`.
 - Setiap skenario memakai file SQLite baru di cache paket khusus. Path efektif
   diverifikasi dengan `PRAGMA database_list` sebelum fixture sintetis ditulis.
 - Sesudah run, ketiga database dihapus, paket tes di-uninstall, dan path APK
@@ -74,6 +77,12 @@ Percobaan pertama berhenti pada kesalahan harness: tombol konfirmasi dialog
 tanggal mode input adalah `OK`, bukan `Save`. Setelah finder diperbaiki, ketiga
 skenario diulang dari database kosong dan semuanya lulus. Tidak ada perubahan
 logika aplikasi untuk mendapatkan hasil sukses.
+
+Run penuh pada revisi awal PR juga lulus. Ketika `main` kemudian menerima
+perubahan backup terenkripsi, branch disinkronkan dan seluruh E2E diulang dari
+database kosong pada revisi integrasi di atas; bukti tersimpan adalah run terakhir.
+[CI analisis dan tes pada revisi integrasi](https://github.com/iqbalmaulana03/pujangga-pos/actions/runs/42987963241)
+juga sukses, dan analisis Dart lokal tanpa temuan.
 
 ## Bukti dan jalankan ulang
 
