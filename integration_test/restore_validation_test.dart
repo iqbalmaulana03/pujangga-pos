@@ -281,7 +281,7 @@ void main() {
       logger: Logger('PR62'),
       backupDirectoryProvider: () async =>
           Directory(path.join(directory.path, 'backup')),
-    ).createBackup();
+    ).createBackup(password: null);
     final raw = await File(backup.filePath).readAsString();
     final originalDate =
         (jsonDecode(raw)['tables']['sales_transactions'] as List)

@@ -44,6 +44,7 @@ dependencies:
   share_plus: ^11.1.0
   sqflite: ^2.4.3
   fl_chart: ^1.2.0
+  cryptography: ^2.9.0
 
 dev_dependencies:
   integration_test:
