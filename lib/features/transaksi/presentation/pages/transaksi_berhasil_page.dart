@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
 import '../controllers/transaksi_controller.dart';
+import '../controllers/receipt_share_controller.dart';
 
 class TransaksiBerhasilPage extends ConsumerWidget {
   const TransaksiBerhasilPage({required this.invoiceNumber, super.key});
@@ -16,6 +18,7 @@ class TransaksiBerhasilPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final receiptAsync = ref.watch(transaksiReceiptProvider(invoiceNumber));
+    final isSharing = ref.watch(receiptShareControllerProvider);
 
     void startNewTransaction() {
       // Re-enter through a fresh catalog load, including after a failed refresh.
@@ -327,7 +330,9 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                               onTap: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Mencetak struk...'),
+                                    content: Text(
+                                      'Cetak struk belum tersedia. Gunakan Bagikan Struk untuk mengirim bukti pembayaran.',
+                                    ),
                                   ),
                                 );
                               },
@@ -353,13 +358,40 @@ class TransaksiBerhasilPage extends ConsumerWidget {
                             ),
                             const SizedBox(width: 48),
                             GestureDetector(
-                              onTap: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Membagikan struk...'),
-                                  ),
-                                );
-                              },
+                              onTap: isSharing
+                                  ? null
+                                  : () async {
+                                      try {
+                                        final result = await ref
+                                            .read(
+                                              receiptShareControllerProvider
+                                                  .notifier,
+                                            )
+                                            .share(invoiceNumber);
+                                        if (!context.mounted) return;
+                                        if (result?.status ==
+                                            ShareResultStatus.unavailable) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Status berbagi tidak tersedia. Silakan periksa aplikasi tujuan.',
+                                                  ),
+                                                ),
+                                              );
+                                        }
+                                      } catch (_) {
+                                        if (!context.mounted) return;
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Gagal membagikan struk. Silakan coba lagi.',
+                                                ),
+                                              ),
+                                            );
+                                      }
+                                    },
                               child: Row(
                                 children: const [
                                   Icon(

@@ -68,3 +68,19 @@ Screenshot Android sintetis yang diperiksa:
 ![Manajemen data lokal](issue56-settings.png)
 
 ![Konfirmasi reset](issue56-reset.png)
+
+## Verifikasi setelah integrasi main (#55)
+
+`main` pada `8fbeef142bb688d460974c8101f360aff08eb100` digabungkan ke branch
+PR #69. Konflik hanya pada `applicationIdSuffix` di Gradle; kedua pilihan paket
+`PUJANGGA_RECOVERY_E2E` (`.issue56e2e`) dan `PUJANGGA_RECEIPT_E2E`
+(`.issue55e2e`) dipertahankan.
+
+- Analyzer dengan `--fatal-infos` lulus.
+- 23 tes regresi pemulihan, penggantian dataset, reset, serta berbagi struk lulus
+  pada database sementara atau boundary berbagi yang diganti khusus tes.
+- APK debug target `integration_test/recovery_backup_test.dart` berhasil dibangun
+  dengan `PUJANGGA_RECOVERY_E2E=1`.
+- E2E pada perangkat belum diulang setelah integrasi ini karena perangkat Android
+  yang sebelumnya digunakan tidak sedang terhubung. Bukti E2E di atas berasal
+  dari revisi sebelum integrasi; hasil build bukan bukti eksekusi perangkat.
