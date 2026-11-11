@@ -57,7 +57,7 @@ void main() {
     ]) {
       clock = date;
       if (readBeforeEdit && id != null) {
-        await salaries.ensureMonthlySalaries(DateTime(2026), clock);
+        await salaries.reconcile();
       }
       await employees.save(
         id: id,
@@ -71,7 +71,7 @@ void main() {
       id ??= (await employees.getEmployees()).single.id;
     }
     clock = DateTime(2026, 9, 30, 23);
-    await salaries.ensureMonthlySalaries(DateTime(2026), DateTime(2026, 10));
+    await salaries.reconcile();
     return (await database.database()).query(
       'expenses',
       columns: ['period_key', 'amount', 'expense_date'],
@@ -100,10 +100,7 @@ void main() {
           'expenses',
           orderBy: 'period_key',
         );
-        await salaries.ensureMonthlySalaries(
-          DateTime(2026),
-          DateTime(2026, 10),
-        );
+        await salaries.reconcile();
         expect(
           await (await database.database()).query(
             'expenses',
@@ -176,10 +173,7 @@ void main() {
         database: database,
         now: () => DateTime(2026, 10, 2),
       );
-      await salaries.ensureMonthlySalaries(
-        DateTime(2026, 10),
-        DateTime(2026, 11),
-      );
+      await salaries.reconcile();
       final october = await (await database.database()).query(
         'expenses',
         where: 'period_key = ?',
@@ -225,11 +219,12 @@ void main() {
         employeeId: employee.id,
       );
       clock = DateTime(2026, 2, 20);
-      await salaries.ensureMonthlySalaries(
-        DateTime(2026, 2),
-        DateTime(2026, 3),
+      await salaries.reconcile();
+      final rows = await (await database.database()).query(
+        'expenses',
+        where: 'period_key = ?',
+        whereArgs: ['2026-02'],
       );
-      final rows = await (await database.database()).query('expenses');
       expect(rows, hasLength(1));
       expect(rows.single['amount'], 3000000);
       expect(rows.single['expense_date'], DateTime(2026, 2).toIso8601String());

@@ -10,9 +10,10 @@ final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
 });
 
 class ExpenseRepository {
-  const ExpenseRepository({required this.database});
+  const ExpenseRepository({required this.database, this.now = DateTime.now});
 
   final AppDatabase database;
+  final DateTime Function() now;
 
   Future<double?> salaryForMonth(int employeeId, DateTime month) async {
     final db = await database.database();
@@ -111,7 +112,8 @@ class ExpenseRepository {
   ) async {
     await EmployeeExpenseService(
       database: database,
-    ).ensureMonthlySalaries(start, end);
+      now: now,
+    ).reconcile();
     final db = await database.database();
     return db.query(
       'expenses',
