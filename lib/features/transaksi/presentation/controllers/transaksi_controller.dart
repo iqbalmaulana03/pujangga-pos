@@ -208,7 +208,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         current,
         cartItems: [],
         orderDiscountAmount: 0,
-        taxAmount: 0,
+        taxMode: TaxMode.automatic,
         cashPaidAmount: 0,
       ),
     );
@@ -249,7 +249,19 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       return;
     }
 
-    state = AsyncData(_buildState(current, taxAmount: value < 0 ? 0 : value));
+    state = AsyncData(
+      _buildState(
+        current,
+        taxAmount: value < 0 ? 0 : value,
+        taxMode: TaxMode.manual,
+      ),
+    );
+  }
+
+  void useAutomaticTax() {
+    final current = _currentState;
+    if (current == null) return;
+    state = AsyncData(_buildState(current, taxMode: TaxMode.automatic));
   }
 
   void updatePaymentMethod(String paymentMethod) {
@@ -436,37 +448,41 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     String? typeFilter,
     double? orderDiscountAmount,
     double? taxAmount,
+    TaxMode? taxMode,
     String? paymentMethod,
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
   }) {
-    double? calculatedTax = taxAmount;
-    if (calculatedTax == null && cartItems != null) {
-      final subtotal = cartItems.fold<double>(0, (t, i) => t + i.lineSubtotal);
-      final discount = cartItems.fold<double>(
-        0,
-        (t, i) => t + i.itemDiscountAmount,
-      );
-      final settings = ref.read(appSettingsProvider).asData?.value;
-      final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
-      calculatedTax = CurrencyFormatter.round(
-        (subtotal - discount) * (taxRatePercent / 100.0),
-        currencyCode: settings?.currencyCode ?? 'IDR',
-      );
-    }
-
-    final nextState = current.copyWith(
+    var nextState = current.copyWith(
       catalogItems: catalogItems,
       cartItems: cartItems,
       searchQuery: searchQuery,
       typeFilter: typeFilter,
       orderDiscountAmount: orderDiscountAmount,
-      taxAmount: calculatedTax ?? current.taxAmount,
+      taxAmount: taxAmount,
+      taxMode: taxMode,
       paymentMethod: paymentMethod,
       cashPaidAmount: cashPaidAmount,
       resetCashPaidAmount: resetCashPaidAmount,
       isSubmitting: current.isSubmitting,
     );
+
+    if (nextState.taxMode == TaxMode.automatic &&
+        (cartItems != null || orderDiscountAmount != null || taxMode != null)) {
+      final settings = ref.read(appSettingsProvider).asData?.value;
+      final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
+      final taxableAmount =
+          (nextState.subtotalAmount -
+                  nextState.itemDiscountAmount -
+                  nextState.orderDiscountAmount)
+              .clamp(0.0, double.infinity);
+      nextState = nextState.copyWith(
+        taxAmount: CurrencyFormatter.round(
+          taxableAmount * (taxRatePercent / 100.0),
+          currencyCode: settings?.currencyCode ?? 'IDR',
+        ),
+      );
+    }
 
     final normalizedQuery = nextState.searchQuery.trim().toLowerCase();
     final filteredItems = nextState.catalogItems.where((item) {

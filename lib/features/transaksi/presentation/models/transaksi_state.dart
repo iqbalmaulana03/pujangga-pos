@@ -1,6 +1,8 @@
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
 
+enum TaxMode { automatic, manual }
+
 class TransaksiState {
   const TransaksiState({
     this.catalogItems = const [],
@@ -11,6 +13,7 @@ class TransaksiState {
     this.paymentMethod = 'tunai',
     this.orderDiscountAmount = 0,
     this.taxAmount = 0,
+    this.taxMode = TaxMode.automatic,
     this.cashPaidAmount,
     this.isSubmitting = false,
     this.catalogRefreshFailed = false,
@@ -26,6 +29,7 @@ class TransaksiState {
   final String paymentMethod;
   final double orderDiscountAmount;
   final double taxAmount;
+  final TaxMode taxMode;
   final double? cashPaidAmount;
   final bool isSubmitting;
   final bool catalogRefreshFailed;
@@ -68,6 +72,7 @@ class TransaksiState {
     String? paymentMethod,
     double? orderDiscountAmount,
     double? taxAmount,
+    TaxMode? taxMode,
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
     bool? isSubmitting,
@@ -85,6 +90,7 @@ class TransaksiState {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       orderDiscountAmount: orderDiscountAmount ?? this.orderDiscountAmount,
       taxAmount: taxAmount ?? this.taxAmount,
+      taxMode: taxMode ?? this.taxMode,
       cashPaidAmount: resetCashPaidAmount
           ? null
           : cashPaidAmount ?? this.cashPaidAmount,
