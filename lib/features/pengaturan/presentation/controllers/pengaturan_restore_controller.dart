@@ -10,6 +10,7 @@ import '../../data/services/backup_file_picker_service.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'pengaturan_backup_controller.dart';
 import 'pengaturan_reset_controller.dart';
+import 'app_recovery_provider.dart';
 
 final backupFilePickerServiceProvider = Provider<BackupFilePickerService>((
   ref,
@@ -74,11 +75,16 @@ class PengaturanRestoreController
     }
   }
 
-  Future<void> restoreBackup(AppBackupRestoreCandidate candidate) async {
+  Future<void> restoreBackup(
+    AppBackupRestoreCandidate candidate, {
+    required String recoveryPassword,
+  }) async {
     state = const AsyncLoading();
 
     try {
-      await ref.read(appRestoreServiceProvider).restoreBackup(candidate);
+      await ref
+          .read(appRecoveryServiceProvider)
+          .restoreWithSnapshot(candidate, password: recoveryPassword);
 
       ref.read(datasetGenerationProvider.notifier).advance();
       ref.invalidate(pengaturanBackupControllerProvider);
@@ -88,6 +94,8 @@ class PengaturanRestoreController
     } catch (error, stackTrace) {
       state = AsyncError(error, stackTrace);
       rethrow;
+    } finally {
+      ref.invalidate(recoverySnapshotsProvider);
     }
   }
 }

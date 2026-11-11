@@ -8,9 +8,14 @@ class BackupProtection {
 }
 
 class BackupPasswordDialog extends StatefulWidget {
-  const BackupPasswordDialog({super.key, required this.creating});
+  const BackupPasswordDialog({
+    super.key,
+    required this.creating,
+    this.requireEncryption = false,
+  });
 
   final bool creating;
+  final bool requireEncryption;
 
   @override
   State<BackupPasswordDialog> createState() => _BackupPasswordDialogState();
@@ -44,12 +49,13 @@ class _BackupPasswordDialogState extends State<BackupPasswordDialog> {
                 const Text(
                   'Simpan kata sandi di tempat aman. Kata sandi diperlukan untuk memulihkan di perangkat lain dan tidak dapat direset.',
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Enkripsi dengan kata sandi'),
-                  value: _encrypted,
-                  onChanged: (value) => setState(() => _encrypted = value),
-                ),
+                if (!widget.requireEncryption)
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Enkripsi dengan kata sandi'),
+                    value: _encrypted,
+                    onChanged: (value) => setState(() => _encrypted = value),
+                  ),
               ],
               if (_encrypted) ...[
                 TextFormField(

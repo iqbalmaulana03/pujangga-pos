@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+
+import 'helpers/recovery_password.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -198,6 +201,7 @@ void main() {
 
     Future<void> confirm() async {
       await tester.tap(find.widgetWithText(FilledButton, 'Pulihkan Data'));
+      await confirmRecoverySnapshot(tester);
       await waitFor(
         () => !container.read(pengaturanRestoreControllerProvider).isLoading,
         'restore completes',

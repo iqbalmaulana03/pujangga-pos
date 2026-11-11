@@ -6,6 +6,7 @@ void main() {
   Future<void> open(
     WidgetTester tester, {
     required bool creating,
+    bool requireEncryption = false,
     required void Function(BackupProtection?) onResult,
   }) async {
     await tester.pumpWidget(
@@ -16,7 +17,10 @@ void main() {
               onPressed: () async => onResult(
                 await showDialog<BackupProtection>(
                   context: context,
-                  builder: (_) => BackupPasswordDialog(creating: creating),
+                  builder: (_) => BackupPasswordDialog(
+                    creating: creating,
+                    requireEncryption: requireEncryption,
+                  ),
                 ),
               ),
               child: const Text('Open'),
@@ -62,6 +66,29 @@ void main() {
     await tester.tap(find.text('Cadangkan Terenkripsi'));
     await tester.pumpAndSettle();
     expect(result?.password, 'Sandi panjang sintetis');
+  });
+
+  testWidgets('recovery snapshot cannot opt out of encryption', (tester) async {
+    BackupProtection? result;
+    await open(
+      tester,
+      creating: true,
+      requireEncryption: true,
+      onResult: (value) => result = value,
+    );
+    expect(find.byType(SwitchListTile), findsNothing);
+    expect(find.text('Cadangkan Tanpa Enkripsi'), findsNothing);
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'synthetic password 56',
+    );
+    await tester.enterText(
+      find.byType(TextFormField).last,
+      'synthetic password 56',
+    );
+    await tester.tap(find.text('Cadangkan Terenkripsi'));
+    await tester.pumpAndSettle();
+    expect(result?.password, 'synthetic password 56');
   });
 
   testWidgets(

@@ -1,3 +1,6 @@
+@Timeout(Duration(minutes: 2))
+library;
+
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +14,9 @@ import 'package:pujangga_pos/features/karyawan/data/repositories/employee_reposi
 import 'package:pujangga_pos/features/karyawan/presentation/controllers/employee_controller.dart';
 import 'package:pujangga_pos/features/katalog/presentation/controllers/katalog_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/app_recovery_service.dart';
+import 'package:pujangga_pos/features/pengaturan/presentation/controllers/app_recovery_provider.dart';
+import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_backup_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/domain/entities/app_backup_restore_candidate.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_reset_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_restore_controller.dart';
@@ -38,6 +44,19 @@ void main() {
     container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWithValue(database),
+        appRecoveryServiceProvider.overrideWith(
+          (ref) => AppRecoveryService(
+            backup: ref.watch(appBackupServiceProvider),
+            restore: ref.watch(appRestoreServiceProvider),
+            reset: ref.watch(appResetServiceProvider),
+            directoryProvider: () async =>
+                Directory('${directory.path}/recovery'),
+            exportDirectoryProvider: () async =>
+                Directory('${directory.path}/exports'),
+            temporaryDirectoryProvider: () async =>
+                Directory('${directory.path}/cache'),
+          ),
+        ),
         appLoggerProvider.overrideWithValue(Logger('DatasetReplacementTest')),
         businessLogoServiceProvider.overrideWithValue(
           BusinessLogoService(
@@ -136,7 +155,7 @@ void main() {
       final candidate = await replacement();
       await container
           .read(pengaturanRestoreControllerProvider.notifier)
-          .restoreBackup(candidate);
+          .restoreBackup(candidate, recoveryPassword: 'synthetic password 56');
       expect(
         container.read(pengaturanRestoreControllerProvider).hasError,
         isFalse,
@@ -180,7 +199,10 @@ void main() {
     () async {
       await container
           .read(pengaturanRestoreControllerProvider.notifier)
-          .restoreBackup(await replacement(includeEmployee: false));
+          .restoreBackup(
+            await replacement(includeEmployee: false),
+            recoveryPassword: 'synthetic password 56',
+          );
       expect(
         container.read(pengaturanRestoreControllerProvider).hasError,
         isFalse,
