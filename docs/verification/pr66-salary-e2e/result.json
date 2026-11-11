@@ -1,0 +1,28 @@
+{
+  "source_revision": "c284c89892a4d7f2317cea24cfa643e57efc72e5",
+  "package": "com.pujanggapos.pujangga_pos.pr66e2e",
+  "android": "13",
+  "model": "2201116TG",
+  "events": [
+    "E2E_PASS: capital isolated Android SQLite, 4 overdue months, zero accruals before UI",
+    "E2E_PASS: capital salary=4000000 capital=6000000 cash=5000000; annual/custom/dashboard reads unchanged; 6000000 stock rejected twice",
+    "E2E_PASS: capital affordable stock saved; QRIS sale=1500000; stock=1; cash=4500000; capital=6500000",
+    "E2E_PASS: capital SQLite reopened, six tables identical; income=1500000; no duplicate salary; integrity=ok; foreign_keys=ok",
+    "E2E_CLEANUP: capital test database removed",
+    "E2E_PASS: annual isolated Android SQLite, 4 overdue months, zero accruals before UI",
+    "E2E_PASS: annual salary=4000000 capital=6000000 cash=5000000; annual/custom/dashboard reads unchanged; 6000000 stock rejected twice",
+    "E2E_PASS: annual affordable stock saved; QRIS sale=1500000; stock=1; cash=4500000; capital=6500000",
+    "E2E_PASS: annual SQLite reopened, six tables identical; income=1500000; no duplicate salary; integrity=ok; foreign_keys=ok",
+    "E2E_CLEANUP: annual test database removed",
+    "E2E_PASS: dashboard isolated Android SQLite, 4 overdue months, zero accruals before UI",
+    "E2E_PASS: dashboard salary=4000000 capital=6000000 cash=5000000; annual/custom/dashboard reads unchanged; 6000000 stock rejected twice",
+    "E2E_PASS: dashboard affordable stock saved; QRIS sale=1500000; stock=1; cash=4500000; capital=6500000",
+    "E2E_PASS: dashboard SQLite reopened, six tables identical; income=1500000; no duplicate salary; integrity=ok; foreign_keys=ok",
+    "E2E_CLEANUP: dashboard test database removed"
+  ],
+  "apk_identity": "package: name='com.pujanggapos.pujangga_pos.pr66e2e' versionCode='6' versionName='1.2.5-debug' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+  "exit_code": 0,
+  "apk_sha256": "bf2295c361e076a8bd805a8bd1e6deb83cf0d66c3a28986f82458093f45bbdaa",
+  "test_package_removed": true,
+  "protected_package_paths_unchanged": true
+}
