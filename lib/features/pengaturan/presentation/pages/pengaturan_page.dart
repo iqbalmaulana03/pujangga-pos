@@ -14,6 +14,7 @@ import '../../domain/entities/app_settings.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import '../../../setup_usaha/domain/entities/business_profile.dart';
 import '../controllers/pengaturan_backup_controller.dart';
+import '../controllers/app_recovery_provider.dart';
 import '../controllers/pengaturan_profil_controller.dart';
 import '../controllers/pengaturan_reset_controller.dart';
 import '../controllers/pengaturan_restore_controller.dart';
@@ -110,12 +111,12 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     }
   }
 
-  Future<void> _handleCreateBackup() async {
+  Future<bool> _handleCreateBackup() async {
     final protection = await showDialog<BackupProtection>(
       context: context,
       builder: (_) => const BackupPasswordDialog(creating: true),
     );
-    if (!mounted || protection == null) return;
+    if (!mounted || protection == null) return false;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     try {
@@ -124,7 +125,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
           .createBackup(password: protection.password);
 
       if (!mounted) {
-        return;
+        return false;
       }
 
       final messenger = ScaffoldMessenger.of(context);
@@ -147,7 +148,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
         );
       } catch (error) {
         if (!mounted) {
-          return;
+          return false;
         }
 
         messenger.showSnackBar(
@@ -157,15 +158,87 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
             ),
           ),
         );
+        return false;
       }
+      return true;
     } catch (error) {
       if (!mounted) {
-        return;
+        return false;
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Gagal mencadangkan data: ${error.toString()}')),
       );
+      return false;
+    }
+  }
+
+  Future<void> _exportBeforeReset() async {
+    if (!await _handleCreateBackup() || !mounted) return;
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cadangan sudah disimpan?'),
+        content: const Text(
+          'Pastikan file telah disimpan di luar penyimpanan aplikasi dan kata sandinya dicatat. Reset akan menghapus semua cadangan lokal aplikasi. Membuka menu bagikan saja belum menjamin file tersimpan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sudah, Reset Semua Data'),
+          ),
+        ],
+      ),
+    );
+    if (saved == true && mounted) await _handleResetDatabase();
+  }
+
+  Future<void> _showRecoverySnapshots() async {
+    try {
+      final files = await ref.read(appRecoveryServiceProvider).snapshots();
+      if (!mounted) return;
+      final selected = await showDialog<String>(
+        context: context,
+        builder: (context) => SimpleDialog(
+          title: const Text('Cadangan Pemulihan'),
+          children: files.isEmpty
+              ? [
+                  const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('Belum ada cadangan sebelum restore.'),
+                  ),
+                ]
+              : [
+                  for (final file in files)
+                    SimpleDialogOption(
+                      onPressed: () => Navigator.pop(context, file.path),
+                      child: Text(
+                        'Sebelum restore: ${DateTime.fromMicrosecondsSinceEpoch(int.parse(file.uri.pathSegments.last.split('_').reversed.elementAt(1))).toLocal()}',
+                      ),
+                    ),
+                ],
+        ),
+      );
+      if (!mounted || selected == null) return;
+      final protection = await showDialog<BackupProtection>(
+        context: context,
+        builder: (_) => const BackupPasswordDialog(creating: false),
+      );
+      if (!mounted || protection?.password == null) return;
+      final candidate = await ref
+          .read(appRestoreServiceProvider)
+          .inspectBackupFile(selected, password: protection!.password);
+      if (mounted) _showRestoreConfirmDialog(candidate);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membuka cadangan pemulihan: $error')),
+        );
+      }
     }
   }
 
@@ -263,12 +336,18 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
   }
 
   Future<void> _handleRestoreBackup(AppBackupRestoreCandidate candidate) async {
+    final protection = await showDialog<BackupProtection>(
+      context: context,
+      builder: (_) =>
+          const BackupPasswordDialog(creating: true, requireEncryption: true),
+    );
+    if (!mounted || protection?.password == null) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     try {
       await ref
           .read(pengaturanRestoreControllerProvider.notifier)
-          .restoreBackup(candidate);
+          .restoreBackup(candidate, recoveryPassword: protection!.password!);
 
       if (!mounted) {
         return;
@@ -538,7 +617,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
               ),
               SizedBox(height: 12),
               Text(
-                'Tindakan ini tidak bisa dibatalkan. Sebaiknya cadangkan data terlebih dahulu jika masih dibutuhkan.',
+                'Tindakan ini tidak bisa dibatalkan. Sebaiknya cadangkan data terlebih dahulu jika masih dibutuhkan. Semua cadangan lokal aplikasi, termasuk cadangan pemulihan, juga dihapus. File yang sudah diekspor ke luar aplikasi tetap ada.',
                 style: TextStyle(
                   color: Color(0xFFBA1A1A),
                   fontWeight: FontWeight.w600,
@@ -547,6 +626,15 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
             ],
           ),
           actions: [
+            TextButton(
+              onPressed: isResetting
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _exportBeforeReset();
+                    },
+              child: const Text('Cadangkan dan Ekspor Dulu'),
+            ),
             TextButton(
               onPressed: isResetting ? null : () => Navigator.pop(context),
               child: const Text(
@@ -611,7 +699,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
               Text('Total data: ${candidate.totalRecords} record'),
               const SizedBox(height: 12),
               const Text(
-                'Data aktif aplikasi akan ditimpa seluruhnya oleh isi backup ini. Pastikan Anda sudah yakin sebelum melanjutkan.',
+                'Data aktif aplikasi akan ditimpa seluruhnya oleh isi backup ini. Sebelum penggantian, buat kata sandi untuk cadangan pemulihan otomatis. Cadangan tersedia di Manajemen Data Lokal. Simpan kata sandinya agar dapat dipulihkan.',
                 style: TextStyle(
                   color: Color(0xFFBA1A1A),
                   fontWeight: FontWeight.w600,
@@ -669,9 +757,13 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
     final isBackingUp = backupState.isLoading;
     final isResetting = resetState.isLoading;
     final isRestoring = restoreState.isLoading;
+    final recoverySnapshots = ref.watch(recoverySnapshotsProvider);
     final isExporting = exportState.isLoading;
 
-    return Scaffold(
+    // Keep the single-user app on this screen until replacement completes:
+    // otherwise a sale/profile edit could land after the recovery snapshot.
+    final replacing = isRestoring || isResetting;
+    final scaffold = Scaffold(
       backgroundColor: const Color(0xFFF8FAF8),
       appBar: AppBar(
         toolbarHeight: 56,
@@ -970,7 +1062,9 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                                 ),
                               )
                             : null,
-                        onTap: isBackingUp ? null : _handleCreateBackup,
+                        onTap: isBackingUp || isRestoring || isResetting
+                            ? null
+                            : _handleCreateBackup,
                       ),
                       const Divider(
                         height: 1,
@@ -990,7 +1084,24 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                                 ),
                               )
                             : null,
-                        onTap: isRestoring ? null : _handlePickRestoreFile,
+                        onTap: isBackingUp || isRestoring || isResetting
+                            ? null
+                            : _handlePickRestoreFile,
+                      ),
+                      _buildRowAction(
+                        icon: Icons.history,
+                        iconColor: const Color(0xFF0D5C56),
+                        title: 'Cadangan Pemulihan',
+                        subtitle: recoverySnapshots.when(
+                          data: (files) => files.isEmpty
+                              ? 'Belum ada cadangan sebelum restore'
+                              : '${files.length} cadangan sebelum restore tersedia',
+                          loading: () => 'Memeriksa cadangan lokal…',
+                          error: (_, _) => 'Tidak dapat membaca cadangan lokal',
+                        ),
+                        onTap: isRestoring || isResetting || isBackingUp
+                            ? null
+                            : _showRecoverySnapshots,
                       ),
                       const Divider(
                         height: 1,
@@ -1062,7 +1173,7 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
                                 ),
                               )
                             : null,
-                        enabled: !isResetting,
+                        enabled: !isResetting && !isRestoring && !isBackingUp,
                         backgroundColor: const Color(0xFFFFF3F1),
                         iconColor: const Color(0xFFBA1A1A),
                         title: 'Reset Data Aplikasi',
@@ -1172,6 +1283,10 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
           () => ref.invalidate(businessProfileProvider),
         ),
       ),
+    );
+    return PopScope(
+      canPop: !replacing,
+      child: AbsorbPointer(absorbing: replacing, child: scaffold),
     );
   }
 
