@@ -81,6 +81,14 @@ PR #69. Konflik hanya pada `applicationIdSuffix` di Gradle; kedua pilihan paket
   pada database sementara atau boundary berbagi yang diganti khusus tes.
 - APK debug target `integration_test/recovery_backup_test.dart` berhasil dibangun
   dengan `PUJANGGA_RECOVERY_E2E=1`.
-- E2E pada perangkat belum diulang setelah integrasi ini karena perangkat Android
-  yang sebelumnya digunakan tidak sedang terhubung. Bukti E2E di atas berasal
-  dari revisi sebelum integrasi; hasil build bukan bukti eksekusi perangkat.
+- E2E perangkat diulang setelah perangkat terhubung kembali pada revisi integrasi
+  `7a16fe26ad7808742e1941965aa07020b4963e7c`, 12 November 2026, 01:00 UTC.
+  Perintah `PUJANGGA_RECOVERY_E2E=1 flutter test --no-pub
+  integration_test/recovery_backup_test.dart -d <device>` selesai **1 lulus**
+  dalam 57 detik (di luar build/instalasi), dengan penanda
+  `ISSUE56_E2E_PASS: sale, stock, restart, recovery, reset` dan exit code 0.
+  Guard memastikan paket `.issue56e2e` dan database sementara. Restore lama,
+  pemulihan transaksi/detail/stok/histori, pembatalan reset/ekspor, serta reset
+  final seluruhnya lulus pada sumber yang telah digabungkan dengan main.
+- Kedua screenshot di atas diperbarui dari pengulangan perangkat ini. Cakupan
+  restart tetap berupa pembuatan ulang layanan, bukan force-stop proses OS.
