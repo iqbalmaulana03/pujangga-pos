@@ -181,6 +181,10 @@ Kebutuhan detail:
 - Catatan transaksi opsional.
 - Diskon nominal dan persentase.
 - Pajak opsional.
+- Pajak otomatis dihitung dari `maksimum(0, subtotal - diskon item - diskon transaksi)` dikalikan persentase pajak default. Diskon nominal maupun persentase memakai nominal diskon akhirnya sebagai pengurang dasar pajak.
+- Pajak otomatis dihitung ulang ketika item, kuantitas, atau diskon berubah, termasuk saat diskon dihapus atau menutup seluruh subtotal. Contoh: subtotal Rp100.000, diskon Rp20.000, pajak 10% menghasilkan pajak Rp8.000 dan total Rp88.000, baik diskon diberikan per item maupun per transaksi.
+- Hasil pajak otomatis dibulatkan sekali ke unit mata uang terkecil: rupiah utuh untuk IDR dan dua desimal untuk USD/SGD, dengan nilai setengah unit dibulatkan menjauhi nol.
+- Penetapan nominal pajak manual (termasuk nol) mengaktifkan mode manual; nominal tersebut dipertahankan saat keranjang atau diskon berubah. Kembali ke mode otomatis menghitung ulang dari dasar terkini. Mengosongkan keranjang atau menyelesaikan transaksi mengembalikan transaksi berikutnya ke mode otomatis. Mode ini berlaku untuk draft transaksi; struk menyimpan nominal pajak final.
 - Pembayaran tunai, transfer, QRIS, e-wallet, dan kartu sebagai label metode pembayaran.
 - Hitung kembalian untuk pembayaran tunai.
 - Nomor invoice otomatis.
