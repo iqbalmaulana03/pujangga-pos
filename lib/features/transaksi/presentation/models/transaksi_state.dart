@@ -1,5 +1,6 @@
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
+import '../../domain/entities/transaction_validation.dart';
 
 enum TaxMode { automatic, manual }
 
@@ -47,21 +48,19 @@ class TransaksiState {
       return 0;
     }
 
-    final paid = cashPaidAmount ?? 0;
-    return paid - totalAmount;
+    final change = (cashPaidAmount ?? 0) - totalAmount;
+    return change.isFinite ? change : 0;
   }
 
-  bool get canSubmit {
-    if (isSubmitting || cartItems.isEmpty || totalAmount < 0) {
-      return false;
-    }
+  String? get validationError => TransactionValidation.error(
+    items: cartItems,
+    orderDiscount: orderDiscountAmount,
+    tax: taxAmount,
+    paymentMethod: paymentMethod,
+    cashPaid: cashPaidAmount,
+  );
 
-    if (paymentMethod == 'tunai') {
-      return (cashPaidAmount ?? 0) >= totalAmount;
-    }
-
-    return true;
-  }
+  bool get canSubmit => !isSubmitting && validationError == null;
 
   TransaksiState copyWith({
     List<TransaksiItem>? catalogItems,

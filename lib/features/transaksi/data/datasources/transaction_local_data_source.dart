@@ -6,6 +6,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_receipt.dart';
 import '../../domain/entities/transaksi_submit_request.dart';
+import '../../domain/entities/transaction_validation.dart';
 import '../models/transaksi_item_db_model.dart';
 
 class TransactionLocalDataSource {
@@ -49,21 +50,17 @@ class TransactionLocalDataSource {
           existing.single['invoice_no'] as String,
         ))!;
       }
+      final error = TransactionValidation.error(
+        items: request.items,
+        orderDiscount: request.orderDiscountAmount,
+        tax: request.taxAmount,
+        paymentMethod: request.paymentMethod,
+        cashPaid: request.cashPaidAmount,
+      );
+      if (error != null) throw AppException('validation_error', error);
       final createdAt = DateTime.now();
       final createdAtIso = createdAt.toIso8601String();
       final invoiceNumber = await _generateInvoiceNumber(txn, createdAt);
-      for (final item in request.items) {
-        if (!item.quantity.isFinite ||
-            item.quantity <= 0 ||
-            !item.itemDiscountAmount.isFinite ||
-            item.itemDiscountAmount < 0 ||
-            item.itemDiscountAmount > item.lineSubtotal) {
-          throw const AppException(
-            'validation_error',
-            'Kuantitas dan diskon item tidak valid.',
-          );
-        }
-      }
       final subtotalAmount = request.items.fold<double>(
         0,
         (total, item) => total + item.lineSubtotal,
@@ -72,39 +69,91 @@ class TransactionLocalDataSource {
         0,
         (total, item) => total + item.itemDiscountAmount,
       );
-      if (!request.orderDiscountAmount.isFinite ||
-          request.orderDiscountAmount < 0 ||
-          request.orderDiscountAmount > subtotalAmount - itemDiscountAmount ||
-          !request.taxAmount.isFinite ||
-          request.taxAmount < 0) {
-        throw const AppException(
-          'validation_error',
-          'Diskon total atau pajak tidak valid.',
-        );
-      }
       final totalAmount =
           subtotalAmount -
           itemDiscountAmount -
           request.orderDiscountAmount +
           request.taxAmount;
 
-      if (totalAmount < 0) {
-        throw const AppException(
-          'validation_error',
-          'Total transaksi tidak boleh negatif.',
-        );
-      }
+      final changeAmount = request.paymentMethod == 'tunai'
+          ? request.cashPaidAmount! - totalAmount
+          : 0.0;
 
-      double changeAmount = 0;
-      if (request.paymentMethod == 'tunai') {
-        final paid = request.cashPaidAmount ?? 0;
-        if (paid < totalAmount) {
+      Map<String, Object?>? employeeSnapshot;
+      double commission = 0;
+      if (request.employeeId != null) {
+        final employeeRows = await txn.query(
+          'employees',
+          where: 'id = ? AND is_active = 1',
+          whereArgs: [request.employeeId],
+          limit: 1,
+        );
+        if (employeeRows.isEmpty) {
           throw const AppException(
-            'validation_error',
-            'Pembayaran tunai belum mencukupi total transaksi.',
+            'employee_unavailable',
+            'Karyawan terpilih sudah tidak aktif atau tidak tersedia. Pilih ulang karyawan sebelum menyimpan transaksi.',
           );
+        } else {
+          final employee = employeeRows.first;
+          final type = employee['compensation_type'] as String;
+          final percent = (employee['commission_percent'] as num?)?.toDouble();
+          final salary = (employee['monthly_salary'] as num?)?.toDouble();
+          final scope = employee['commission_scope'] as String? ?? 'all';
+          final netSales = subtotalAmount - itemDiscountAmount;
+          final eligibleSales = request.items
+              .where(
+                (line) =>
+                    scope == 'all' ||
+                    (scope == 'service' && line.item.isJasa) ||
+                    (scope == 'product' && line.item.isBarang),
+              )
+              .fold<double>(0, (sum, line) => sum + line.lineTotal);
+          // Allocate the order discount proportionally, before tax.
+          final commissionBase = netSales > 0
+              ? eligibleSales * (1 - request.orderDiscountAmount / netSales)
+              : 0.0;
+          commission = type == 'commission'
+              ? (commissionBase * (percent ?? 0) / 100)
+                    .clamp(0, double.infinity)
+                    .toDouble()
+              : 0.0;
+          for (final amount in [
+            percent,
+            salary,
+            netSales,
+            eligibleSales,
+            commissionBase,
+            commission,
+          ]) {
+            TransactionValidation.requireFinite(amount);
+          }
+          employeeSnapshot = {
+            'employee_id': request.employeeId,
+            'employee_name_snapshot': employee['name'],
+            'compensation_type_snapshot': type,
+            'commission_percent_snapshot': percent,
+            'commission_scope_snapshot': scope,
+            'monthly_salary_snapshot': salary,
+            'commission_amount': commission,
+          };
         }
-        changeAmount = paid - totalAmount;
+      }
+      final costPrices = <double?>[];
+      for (final line in request.items) {
+        final rows = await txn.query(
+          'items',
+          columns: ['harga_modal', 'biaya_dasar'],
+          where: 'id = ?',
+          whereArgs: [int.parse(line.item.id)],
+          limit: 1,
+        );
+        final cost = rows.isEmpty
+            ? null
+            : (rows.first[line.item.isJasa ? 'biaya_dasar' : 'harga_modal']
+                      as num?)
+                  ?.toDouble();
+        TransactionValidation.requireFinite(cost);
+        costPrices.add(cost);
       }
 
       final pendingStockMovementIds = <int>[];
@@ -163,7 +212,9 @@ class TransactionLocalDataSource {
         'tax_amount': request.taxAmount,
         'total_amount': totalAmount,
         'payment_method': _mapUiPaymentMethodToDb(request.paymentMethod),
-        'paid_amount': request.cashPaidAmount ?? 0,
+        'paid_amount': request.paymentMethod == 'tunai'
+            ? request.cashPaidAmount!
+            : 0,
         'change_amount': changeAmount,
         'customer_name': null,
         'notes': null,
@@ -172,87 +223,33 @@ class TransactionLocalDataSource {
         'updated_at': createdAtIso,
       });
 
-      if (request.employeeId != null) {
-        final employeeRows = await txn.query(
-          'employees',
-          where: 'id = ? AND is_active = 1',
-          whereArgs: [request.employeeId],
-          limit: 1,
+      if (employeeSnapshot != null) {
+        await txn.update(
+          'sales_transactions',
+          employeeSnapshot,
+          where: 'id = ?',
+          whereArgs: [transactionId],
         );
-        if (employeeRows.isEmpty) {
-          throw const AppException(
-            'employee_unavailable',
-            'Karyawan terpilih sudah tidak aktif atau tidak tersedia. Pilih ulang karyawan sebelum menyimpan transaksi.',
-          );
-        } else {
-          final employee = employeeRows.first;
-          final type = employee['compensation_type'] as String;
-          final percent = (employee['commission_percent'] as num?)?.toDouble();
-          final salary = (employee['monthly_salary'] as num?)?.toDouble();
-          final scope = employee['commission_scope'] as String? ?? 'all';
-          final netSales = subtotalAmount - itemDiscountAmount;
-          final eligibleSales = request.items
-              .where(
-                (line) =>
-                    scope == 'all' ||
-                    (scope == 'service' && line.item.isJasa) ||
-                    (scope == 'product' && line.item.isBarang),
-              )
-              .fold<double>(0, (sum, line) => sum + line.lineTotal);
-          // Allocate the order discount proportionally, before tax.
-          final commissionBase = netSales > 0
-              ? eligibleSales * (1 - request.orderDiscountAmount / netSales)
-              : 0.0;
-          final commission = type == 'commission'
-              ? (commissionBase * (percent ?? 0) / 100)
-                    .clamp(0, double.infinity)
-                    .toDouble()
-              : 0.0;
-          await txn.update(
-            'sales_transactions',
-            {
-              'employee_id': request.employeeId,
-              'employee_name_snapshot': employee['name'],
-              'compensation_type_snapshot': type,
-              'commission_percent_snapshot': percent,
-              'commission_scope_snapshot': scope,
-              'monthly_salary_snapshot': salary,
-              'commission_amount': commission,
-            },
-            where: 'id = ?',
-            whereArgs: [transactionId],
-          );
-          if (commission > 0) {
-            await txn.insert('expenses', {
-              'amount': commission,
-              'category': 'Komisi Karyawan',
-              'notes': 'Komisi ${employee['name']} - $invoiceNumber',
-              'expense_date': createdAtIso,
-              'created_at': createdAtIso,
-              'updated_at': createdAtIso,
-              'source_type': 'commission',
-              'source_id': transactionId,
-              'employee_id': request.employeeId,
-              'period_key': null,
-            });
-          }
+        if (commission > 0) {
+          await txn.insert('expenses', {
+            'amount': commission,
+            'category': 'Komisi Karyawan',
+            'notes':
+                'Komisi ${employeeSnapshot['employee_name_snapshot']} - $invoiceNumber',
+            'expense_date': createdAtIso,
+            'created_at': createdAtIso,
+            'updated_at': createdAtIso,
+            'source_type': 'commission',
+            'source_id': transactionId,
+            'employee_id': request.employeeId,
+            'period_key': null,
+          });
         }
       }
 
-      for (final cartItem in request.items) {
-        final itemRows = await txn.query(
-          'items',
-          columns: ['harga_modal', 'biaya_dasar'],
-          where: 'id = ?',
-          whereArgs: [int.parse(cartItem.item.id)],
-          limit: 1,
-        );
-        double? costPrice;
-        if (itemRows.isNotEmpty) {
-          costPrice = cartItem.item.isJasa
-              ? (itemRows.first['biaya_dasar'] as num?)?.toDouble()
-              : (itemRows.first['harga_modal'] as num?)?.toDouble();
-        }
+      for (var index = 0; index < request.items.length; index++) {
+        final cartItem = request.items[index];
+        final costPrice = costPrices[index];
 
         await txn.insert('sales_transaction_items', {
           'transaction_id': transactionId,
@@ -301,7 +298,9 @@ class TransactionLocalDataSource {
         taxAmount: request.taxAmount,
         totalAmount: totalAmount,
         changeAmount: changeAmount,
-        cashPaidAmount: request.cashPaidAmount,
+        cashPaidAmount: request.paymentMethod == 'tunai'
+            ? request.cashPaidAmount
+            : null,
         items: request.items,
       );
     });
