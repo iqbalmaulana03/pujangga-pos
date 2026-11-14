@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/utils/currency_formatter.dart';
 
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
@@ -14,6 +15,7 @@ import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
 import '../../domain/entities/transaksi_receipt.dart';
 import '../../domain/entities/transaksi_submit_request.dart';
+import '../../domain/entities/transaction_validation.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import '../models/transaksi_state.dart';
@@ -171,6 +173,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   void setQuantity(String itemId, double quantity) {
+    TransactionValidation.requireFinite(quantity);
     final current = _currentState;
     if (current == null) {
       return;
@@ -209,12 +212,13 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         cartItems: [],
         orderDiscountAmount: 0,
         taxMode: TaxMode.automatic,
-        cashPaidAmount: 0,
+        resetCashPaidAmount: true,
       ),
     );
   }
 
   void updateItemDiscount(String itemId, double value) {
+    TransactionValidation.requireFinite(value);
     final current = _currentState;
     if (current == null) {
       return;
@@ -233,6 +237,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   void updateOrderDiscount(double value) {
+    TransactionValidation.requireFinite(value);
     final current = _currentState;
     if (current == null) {
       return;
@@ -244,6 +249,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   void updateTaxAmount(double value) {
+    TransactionValidation.requireFinite(value);
     final current = _currentState;
     if (current == null) {
       return;
@@ -296,7 +302,14 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       return;
     }
 
-    state = AsyncData(_buildState(current, cashPaidAmount: value ?? 0));
+    final valid = value != null && value.isFinite && value >= 0;
+    state = AsyncData(
+      _buildState(
+        current,
+        cashPaidAmount: valid ? value : null,
+        resetCashPaidAmount: !valid,
+      ),
+    );
   }
 
   Future<TransaksiReceipt> submit() async {
@@ -322,9 +335,9 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     }
 
     if (!current.canSubmit) {
-      throw const AppException(
+      throw AppException(
         'validation_error',
-        'Lengkapi pembayaran terlebih dahulu sebelum menyimpan transaksi.',
+        current.validationError ?? 'Transaksi sedang disimpan.',
       );
     }
 
@@ -476,11 +489,15 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
                   nextState.itemDiscountAmount -
                   nextState.orderDiscountAmount)
               .clamp(0.0, double.infinity);
+      final rawTax = taxableAmount * (taxRatePercent / 100.0);
+      final currencyCode = settings?.currencyCode ?? 'IDR';
+      // Currency rounding scales foreign currencies by 100; check that
+      // intermediate as well before passing it to rounding operations.
+      final scaledTax = rawTax * (currencyCode == 'IDR' ? 1 : 100);
       nextState = nextState.copyWith(
-        taxAmount: CurrencyFormatter.round(
-          taxableAmount * (taxRatePercent / 100.0),
-          currencyCode: settings?.currencyCode ?? 'IDR',
-        ),
+        taxAmount: rawTax.isFinite && scaledTax.isFinite
+            ? CurrencyFormatter.round(rawTax, currencyCode: currencyCode)
+            : double.nan,
       );
     }
 
