@@ -225,6 +225,12 @@ class _ObservedExecutor implements DatabaseExecutor {
   final Future<void> Function(String)? afterQuery;
 
   @override
+  Future<List<Map<String, Object?>>> rawQuery(
+    String sql, [
+    List<Object?>? arguments,
+  ]) => delegate.rawQuery(sql, arguments);
+
+  @override
   Future<List<Map<String, Object?>>> query(
     String table, {
     bool? distinct,

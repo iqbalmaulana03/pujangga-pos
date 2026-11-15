@@ -71,36 +71,48 @@ class AppRecoveryService {
     AppBackupRestoreCandidate candidate, {
     required String password,
   }) => _exclusive(() async {
-    final directory = await _directory();
-    await directory.create(recursive: true);
-    final staging = await directory.createTemp('.pending-');
-    final snapshotBackup = AppBackupService(
-      database: backup.database,
-      logger: backup.logger,
-      logoService: backup.logoService,
-      backupDirectoryProvider: () async => staging,
-    );
     try {
-      final snapshot = await snapshotBackup.createBackup(password: password);
-      // Read the persisted encrypted bytes through the full restore validator.
-      // A truncated, oversized, or invalid snapshot must block replacement.
-      final verified = await restore.inspectBackupFile(
-        snapshot.filePath,
-        password: password,
+      final directory = await _directory();
+      await directory.create(recursive: true);
+      final snapshotDirectory = await directory.createTemp('.pending-');
+      final snapshotBackup = AppBackupService(
+        database: backup.database,
+        logger: backup.logger,
+        logoService: backup.logoService,
+        backupDirectoryProvider: () async => snapshotDirectory,
       );
-      if (snapshot.warnings.isNotEmpty ||
-          verified.totalRecords != snapshot.totalRecords) {
-        throw const AppException(
-          'recovery_invalid',
-          'Cadangan pemulihan tidak lengkap. Data aktif belum diganti.',
+      try {
+        final snapshot = await snapshotBackup.createBackup(password: password);
+        // Read the persisted encrypted bytes through the full restore validator.
+        // A truncated, oversized, or invalid snapshot must block replacement.
+        final verified = await restore.inspectBackupFile(
+          snapshot.filePath,
+          password: password,
         );
+        if (snapshot.warnings.isNotEmpty ||
+            verified.totalRecords != snapshot.totalRecords) {
+          throw const AppException(
+            'recovery_invalid',
+            'Cadangan pemulihan tidak lengkap. Data aktif belum diganti.',
+          );
+        }
+        // Publish only fully verified files. Interrupted writes remain encrypted
+        // in staging and are never offered as a usable recovery point.
+        await File(snapshot.filePath)
+            .rename(path.join(directory.path, snapshot.fileName));
+      } finally {
+        if (await snapshotDirectory.exists()) {
+          await snapshotDirectory.delete(recursive: true);
+        }
       }
-      // Publish only fully verified files. Interrupted writes remain encrypted
-      // in staging and are never offered as a usable recovery point.
-      await File(snapshot.filePath)
-          .rename(path.join(directory.path, snapshot.fileName));
-    } finally {
-      if (await staging.exists()) await staging.delete(recursive: true);
+    } catch (error) {
+      final reason = error is AppException
+          ? error.message
+          : 'File cadangan tidak dapat disimpan atau diverifikasi.';
+      throw AppException(
+        'recovery_invalid',
+        'Cadangan pemulihan gagal dibuat. $reason Data aktif belum diganti.',
+      );
     }
     // Keep this file even if replacement fails: it is a verified recovery point.
     await restore.restoreBackup(candidate);
