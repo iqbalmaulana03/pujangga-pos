@@ -1,4 +1,5 @@
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/scaled_arithmetic.dart';
 
 /// Business invariants shared by file inspection and direct restore candidates.
 /// Call only after SQLite column types and nullability have been checked.
@@ -108,8 +109,9 @@ class BackupDataValidator {
           _invalid(table.key, 'monthly_salary');
         }
         if (row['valid_until'] != null &&
-            !DateTime.parse(row['valid_until'] as String)
-                .isAfter(DateTime.parse(row['valid_from'] as String))) {
+            !DateTime.parse(
+              row['valid_until'] as String,
+            ).isAfter(DateTime.parse(row['valid_from'] as String))) {
           _invalid(table.key, 'valid_until');
         }
         if (table.key == 'stock_movements') {
@@ -142,12 +144,24 @@ class BackupDataValidator {
       if (discount > subtotal) {
         _invalid('sales_transaction_items', 'line_discount_amount');
       }
-      _equal(
-        'sales_transaction_items',
-        'line_subtotal',
-        subtotal,
-        (row['price_snapshot'] as num) * (row['qty'] as num),
-      );
+      final price = row['price_snapshot'] as num;
+      final quantity = row['qty'] as num;
+      // No historical currency snapshot exists. Accept the legacy product or
+      // a result of one of the two supported currency precisions, not a wider
+      // generic tolerance. Never rewrite imported values.
+      var validSubtotal = _close(subtotal, price * quantity);
+      for (final currency in ['IDR', 'USD']) {
+        try {
+          final rounded = ScaledArithmetic.valueOf(
+            ScaledArithmetic.lineSubtotal(price, quantity, currency),
+            ScaledArithmetic.moneyDigits(currency),
+          );
+          validSubtotal = validSubtotal || _close(subtotal, rounded);
+        } on FormatException {
+          // Old valid REAL values need not fit new calculation limits.
+        }
+      }
+      if (!validSubtotal) _invalid('sales_transaction_items', 'line_subtotal');
       _equal(
         'sales_transaction_items',
         'line_total',
@@ -219,11 +233,15 @@ class BackupDataValidator {
 
   void _equal(String table, String column, num actual, num expected) {
     // Permit floating-point arithmetic noise, not rounded currency differences.
-    if (!expected.isFinite ||
-        (actual - expected).abs() > 0.000001 + expected.abs() * 1e-12) {
+    if (!_close(actual, expected)) {
       _invalid(table, column);
     }
   }
+
+  bool _close(num actual, num expected) =>
+      actual.isFinite &&
+      expected.isFinite &&
+      (actual - expected).abs() <= 0.000001 + expected.abs() * 1e-12;
 
   Never _invalid(String table, String column) => throw AppException(
     'backup_invalid',

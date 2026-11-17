@@ -178,6 +178,10 @@ void main() {
     expect(current().cartItems, same(before.cartItems));
     expect(current().cashPaidAmount, before.cashPaidAmount);
     expect(current().employeeId, before.employeeId);
+    // Presentation-only changes must not turn a retry into a new checkout.
+    controller.updateSearch('Kopi');
+    controller.updateFilter('barang');
+    expect(current().cartItems, same(before.cartItems));
     repository.save = Completer<TransaksiReceipt>();
     final unchangedRetry = controller.submit();
     expect(repository.requests, hasLength(2));

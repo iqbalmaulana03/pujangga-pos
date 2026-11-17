@@ -1,5 +1,6 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/scaled_arithmetic.dart';
 import '../../domain/entities/stock_adjustment_request.dart';
 import '../models/stock_item_db_model.dart';
 import '../models/stock_movement_db_model.dart';
@@ -90,17 +91,18 @@ class StockLocalDataSource {
         );
       }
 
-      final currentQty = (item['stock_qty'] as num).toDouble();
+      final currentQty = ScaledArithmetic.quantity(item['stock_qty'] as num);
       if (!request.quantity.isFinite || request.quantity < 0) {
         throw const AppException(
           'validation_error',
           'Jumlah penyesuaian harus berupa angka positif yang valid.',
         );
       }
+      final quantity = ScaledArithmetic.inputQuantity(request.quantity);
       final nextQty = switch (request.adjustmentType) {
-        'manual_add' => currentQty + request.quantity,
-        'manual_reduce' => currentQty - request.quantity,
-        'set_balance' => request.quantity,
+        'manual_add' => ScaledArithmetic.addQuantity(currentQty, quantity),
+        'manual_reduce' => ScaledArithmetic.addQuantity(currentQty, -quantity),
+        'set_balance' => quantity,
         _ => throw const AppException(
           'validation_error',
           'Tipe penyesuaian stok tidak valid.',
@@ -126,10 +128,10 @@ class StockLocalDataSource {
         'item_id': itemId,
         'movement_type': request.adjustmentType,
         'qty_change': request.adjustmentType == 'set_balance'
-            ? nextQty - currentQty
+            ? ScaledArithmetic.addQuantity(nextQty, -currentQty)
             : (request.adjustmentType == 'manual_reduce'
-                  ? -request.quantity
-                  : request.quantity),
+                  ? -quantity
+                  : quantity),
         'qty_before': currentQty,
         'qty_after': nextQty,
         'reference_type': 'adjustment',

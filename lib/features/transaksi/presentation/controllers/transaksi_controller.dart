@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/utils/currency_formatter.dart';
+
+import '../../../../core/utils/scaled_arithmetic.dart';
 
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
@@ -95,7 +96,10 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     } else {
       final existing = updatedCart[existingIndex];
       updatedCart[existingIndex] = existing.copyWith(
-        quantity: existing.quantity + _quantityStep(existing.item),
+        quantity: ScaledArithmetic.addQuantity(
+          existing.quantity,
+          _quantityStep(existing.item),
+        ),
       );
     }
 
@@ -115,7 +119,10 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         continue;
       }
 
-      final quantity = cartItem.quantity - _quantityStep(cartItem.item);
+      final quantity = ScaledArithmetic.addQuantity(
+        cartItem.quantity,
+        -_quantityStep(cartItem.item),
+      );
       if (quantity > 0) {
         final updatedItem = cartItem.copyWith(quantity: quantity);
         updatedCart.add(
@@ -142,7 +149,10 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         return cartItem;
       }
 
-      final quantity = cartItem.quantity + _quantityStep(cartItem.item);
+      final quantity = ScaledArithmetic.addQuantity(
+        cartItem.quantity,
+        _quantityStep(cartItem.item),
+      );
       final updatedItem = cartItem.copyWith(quantity: quantity);
       return updatedItem.copyWith(
         itemDiscountAmount: cartItem.itemDiscountAmount
@@ -176,6 +186,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       return;
     }
 
+    quantity = ScaledArithmetic.inputQuantity(quantity);
     if (quantity <= 0) {
       removeItem(itemId);
       return;
@@ -339,10 +350,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
                 (current.paymentMethod == 'tunai'
                     ? current.cashPaidAmount
                     : null) &&
+            previous.currencyCode == current.currencyCode &&
             previous.employeeId == current.employeeId
         ? previous
         : TransaksiSubmitRequest(
             items: current.cartItems,
+            currencyCode: current.currencyCode,
             orderDiscountAmount: current.orderDiscountAmount,
             taxAmount: current.taxAmount,
             paymentMethod: current.paymentMethod,
@@ -374,7 +387,9 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       _submitInProgress = false;
       return receipt;
     }
-    state = const AsyncData(TransaksiState(isSubmitting: true));
+    state = AsyncData(
+      TransaksiState(isSubmitting: true, currencyCode: current.currencyCode),
+    );
     try {
       ref.invalidate(transaksiReceiptProvider(receipt.invoiceNumber));
       ref.invalidate(stokControllerProvider);
@@ -453,33 +468,52 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
   }) {
+    final settings = ref.read(appSettingsProvider).asData?.value;
+    final currency = settings?.currencyCode ?? current.currencyCode;
+    double money(double value) => ScaledArithmetic.money(value, currency);
+    // Search/payment-only changes must preserve cart identity for checkout retry.
+    final normalizedCart = cartItems != null || currency != current.currencyCode
+        ? (cartItems ?? current.cartItems)
+              .map(
+                (line) => line.copyWith(
+                  currencyCode: currency,
+                  quantity: ScaledArithmetic.quantity(line.quantity),
+                  itemDiscountAmount: money(line.itemDiscountAmount),
+                ),
+              )
+              .toList()
+        : current.cartItems;
     var nextState = current.copyWith(
+      currencyCode: currency,
       catalogItems: catalogItems,
-      cartItems: cartItems,
+      cartItems: normalizedCart,
       searchQuery: searchQuery,
       typeFilter: typeFilter,
-      orderDiscountAmount: orderDiscountAmount,
-      taxAmount: taxAmount,
+      orderDiscountAmount: money(
+        orderDiscountAmount ?? current.orderDiscountAmount,
+      ),
+      taxAmount: money(taxAmount ?? current.taxAmount),
       taxMode: taxMode,
       paymentMethod: paymentMethod,
-      cashPaidAmount: cashPaidAmount,
+      cashPaidAmount: cashPaidAmount == null && current.cashPaidAmount == null
+          ? null
+          : money(cashPaidAmount ?? current.cashPaidAmount!),
       resetCashPaidAmount: resetCashPaidAmount,
       isSubmitting: current.isSubmitting,
     );
 
     if (nextState.taxMode == TaxMode.automatic &&
-        (cartItems != null || orderDiscountAmount != null || taxMode != null)) {
-      final settings = ref.read(appSettingsProvider).asData?.value;
-      final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
-      final taxableAmount =
-          (nextState.subtotalAmount -
-                  nextState.itemDiscountAmount -
-                  nextState.orderDiscountAmount)
-              .clamp(0.0, double.infinity);
+        (cartItems != null ||
+            orderDiscountAmount != null ||
+            taxMode != null ||
+            currency != current.currencyCode)) {
+      final taxable = nextState.calculation.net;
       nextState = nextState.copyWith(
-        taxAmount: CurrencyFormatter.round(
-          taxableAmount * (taxRatePercent / 100.0),
-          currencyCode: settings?.currencyCode ?? 'IDR',
+        taxAmount: nextState.calculation.amount(
+          ScaledArithmetic.percentage(
+            taxable < 0 ? 0 : taxable,
+            settings?.defaultTaxPercent ?? 0,
+          ),
         ),
       );
     }

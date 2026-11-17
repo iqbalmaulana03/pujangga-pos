@@ -220,7 +220,8 @@ void main() {
         controller.addItem(halfCentItem);
         state = container.read(transaksiControllerProvider).requireValue;
         expect(state.taxAmount, isIdr ? 0 : 0.15);
-        expect(state.totalAmount, closeTo(isIdr ? 1.45 : 1.60, 1e-10));
+        // Checkout now rounds each line to the currency's smallest unit.
+        expect(state.totalAmount, closeTo(isIdr ? 1 : 1.60, 1e-10));
       },
     );
 
