@@ -315,6 +315,197 @@ void main() {
     expect((await db.query('sales_transaction_items')).single['qty'], 0.3);
   });
 
+  test(
+    'checkout reads the latest setting and rolls back a partial sale',
+    () async {
+      final first = await line(price: 100, stock: 1, quantity: 1);
+      final second = await line(price: 100, stock: 0, quantity: 1);
+      final service = await line(type: 'service', stock: 0);
+      final checkout = request([first, second, service]);
+      final items = await db.query('items', orderBy: 'id');
+
+      for (final missingSetting in [false, true]) {
+        if (missingSetting) await db.delete('app_settings');
+        await expectLater(
+          sales.saveTransaction(checkout),
+          throwsA(
+            isA<AppException>().having(
+              (e) => e.code,
+              'code',
+              'insufficient_stock',
+            ),
+          ),
+        );
+        expect(await db.query('items', orderBy: 'id'), items);
+        for (final table in [
+          'stock_movements',
+          'sales_transactions',
+          'sales_transaction_items',
+          'expenses',
+        ]) {
+          expect(await db.query(table), isEmpty, reason: table);
+        }
+      }
+
+      final now = DateTime.now().toIso8601String();
+      await db.insert('app_settings', {
+        'stock_allow_negative': 1,
+        'created_at': now,
+        'updated_at': now,
+      });
+      final receipt = await sales.saveTransaction(checkout);
+      await db.update('app_settings', {'stock_allow_negative': 0});
+      final retry = await sales.saveTransaction(checkout);
+      expect(retry.invoiceNumber, receipt.invoiceNumber);
+      expect(await db.query('sales_transactions'), hasLength(1));
+      expect(
+        (await db.query('items', orderBy: 'id')).map((row) => row['stock_qty']),
+        [0, -1, 0],
+      );
+      final movements = await db.query('stock_movements', orderBy: 'id');
+      expect(movements, hasLength(2));
+      expect(movements.last, containsPair('qty_before', 0));
+      expect(movements.last, containsPair('qty_change', -1));
+      expect(movements.last, containsPair('qty_after', -1));
+    },
+  );
+
+  test('adjustments apply the policy to the resulting balance', () async {
+    final item = await line(stock: 0);
+    final stock = StockLocalDataSource(database: source);
+    StockAdjustmentRequest adjustment(String type, double quantity) =>
+        StockAdjustmentRequest(
+          itemId: item.item.id,
+          adjustmentType: type,
+          quantity: quantity,
+        );
+    final reduce = adjustment('manual_reduce', 0.1);
+    final set = adjustment('set_balance', -0.3);
+    final rejected = throwsA(
+      isA<AppException>().having((e) => e.code, 'code', 'validation_error'),
+    );
+
+    await expectLater(stock.adjustStock(reduce), rejected);
+    await expectLater(stock.adjustStock(set), rejected);
+    expect((await db.query('items')).single['stock_qty'], 0);
+    expect(await db.query('stock_movements'), isEmpty);
+
+    await db.update('app_settings', {'stock_allow_negative': 1});
+    await stock.adjustStock(reduce);
+    await stock.adjustStock(set);
+    for (final type in ['manual_add', 'manual_reduce']) {
+      await expectLater(stock.adjustStock(adjustment(type, -0.1)), rejected);
+    }
+
+    await db.update('app_settings', {'stock_allow_negative': 0});
+    await expectLater(
+      stock.adjustStock(adjustment('manual_add', 0.1)),
+      rejected,
+    );
+    await stock.adjustStock(adjustment('manual_add', 0.3));
+    expect((await db.query('items')).single['stock_qty'], 0);
+
+    final movements = await db.query('stock_movements', orderBy: 'id');
+    expect(
+      movements.map(
+        (row) => [row['qty_before'], row['qty_change'], row['qty_after']],
+      ),
+      [
+        [0, -0.1, -0.1],
+        [-0.1, -0.2, -0.3],
+        [-0.3, 0.3, 0],
+      ],
+    );
+  });
+
+  test(
+    'catalog edits preserve the latest balance unless explicitly changed',
+    () async {
+      final item = await line(stock: 0);
+      final catalog = CatalogLocalDataSource(database: source);
+      CatalogItemDraft draft(double stock, {bool preserveStock = false}) =>
+          CatalogItemDraft(
+            name: 'Renamed',
+            category: 'Synthetic',
+            itemType: 'barang',
+            sellingPrice: 100,
+            isActive: true,
+            stockQuantity: stock,
+            preserveStock: preserveStock,
+          );
+      final id = item.item.id;
+      final rejected = throwsA(isA<AppException>());
+
+      await expectLater(catalog.updateItem(id, draft(-0.2)), rejected);
+      expect(await db.query('categories'), isEmpty);
+      await db.update('app_settings', {'stock_allow_negative': 1});
+      await expectLater(catalog.createItem(draft(-1)), rejected);
+      await catalog.updateItem(id, draft(-0.2));
+      final movements = await db.query('stock_movements');
+      expect(movements.single, containsPair('qty_before', 0));
+      expect(movements.single, containsPair('qty_change', -0.2));
+      expect(movements.single, containsPair('qty_after', -0.2));
+
+      await db.update('app_settings', {'stock_allow_negative': 0});
+      await catalog.updateItem(id, draft(0, preserveStock: true));
+      await expectLater(catalog.updateItem(id, draft(-0.1)), rejected);
+      expect((await db.query('items')).single, containsPair('name', 'Renamed'));
+      expect((await db.query('items')).single, containsPair('stock_qty', -0.2));
+      expect(await db.query('stock_movements'), movements);
+    },
+  );
+
+  test(
+    'void and backup round trip retain a deficit after the option is disabled',
+    () async {
+      final item = await line(price: 100, stock: 0, quantity: 0.1);
+      await db.update('app_settings', {'stock_allow_negative': 1});
+      final first = await sales.saveTransaction(request([item]));
+      await sales.saveTransaction(request([item.copyWith(quantity: 0.2)]));
+      await db.update('app_settings', {'stock_allow_negative': 0});
+
+      final history = RiwayatLocalDataSource(database: source);
+      await history.voidTransaction(first.invoiceNumber);
+      await history.voidTransaction(first.invoiceNumber);
+
+      final movements = await db.query('stock_movements', orderBy: 'id');
+      expect(movements, hasLength(3));
+      expect(movements.last, containsPair('movement_type', 'void'));
+      expect(movements.last, containsPair('qty_before', -0.3));
+      expect(movements.last, containsPair('qty_change', 0.1));
+      expect(movements.last, containsPair('qty_after', -0.2));
+      expect((await db.query('items')).single['stock_qty'], -0.2);
+
+      final backup = await AppBackupService(
+        database: source,
+        logger: Logger('negative-stock-test'),
+        backupDirectoryProvider: () async => root,
+      ).createBackup(password: null);
+      final restore = AppRestoreService(
+        database: destination,
+        logger: Logger('negative-stock-test'),
+      );
+      await restore.restoreBackup(
+        await restore.inspectBackupFile(backup.filePath),
+      );
+      final restored = await destination.database();
+      for (final table in [
+        'app_settings',
+        'items',
+        'stock_movements',
+        'sales_transactions',
+        'sales_transaction_items',
+      ]) {
+        expect(
+          await restored.query(table, orderBy: 'id'),
+          await db.query(table, orderBy: 'id'),
+          reason: table,
+        );
+      }
+      expect(await restored.rawQuery('PRAGMA foreign_key_check'), isEmpty);
+    },
+  );
+
   for (final currency in ['USD', 'SGD']) {
     test(
       '$currency exact payment, retry, snapshots and insufficient payment',

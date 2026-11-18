@@ -1,4 +1,5 @@
 import '../../../../core/database/app_database.dart';
+import '../../../../core/database/stock_policy.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/scaled_arithmetic.dart';
 import '../../domain/entities/stock_adjustment_request.dart';
@@ -93,14 +94,18 @@ class StockLocalDataSource {
 
       final currentQty = (item['stock_qty'] as num).toDouble();
       ScaledArithmetic.quantityUnits(currentQty);
-      if (!request.quantity.isFinite || request.quantity < 0) {
+      if (!request.quantity.isFinite ||
+          (request.adjustmentType != 'set_balance' && request.quantity <= 0)) {
         throw const AppException(
           'validation_error',
           'Jumlah penyesuaian harus berupa angka positif yang valid.',
         );
       }
       final quantity = ScaledArithmetic.inputQuantity(request.quantity);
-      if (request.adjustmentType == 'manual_reduce' && quantity > currentQty) {
+      final allowNegative = await allowsNegativeStock(txn);
+      if (!allowNegative &&
+          request.adjustmentType == 'manual_reduce' &&
+          quantity > currentQty) {
         throw const AppException(
           'validation_error',
           'Stok akhir tidak boleh negatif.',
@@ -116,7 +121,7 @@ class StockLocalDataSource {
         ),
       };
 
-      if (nextQty < 0) {
+      if (!allowNegative && nextQty < 0) {
         throw const AppException(
           'validation_error',
           'Stok akhir tidak boleh negatif.',

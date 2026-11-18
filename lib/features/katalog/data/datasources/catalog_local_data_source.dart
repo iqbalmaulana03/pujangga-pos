@@ -1,4 +1,5 @@
 import '../../../../core/database/app_database.dart';
+import '../../../../core/database/stock_policy.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/scaled_arithmetic.dart';
 import '../../domain/entities/catalog_item_draft.dart';
@@ -59,6 +60,12 @@ class CatalogLocalDataSource {
       final stockQuantity = draft.isBarang
           ? ScaledArithmetic.inputQuantity(draft.stockQuantity ?? 0)
           : 0.0;
+      if (stockQuantity < 0) {
+        throw const AppException(
+          'validation_error',
+          'Stok awal tidak boleh negatif.',
+        );
+      }
       final barcode = _normalizedBarcode(draft.barcode);
       await _ensureBarcodeAvailable(txn, barcode);
       final itemId = await txn.insert('items', {
@@ -149,9 +156,22 @@ class CatalogLocalDataSource {
       );
       final barcode = _normalizedBarcode(draft.barcode);
       await _ensureBarcodeAvailable(txn, barcode, excludingItemId: id);
-      final nextStock = draft.isBarang
+      final preserveStock = draft.preserveStock && previousType == dbItemType;
+      final nextStock = preserveStock
+          ? previousStock
+          : draft.isBarang
           ? ScaledArithmetic.inputQuantity(draft.stockQuantity ?? 0)
           : 0.0;
+      final stockDelta = ScaledArithmetic.quantityDelta(
+        previousStock,
+        nextStock,
+      );
+      if (stockDelta != 0 && nextStock < 0 && !await allowsNegativeStock(txn)) {
+        throw const AppException(
+          'validation_error',
+          'Stok akhir tidak boleh negatif.',
+        );
+      }
       final updatedRows = await txn.update(
         'items',
         {
@@ -161,7 +181,7 @@ class CatalogLocalDataSource {
           'sale_price': draft.sellingPrice,
           'sku': _normalizedText(draft.sku),
           'barcode': barcode,
-          'stock_qty': nextStock,
+          if (!preserveStock) 'stock_qty': nextStock,
           'unit': _normalizedText(draft.unitLabel),
           'harga_modal': draft.isBarang ? draft.costPrice : null,
           'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
@@ -178,10 +198,6 @@ class CatalogLocalDataSource {
         throw const AppException('not_found', 'Item katalog tidak ditemukan.');
       }
 
-      final stockDelta = ScaledArithmetic.quantityDelta(
-        previousStock,
-        nextStock,
-      );
       if (stockDelta != 0) {
         await txn.insert('stock_movements', {
           'item_id': id,

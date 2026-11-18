@@ -129,7 +129,7 @@ class _StokPageState extends ConsumerState<StokPage> {
       body: stokAsync.when(
         data: (state) {
           final outOfStockCount = state.allItems
-              .where((item) => item.currentStock == 0)
+              .where((item) => item.currentStock <= 0)
               .length;
 
           return RefreshIndicator(
@@ -570,7 +570,7 @@ class _StokPageState extends ConsumerState<StokPage> {
   }
 
   Widget _buildStockItemCard(StockItem item) {
-    final isOutOfStock = item.currentStock == 0;
+    final isOutOfStock = item.currentStock <= 0;
     final isLowStock = item.isLowStock;
 
     Color stockBadgeColor;

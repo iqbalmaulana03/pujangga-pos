@@ -2,6 +2,7 @@ import 'package:intl/intl.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/database/stock_policy.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/scaled_arithmetic.dart';
 import '../../domain/services/transaction_calculator.dart';
@@ -225,6 +226,7 @@ class TransactionLocalDataSource {
           costPrices.add(cost);
         }
 
+        final allowNegative = await allowsNegativeStock(txn);
         final pendingStockMovementIds = <int>[];
 
         for (final cartItem in items) {
@@ -245,7 +247,7 @@ class TransactionLocalDataSource {
               .toDouble();
           ScaledArithmetic.quantityUnits(currentStock);
           final quantity = cartItem.quantity.toDouble();
-          if (currentStock < quantity) {
+          if (!allowNegative && currentStock < quantity) {
             throw AppException(
               'insufficient_stock',
               'Stok ${cartItem.item.name} tidak cukup untuk transaksi ini.',

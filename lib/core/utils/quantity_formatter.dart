@@ -1,13 +1,16 @@
 class QuantityFormatter {
   QuantityFormatter._();
 
-  static double? parse(String? raw) {
-    final text = (raw ?? '').trim();
+  static double? parse(String? raw, {bool allowNegative = false}) {
+    var text = (raw ?? '').trim();
+    final isNegative = allowNegative && text.startsWith('-');
+    if (isNegative) text = text.substring(1);
     if (!RegExp(r'^(?:\d+(?:[.,]\d{0,3})?|[.,]\d{1,3})$').hasMatch(text)) {
       return null;
     }
     final value = double.tryParse(text.replaceAll(',', '.'));
-    return value != null && value.isFinite ? value : null;
+    if (value == null || !value.isFinite) return null;
+    return isNegative ? -value : value;
   }
 
   static String format(num value) {
