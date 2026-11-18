@@ -50,13 +50,17 @@ class PengaturanSettingsController extends AsyncNotifier<void> {
 
   Future<void> save(AppSettings settings) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    try {
       await ref.read(settingsRepositoryProvider).saveSettings(settings);
       CurrencyFormatter.configure(
         currencyCode: settings.currencyCode,
         currencySymbol: settings.currencySymbol,
       );
       ref.invalidate(appSettingsProvider);
-    });
+      state = const AsyncData(null);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+      rethrow;
+    }
   }
 }
