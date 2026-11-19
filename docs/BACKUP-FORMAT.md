@@ -5,6 +5,23 @@ sandi minimal 12 karakter dan ulangi untuk konfirmasi. Simpan kata sandi di temp
 aman: aplikasi tidak menyimpannya dan tidak dapat meresetnya. Kata sandi yang sama
 diperlukan untuk pemulihan di perangkat lain, tanpa akun atau kunci perangkat asal.
 
+## Cadangan dan pindah perangkat Android
+
+Gunakan **Pengaturan → Cadangkan Data** untuk membuat cadangan terenkripsi.
+Simpan salinan file di luar penyimpanan privat aplikasi, misalnya di folder
+Dokumen atau di media penyimpanan terpisah. Pada perangkat tujuan, buka
+**Pengaturan → Pulihkan Data**, pilih file tersebut, lalu masukkan kata sandi
+yang sama. Simpan file dan kata sandi secara terpisah.
+
+Aplikasi menonaktifkan backup sistem Android dan mengecualikan penyimpanan
+aplikasi dari backup cloud dan transfer antarperangkat. Perilaku transfer
+dapat berbeda menurut produsen dan versi Android, jadi gunakan cadangan
+terenkripsi aplikasi saat mengganti perangkat. Kebijakan ini tidak menghapus
+cadangan sistem yang sudah dibuat atau salinan yang sudah disimpan di luar
+penyimpanan aplikasi.
+
+## Kompatibilitas file
+
 Untuk kebutuhan kompatibilitas, pengguna dapat mematikan enkripsi secara eksplisit.
 Dialog menampilkan peringatan bahwa profil, transaksi, harga modal, dan gaji dapat
 dibaca siapa pun yang memperoleh file. Impor JSON lama tetap tersedia tanpa kata
