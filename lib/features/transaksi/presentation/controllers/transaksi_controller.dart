@@ -96,12 +96,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       );
     } else {
       final existing = updatedCart[existingIndex];
-      updatedCart[existingIndex] = existing.copyWith(
-        quantity: ScaledArithmetic.addQuantity(
-          existing.quantity,
-          _quantityStep(existing.item),
-        ),
+      final quantity = _adjustQuantity(
+        existing.quantity,
+        _quantityStep(existing.item),
       );
+      if (quantity == null) return;
+      updatedCart[existingIndex] = existing.copyWith(quantity: quantity);
     }
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -120,10 +120,14 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         continue;
       }
 
-      final quantity = ScaledArithmetic.addQuantity(
+      final quantity = _adjustQuantity(
         cartItem.quantity,
         -_quantityStep(cartItem.item),
       );
+      if (quantity == null) {
+        updatedCart.add(cartItem);
+        continue;
+      }
       if (quantity > 0) {
         final updatedItem = cartItem.copyWith(quantity: quantity);
         updatedCart.add(
@@ -150,10 +154,11 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         return cartItem;
       }
 
-      final quantity = ScaledArithmetic.addQuantity(
+      final quantity = _adjustQuantity(
         cartItem.quantity,
         _quantityStep(cartItem.item),
       );
+      if (quantity == null) return cartItem;
       final updatedItem = cartItem.copyWith(quantity: quantity);
       return updatedItem.copyWith(
         itemDiscountAmount: cartItem.itemDiscountAmount
@@ -462,6 +467,15 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
           isRefreshingCatalog: false,
         ),
       );
+    }
+  }
+
+  double? _adjustQuantity(double quantity, double step) {
+    try {
+      return ScaledArithmetic.addQuantity(quantity, step);
+    } on FormatException {
+      // Keep an unrepresentable draft editable; validation disables checkout.
+      return null;
     }
   }
 
