@@ -13,6 +13,7 @@ import 'package:pujangga_pos/core/services/app_startup_service.dart';
 import 'package:pujangga_pos/core/utils/app_date_formatting.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_file_picker_service.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/backup_input_limits.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/app_recovery_provider.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_restore_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/pages/pengaturan_page.dart';
@@ -178,6 +179,44 @@ void main() {
 
       await waitFor(() => find.byTooltip('Pengaturan').evaluate().isNotEmpty);
       await settings();
+      // Issue #71: a valid incoming backup must not bypass a failed snapshot.
+      final settingsBefore = (await db.query('app_settings')).single;
+      await db.update('app_settings', {
+        'receipt_footer': 'a' * (BackupInputLimits.maxStringLength + 1),
+      });
+      final beforeFailure = {
+        for (final table in AppBackupService.backupTables)
+          table: await db.query(table, orderBy: 'id'),
+      };
+      await scrollTo('Pulihkan Data');
+      await tester.tap(find.text('Pulihkan Data').first);
+      await waitFor(() => find.text('Pulihkan Data?').evaluate().isNotEmpty);
+      await tester.tap(find.widgetWithText(FilledButton, 'Pulihkan Data'));
+      await confirmRecoverySnapshot(tester);
+      await waitFor(
+        () => find
+            .textContaining('Data aktif belum diganti.')
+            .evaluate()
+            .isNotEmpty,
+      );
+      expect(find.byType(PengaturanPage), findsOneWidget);
+      for (final table in AppBackupService.backupTables) {
+        expect(
+          await db.query(table, orderBy: 'id'),
+          beforeFailure[table],
+          reason: table,
+        );
+      }
+      expect(
+        await container.read(appRecoveryServiceProvider).snapshots(),
+        isEmpty,
+      );
+      await db.update('app_settings', {
+        'receipt_footer': settingsBefore['receipt_footer'],
+      });
+      debugPrint(
+        'ISSUE71_E2E_PASS: failed oversized snapshot preserves active dataset',
+      );
       await scrollTo('Pulihkan Data');
       await tester.tap(find.text('Pulihkan Data').first);
       await waitFor(() => find.text('Pulihkan Data?').evaluate().isNotEmpty);

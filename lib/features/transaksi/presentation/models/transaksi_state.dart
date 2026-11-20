@@ -1,5 +1,7 @@
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
+import '../../domain/services/transaction_calculator.dart';
+import '../../domain/entities/transaction_validation.dart';
 
 enum TaxMode { automatic, manual }
 
@@ -19,6 +21,7 @@ class TransaksiState {
     this.catalogRefreshFailed = false,
     this.isRefreshingCatalog = false,
     this.employeeId,
+    this.currencyCode = 'IDR',
   });
 
   final List<TransaksiItem> catalogItems;
@@ -35,33 +38,42 @@ class TransaksiState {
   final bool catalogRefreshFailed;
   final bool isRefreshingCatalog;
   final int? employeeId;
+  final String currencyCode;
 
-  double get subtotalAmount =>
-      cartItems.fold(0, (total, item) => total + item.lineSubtotal);
-  double get itemDiscountAmount =>
-      cartItems.fold(0, (total, item) => total + item.itemDiscountAmount);
-  double get totalAmount =>
-      subtotalAmount - itemDiscountAmount - orderDiscountAmount + taxAmount;
+  TransactionCalculation get calculation => TransactionCalculation(
+    items: cartItems,
+    currencyCode: currencyCode,
+    orderDiscount: orderDiscountAmount,
+    tax: taxAmount,
+    paid: paymentMethod == 'tunai' ? cashPaidAmount : null,
+  );
+  double _amount(int Function(TransactionCalculation) select) {
+    try {
+      final value = calculation;
+      return value.amount(select(value));
+    } on FormatException {
+      return double.nan;
+    }
+  }
+
+  double get subtotalAmount => _amount((value) => value.subtotal);
+  double get itemDiscountAmount => _amount((value) => value.itemDiscount);
+  double get totalAmount => _amount((value) => value.total);
   double get changeAmount {
-    if (paymentMethod != 'tunai') {
-      return 0;
-    }
-
-    final paid = cashPaidAmount ?? 0;
-    return paid - totalAmount;
+    if (paymentMethod != 'tunai') return 0;
+    final change = _amount((value) => value.change);
+    return change.isFinite ? change : 0;
   }
 
-  bool get canSubmit {
-    if (isSubmitting || cartItems.isEmpty || totalAmount < 0) {
-      return false;
-    }
-
-    if (paymentMethod == 'tunai') {
-      return (cashPaidAmount ?? 0) >= totalAmount;
-    }
-
-    return true;
-  }
+  String? get validationError => TransactionValidation.error(
+    items: cartItems,
+    currencyCode: currencyCode,
+    orderDiscount: orderDiscountAmount,
+    tax: taxAmount,
+    paymentMethod: paymentMethod,
+    cashPaid: cashPaidAmount,
+  );
+  bool get canSubmit => !isSubmitting && validationError == null;
 
   TransaksiState copyWith({
     List<TransaksiItem>? catalogItems,
@@ -80,6 +92,7 @@ class TransaksiState {
     bool? isRefreshingCatalog,
     int? employeeId,
     bool resetEmployeeId = false,
+    String? currencyCode,
   }) {
     return TransaksiState(
       catalogItems: catalogItems ?? this.catalogItems,
@@ -98,6 +111,7 @@ class TransaksiState {
       catalogRefreshFailed: catalogRefreshFailed ?? this.catalogRefreshFailed,
       isRefreshingCatalog: isRefreshingCatalog ?? this.isRefreshingCatalog,
       employeeId: resetEmployeeId ? null : employeeId ?? this.employeeId,
+      currencyCode: currencyCode ?? this.currencyCode,
     );
   }
 }

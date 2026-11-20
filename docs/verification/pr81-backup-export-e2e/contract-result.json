@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "revision": "57f6146b1d33b32335b3ecbfcdd3a4cec3dad853",
+  "package": "com.pujanggapos.pujangga_pos.pr81e2e",
+  "events": [
+    "plaintext round-trip, logo, all tables and reopen",
+    "plaintext rejects rows, no data/file changes",
+    "plaintext rejects string, no data/file changes",
+    "plaintext rejects depth, no data/file changes",
+    "plaintext rejects tokens, no data/file changes",
+    "plaintext rejects bytes, no data/file changes",
+    "plaintext write failure, no partial file; encrypted staging contains ciphertext only",
+    "plaintext inspect failure, no partial file; encrypted staging contains ciphertext only",
+    "plaintext rename failure, no partial file; encrypted staging contains ciphertext only",
+    "encrypted round-trip, logo, all tables and reopen",
+    "encrypted rejects rows, no data/file changes",
+    "encrypted rejects string, no data/file changes",
+    "encrypted rejects depth, no data/file changes",
+    "encrypted rejects tokens, no data/file changes",
+    "encrypted rejects bytes, no data/file changes",
+    "encrypted rejects envelope-overhead, no data/file changes",
+    "encrypted write failure, no partial file; encrypted staging contains ciphertext only",
+    "encrypted inspect failure, no partial file; encrypted staging contains ciphertext only",
+    "encrypted rename failure, no partial file; encrypted staging contains ciphertext only",
+    "real dataset >50000 rows and <20MiB rejected in both formats"
+  ],
+  "large_rows": 50003,
+  "large_plaintext_bytes": 9729739,
+  "independent_crypto_and_sqlite_reconciliation": "passed",
+  "apk_sha256": "7c7a9001c6d247cd191e89f0ddae783b43e0ebd888b9d8b4dbd23646ed7731f3",
+  "harness_sha256": "4773517416c618ac0d86e0ed6dbcf7e898a19162847ba2130d2ad8c624e1cdb3",
+  "verified_at_utc": "2026-11-20T09:19:22.988299+00:00"
+}

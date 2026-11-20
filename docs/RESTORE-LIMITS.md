@@ -1,5 +1,32 @@
 # Batas sumber daya restore
 
+## Kontrak ekspor dan impor
+
+Ekspor plaintext maupun terenkripsi memakai batas yang sama dengan impor.
+Payload diserialisasi dan diperiksa di worker, lalu melewati parser metadata,
+normalisasi, validasi kolom/semantik, dan validasi logo yang sama dengan inspeksi
+restore. Snapshot tabel tetap diambil dalam satu transaksi SQLite, termasuk
+pemeriksaan foreign key; pekerjaan file dilakukan setelah transaksi berakhir.
+
+Untuk ekspor terenkripsi, plaintext hanya berada di memori. Envelope akhir juga
+harus lolos batas 20 MiB, sehingga overhead base64 dapat membuat ekspor terenkripsi
+ditolak meskipun versi plaintext masih muat. Batas impor tidak dinaikkan.
+
+File ditulis dan di-flush dalam direktori staging unik pada filesystem tujuan,
+diinspeksi kembali dari byte tersimpan, lalu di-rename ke nama final. Hanya setelah
+rename berhasil aplikasi mengembalikan hasil ekspor dan mencatat sukses. Saat
+operasi gagal, staging milik operasi dibersihkan tanpa mengubah data aktif atau backup lama.
+Jika proses dihentikan paksa sebelum rename, staging mungkin tertinggal; file itu
+bukan backup final dan tidak ditawarkan sebagai snapshot pemulihan.
+
+Restore tetap mewajibkan snapshot terenkripsi yang lolos inspeksi. Jika data aktif
+melampaui batas atau snapshot tidak dapat ditulis/diverifikasi, operasi dibatalkan
+dengan kode `recovery_invalid`, penyebab dalam bahasa Indonesia, dan penegasan
+bahwa data aktif belum diganti. Tidak ada bypass snapshot. Streaming dataset besar
+merupakan pekerjaan terpisah.
+
+## Anggaran dan pemeriksaan impor
+
 Inspeksi backup memakai batas berikut (semuanya harus terpenuhi):
 
 | Sumber daya | Batas |

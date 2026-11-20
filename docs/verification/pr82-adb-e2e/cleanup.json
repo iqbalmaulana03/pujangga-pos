@@ -1,0 +1,7 @@
+{
+  "test_package_removed": true,
+  "preexisting_package_inventory_unchanged": true,
+  "after": [
+    "package:com.pujanggapos.pujangga_pos.pr80e2e"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "status": "passed",
+  "before": [
+    "package:com.pujanggapos.pujangga_pos.pr80e2e"
+  ],
+  "after_cleanup": [
+    "package:com.pujanggapos.pujangga_pos.pr80e2e"
+  ],
+  "removed_owned_packages": [
+    "com.pujanggapos.pujangga_pos.issue56e2e",
+    "com.pujanggapos.pujangga_pos.pr81e2e"
+  ],
+  "verified_at_utc": "2026-11-20T09:21:25.026928+00:00"
+}

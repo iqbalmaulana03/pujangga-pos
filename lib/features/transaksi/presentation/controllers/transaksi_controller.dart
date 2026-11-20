@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/utils/currency_formatter.dart';
+
+import '../../../../core/utils/scaled_arithmetic.dart';
 
 import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
@@ -14,6 +15,7 @@ import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
 import '../../domain/entities/transaksi_receipt.dart';
 import '../../domain/entities/transaksi_submit_request.dart';
+import '../../domain/entities/transaction_validation.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import '../models/transaksi_state.dart';
@@ -94,9 +96,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       );
     } else {
       final existing = updatedCart[existingIndex];
-      updatedCart[existingIndex] = existing.copyWith(
-        quantity: existing.quantity + _quantityStep(existing.item),
+      final quantity = _adjustQuantity(
+        existing.quantity,
+        _quantityStep(existing.item),
       );
+      if (quantity == null) return;
+      updatedCart[existingIndex] = existing.copyWith(quantity: quantity);
     }
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -115,7 +120,14 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         continue;
       }
 
-      final quantity = cartItem.quantity - _quantityStep(cartItem.item);
+      final quantity = _adjustQuantity(
+        cartItem.quantity,
+        -_quantityStep(cartItem.item),
+      );
+      if (quantity == null) {
+        updatedCart.add(cartItem);
+        continue;
+      }
       if (quantity > 0) {
         final updatedItem = cartItem.copyWith(quantity: quantity);
         updatedCart.add(
@@ -142,7 +154,11 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         return cartItem;
       }
 
-      final quantity = cartItem.quantity + _quantityStep(cartItem.item);
+      final quantity = _adjustQuantity(
+        cartItem.quantity,
+        _quantityStep(cartItem.item),
+      );
+      if (quantity == null) return cartItem;
       final updatedItem = cartItem.copyWith(quantity: quantity);
       return updatedItem.copyWith(
         itemDiscountAmount: cartItem.itemDiscountAmount
@@ -171,11 +187,23 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   void setQuantity(String itemId, double quantity) {
+    TransactionValidation.requireFinite(quantity);
     final current = _currentState;
     if (current == null) {
       return;
     }
 
+    try {
+      quantity = ScaledArithmetic.inputQuantity(quantity);
+    } on FormatException {
+      // Keep finite overflow visible as invalid input, as required by #70.
+      if (quantity.abs() <= ScaledArithmetic.maxUnits / 1000) {
+        throw const AppException(
+          'validation_error',
+          'Kuantitas maksimal tiga angka desimal.',
+        );
+      }
+    }
     if (quantity <= 0) {
       removeItem(itemId);
       return;
@@ -209,12 +237,13 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         cartItems: [],
         orderDiscountAmount: 0,
         taxMode: TaxMode.automatic,
-        cashPaidAmount: 0,
+        resetCashPaidAmount: true,
       ),
     );
   }
 
   void updateItemDiscount(String itemId, double value) {
+    TransactionValidation.requireFinite(value);
     final current = _currentState;
     if (current == null) {
       return;
@@ -233,6 +262,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   void updateOrderDiscount(double value) {
+    TransactionValidation.requireFinite(value);
     final current = _currentState;
     if (current == null) {
       return;
@@ -244,6 +274,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
   }
 
   void updateTaxAmount(double value) {
+    TransactionValidation.requireFinite(value);
     final current = _currentState;
     if (current == null) {
       return;
@@ -296,7 +327,14 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       return;
     }
 
-    state = AsyncData(_buildState(current, cashPaidAmount: value ?? 0));
+    final valid = value != null && value.isFinite && value >= 0;
+    state = AsyncData(
+      _buildState(
+        current,
+        cashPaidAmount: valid ? value : null,
+        resetCashPaidAmount: !valid,
+      ),
+    );
   }
 
   Future<TransaksiReceipt> submit() async {
@@ -322,9 +360,9 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     }
 
     if (!current.canSubmit) {
-      throw const AppException(
+      throw AppException(
         'validation_error',
-        'Lengkapi pembayaran terlebih dahulu sebelum menyimpan transaksi.',
+        current.validationError ?? 'Transaksi sedang disimpan.',
       );
     }
 
@@ -339,10 +377,12 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
                 (current.paymentMethod == 'tunai'
                     ? current.cashPaidAmount
                     : null) &&
+            previous.currencyCode == current.currencyCode &&
             previous.employeeId == current.employeeId
         ? previous
         : TransaksiSubmitRequest(
             items: current.cartItems,
+            currencyCode: current.currencyCode,
             orderDiscountAmount: current.orderDiscountAmount,
             taxAmount: current.taxAmount,
             paymentMethod: current.paymentMethod,
@@ -374,7 +414,9 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
       _submitInProgress = false;
       return receipt;
     }
-    state = const AsyncData(TransaksiState(isSubmitting: true));
+    state = AsyncData(
+      TransaksiState(isSubmitting: true, currencyCode: current.currencyCode),
+    );
     try {
       ref.invalidate(transaksiReceiptProvider(receipt.invoiceNumber));
       ref.invalidate(stokControllerProvider);
@@ -428,6 +470,15 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     }
   }
 
+  double? _adjustQuantity(double quantity, double step) {
+    try {
+      return ScaledArithmetic.addQuantity(quantity, step);
+    } on FormatException {
+      // Keep an unrepresentable draft editable; validation disables checkout.
+      return null;
+    }
+  }
+
   double _quantityStep(TransaksiItem item) {
     const fractionalUnits = {'kg', 'g', 'l', 'liter', 'ml', 'm', 'meter'};
     final unit = item.unitLabel?.trim().toLowerCase();
@@ -453,35 +504,77 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
     double? cashPaidAmount,
     bool resetCashPaidAmount = false,
   }) {
+    final settings = ref.read(appSettingsProvider).asData?.value;
+    final currency = settings?.currencyCode ?? current.currencyCode;
+    double money(double value) {
+      try {
+        return ScaledArithmetic.money(value, currency);
+      } on FormatException {
+        return value;
+      }
+    }
+
+    double quantity(double value) {
+      try {
+        return ScaledArithmetic.quantity(value);
+      } on FormatException {
+        return value;
+      }
+    }
+
+    // Search/payment-only changes must preserve cart identity for checkout retry.
+    final normalizedCart = cartItems != null || currency != current.currencyCode
+        ? (cartItems ?? current.cartItems)
+              .map(
+                (line) => line.copyWith(
+                  currencyCode: currency,
+                  quantity: quantity(line.quantity),
+                  itemDiscountAmount: money(line.itemDiscountAmount),
+                ),
+              )
+              .toList()
+        : current.cartItems;
     var nextState = current.copyWith(
+      currencyCode: currency,
       catalogItems: catalogItems,
-      cartItems: cartItems,
+      cartItems: normalizedCart,
       searchQuery: searchQuery,
       typeFilter: typeFilter,
-      orderDiscountAmount: orderDiscountAmount,
-      taxAmount: taxAmount,
+      orderDiscountAmount: money(
+        orderDiscountAmount ?? current.orderDiscountAmount,
+      ),
+      taxAmount: money(taxAmount ?? current.taxAmount),
       taxMode: taxMode,
       paymentMethod: paymentMethod,
-      cashPaidAmount: cashPaidAmount,
+      cashPaidAmount: cashPaidAmount == null && current.cashPaidAmount == null
+          ? null
+          : money(cashPaidAmount ?? current.cashPaidAmount!),
       resetCashPaidAmount: resetCashPaidAmount,
       isSubmitting: current.isSubmitting,
     );
 
     if (nextState.taxMode == TaxMode.automatic &&
-        (cartItems != null || orderDiscountAmount != null || taxMode != null)) {
-      final settings = ref.read(appSettingsProvider).asData?.value;
-      final taxRatePercent = settings?.defaultTaxPercent ?? 0.0;
-      final taxableAmount =
-          (nextState.subtotalAmount -
-                  nextState.itemDiscountAmount -
-                  nextState.orderDiscountAmount)
-              .clamp(0.0, double.infinity);
-      nextState = nextState.copyWith(
-        taxAmount: CurrencyFormatter.round(
-          taxableAmount * (taxRatePercent / 100.0),
-          currencyCode: settings?.currencyCode ?? 'IDR',
-        ),
-      );
+        (cartItems != null ||
+            orderDiscountAmount != null ||
+            taxMode != null ||
+            currency != current.currencyCode)) {
+      try {
+        // Ignore the previous tax/payment while recovering an invalid draft.
+        final calculation = nextState
+            .copyWith(taxAmount: 0, resetCashPaidAmount: true)
+            .calculation;
+        final taxable = calculation.net;
+        nextState = nextState.copyWith(
+          taxAmount: calculation.amount(
+            ScaledArithmetic.percentage(
+              taxable < 0 ? 0 : taxable,
+              settings?.defaultTaxPercent ?? 0,
+            ),
+          ),
+        );
+      } on FormatException {
+        nextState = nextState.copyWith(taxAmount: double.nan);
+      }
     }
 
     final normalizedQuery = nextState.searchQuery.trim().toLowerCase();
