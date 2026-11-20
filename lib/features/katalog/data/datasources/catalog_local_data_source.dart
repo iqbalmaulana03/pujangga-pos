@@ -1,5 +1,6 @@
 import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utils/scaled_arithmetic.dart';
 import '../../domain/entities/catalog_item_draft.dart';
 import '../models/catalog_item_db_model.dart';
 
@@ -55,7 +56,9 @@ class CatalogLocalDataSource {
         timestamp: timestamp,
       );
 
-      final stockQuantity = draft.isBarang ? (draft.stockQuantity ?? 0) : 0;
+      final stockQuantity = draft.isBarang
+          ? ScaledArithmetic.inputQuantity(draft.stockQuantity ?? 0)
+          : 0.0;
       final barcode = _normalizedBarcode(draft.barcode);
       await _ensureBarcodeAvailable(txn, barcode);
       final itemId = await txn.insert('items', {
@@ -146,7 +149,9 @@ class CatalogLocalDataSource {
       );
       final barcode = _normalizedBarcode(draft.barcode);
       await _ensureBarcodeAvailable(txn, barcode, excludingItemId: id);
-      final nextStock = draft.isBarang ? (draft.stockQuantity ?? 0) : 0;
+      final nextStock = draft.isBarang
+          ? ScaledArithmetic.inputQuantity(draft.stockQuantity ?? 0)
+          : 0.0;
       final updatedRows = await txn.update(
         'items',
         {
@@ -173,7 +178,10 @@ class CatalogLocalDataSource {
         throw const AppException('not_found', 'Item katalog tidak ditemukan.');
       }
 
-      final stockDelta = nextStock - previousStock;
+      final stockDelta = ScaledArithmetic.quantityDelta(
+        previousStock,
+        nextStock,
+      );
       if (stockDelta != 0) {
         await txn.insert('stock_movements', {
           'item_id': id,

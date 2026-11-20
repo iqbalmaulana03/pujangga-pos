@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
+  "package": "com.pujanggapos.pujangga_pos.pr82e2e",
+  "boots": [
+    {
+      "status": "passed",
+      "package": "com.pujanggapos.pujangga_pos.pr82e2e",
+      "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
+      "pid": 7680,
+      "invoice_rendered": "INV-20261120-225653-000579",
+      "transaction_count": 7,
+      "total": 0.3,
+      "paid": 0.3,
+      "change": 0,
+      "legacy_line_total": 0.015,
+      "rows_unchanged": true,
+      "integrity": "ok",
+      "verified_at_utc": "2026-11-20T16:03:16.138844Z"
+    },
+    {
+      "status": "passed",
+      "package": "com.pujanggapos.pujangga_pos.pr82e2e",
+      "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
+      "pid": 9009,
+      "invoice_rendered": "INV-20261120-225653-000579",
+      "transaction_count": 7,
+      "total": 0.3,
+      "paid": 0.3,
+      "change": 0,
+      "legacy_line_total": 0.015,
+      "rows_unchanged": true,
+      "integrity": "ok",
+      "verified_at_utc": "2026-11-20T16:03:23.169984Z"
+    }
+  ],
+  "distinct_android_processes": true,
+  "all_rows_unchanged": true,
+  "package_removed": true,
+  "existing_packages_preserved": true,
+  "cold_apk_sha256": "704cde06afd17db83b4a2d11f56593fa189305c0a3f4ed7c8c5ca76f864ca168",
+  "verified_at_utc": "2026-11-20T16:03:27.328128+00:00"
+}

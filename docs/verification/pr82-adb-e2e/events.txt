@@ -1,0 +1,59 @@
+PR82_ISOLATION: USD /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-USD-ILEAEJ
+PR82_PASS: USD ten UI decrements remove cart row
+PR82_CAPTURE: usd-fractional-receipt
+PR82_PASS: USD UI 0.1 + 0.1 + 0.1 sells stock 0.3 exactly
+PR82_ADB_INPUT: 0.30
+PR82_CAPTURE: usd-exact-payment
+PR82_PASS: USD UI 0.10 x 3 exact payment; insufficient payment blocked
+PR82_PASS: USD three partial sales leave zero stock
+PR82_CAPTURE: usd-overflow-validation
+PR82_PASS: USD overflow controls do not throw and valid UI input recovers
+PR82_CAPTURE: usd-mixed-receipt
+PR82_PASS: USD mixed sale item/order discount tax and commission reconcile
+PR82_CAPTURE: usd-void-detail
+PR82_PASS: USD UI void restores stock and removes commission once
+PR82_PASS: USD native stock adjustments and half-away-from-zero boundaries
+PR82_PASS: USD plaintext backup restores old and new snapshots unchanged
+PR82_PASS: USD encrypted backup restores old and new snapshots unchanged
+PR82_CAPTURE: usd-reopened-history
+PR82_PASS: USD reopened app displays historical snapshots without rewriting rows
+PR82_CLEANUP: USD disposable databases removed
+PR82_ISOLATION: SGD /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-SGD-QKPOAN
+PR82_PASS: SGD ten UI decrements remove cart row
+PR82_CAPTURE: sgd-fractional-receipt
+PR82_PASS: SGD UI 0.1 + 0.1 + 0.1 sells stock 0.3 exactly
+PR82_CAPTURE: sgd-exact-payment
+PR82_PASS: SGD UI 0.10 x 3 exact payment; insufficient payment blocked
+PR82_PASS: SGD three partial sales leave zero stock
+PR82_CAPTURE: sgd-overflow-validation
+PR82_PASS: SGD overflow controls do not throw and valid UI input recovers
+PR82_CAPTURE: sgd-mixed-receipt
+PR82_PASS: SGD mixed sale item/order discount tax and commission reconcile
+PR82_CAPTURE: sgd-void-detail
+PR82_PASS: SGD UI void restores stock and removes commission once
+PR82_PASS: SGD native stock adjustments and half-away-from-zero boundaries
+PR82_PASS: SGD plaintext backup restores old and new snapshots unchanged
+PR82_PASS: SGD encrypted backup restores old and new snapshots unchanged
+PR82_CAPTURE: sgd-reopened-history
+PR82_PASS: SGD reopened app displays historical snapshots without rewriting rows
+PR82_CLEANUP: SGD disposable databases removed
+PR82_ISOLATION: IDR /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-IDR-KTWCHZ
+PR82_PASS: IDR ten UI decrements remove cart row
+PR82_CAPTURE: idr-fractional-receipt
+PR82_PASS: IDR UI 0.1 + 0.1 + 0.1 sells stock 0.3 exactly
+PR82_CAPTURE: idr-exact-payment
+PR82_PASS: IDR UI 0.10 x 3 exact payment; insufficient payment blocked
+PR82_PASS: IDR three partial sales leave zero stock
+PR82_CAPTURE: idr-overflow-validation
+PR82_PASS: IDR overflow controls do not throw and valid UI input recovers
+PR82_CAPTURE: idr-mixed-receipt
+PR82_PASS: IDR mixed sale item/order discount tax and commission reconcile
+PR82_CAPTURE: idr-void-detail
+PR82_PASS: IDR UI void restores stock and removes commission once
+PR82_PASS: IDR native stock adjustments and half-away-from-zero boundaries
+PR82_PASS: IDR plaintext backup restores old and new snapshots unchanged
+PR82_PASS: IDR encrypted backup restores old and new snapshots unchanged
+PR82_CAPTURE: idr-reopened-history
+PR82_PASS: IDR reopened app displays historical snapshots without rewriting rows
+PR82_CLEANUP: IDR disposable databases removed
+PR82_COMPLETE: 33 verified scenarios

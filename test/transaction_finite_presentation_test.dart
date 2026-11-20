@@ -193,6 +193,67 @@ void main() {
     },
   );
 
+  test(
+    'quantity controls preserve an overflowing draft and allow recovery',
+    () async {
+      final repository = _Repository();
+      final container = ProviderContainer(overrides: _overrides(repository));
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        transaksiControllerProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      await container.read(appSettingsProvider.future);
+      await container.read(transaksiControllerProvider.future);
+      final controller = container.read(transaksiControllerProvider.notifier);
+      controller.addItem(_item);
+      controller.updatePaymentMethod('qris');
+      for (final overflow in [1e100, 1e308]) {
+        controller.setQuantity(_item.id, overflow);
+        for (final action in <void Function()>[
+          () => controller.increaseQuantity(_item.id),
+          () => controller.decreaseQuantity(_item.id),
+          () => controller.addItem(_item),
+        ]) {
+          expect(action, returnsNormally);
+          final state = container
+              .read(transaksiControllerProvider)
+              .requireValue;
+          expect(state.cartItems.single.quantity, overflow);
+          expect(state.canSubmit, isFalse);
+          expect(state.validationError, isNotNull);
+          expect(repository.saved, isEmpty);
+        }
+        controller.setQuantity(_item.id, 1);
+        expect(
+          container.read(transaksiControllerProvider).requireValue.canSubmit,
+          isTrue,
+        );
+        controller.increaseQuantity(_item.id);
+        expect(
+          container
+              .read(transaksiControllerProvider)
+              .requireValue
+              .cartItems
+              .single
+              .quantity,
+          2,
+        );
+        controller.decreaseQuantity(_item.id);
+        expect(
+          container
+              .read(transaksiControllerProvider)
+              .requireValue
+              .cartItems
+              .single
+              .quantity,
+          1,
+        );
+      }
+    },
+  );
+
   for (final wide in [false, true]) {
     testWidgets(
       'invalid pasted cash and overflowing totals render safely (${wide ? 'wide' : 'mobile'})',

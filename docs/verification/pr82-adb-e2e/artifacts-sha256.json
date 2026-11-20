@@ -1,0 +1,15 @@
+{
+  "text_normalization": "CRLF to LF for JSON/TXT; binary files unchanged",
+  "files": {
+    "cleanup.json": "322d001865670a373806a9d1fc7f7985b9050a8770ed5f91deefc39606212243",
+    "cold-boot-2.png": "f3d10956cad27bf452e1c3c0a0ff519f80018a23efbecf768cefca9926db80f6",
+    "cold-start-verified.json": "fe20e43a9107975c55ff79743ad3044bdd162ec01c6f949d8aa90d55b3a43e02",
+    "events.txt": "4a5c93429e618fbc016bff2f990361ec5a5b71e964b843c64d4f4f36405a103e",
+    "idr-exact-payment.png": "6ed0ff083c67864a079948a049b960346c92b9e6443a8d7e2537257a19ce921e",
+    "legacy-verified-result.json": "20ae12fd6aab9f464536c06c7e6ae82150f465a6602b1fb454e1f03ec0422332",
+    "sgd-void-detail.png": "6adb826bc7276b1c9e890d897815c8ff2b8c419d720172a312b4eb3411bfbcf9",
+    "source-provenance.json": "8f9afa7389607c3c341dc34e4355c15f555e72ae8c4b6425c3770efb3f51264e",
+    "usd-exact-payment.png": "79e2ae52b8be8acd35a322fc239917d0c457113f172753b2adac2649a8fcc0b4",
+    "verified-result.json": "3f85708213132242018fd773744b524d2bea9e6aa6aad43b7b668a0f39f5eb5a"
+  }
+}

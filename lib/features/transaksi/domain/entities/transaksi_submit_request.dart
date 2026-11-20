@@ -10,6 +10,7 @@ class TransaksiSubmitRequest {
     required this.paymentMethod,
     this.employeeId,
     this.cashPaidAmount,
+    this.currencyCode = 'IDR',
     String? checkoutId,
   }) : checkoutId = checkoutId ?? _newCheckoutId();
 
@@ -23,6 +24,7 @@ class TransaksiSubmitRequest {
   }
 
   final String checkoutId;
+  final String currencyCode;
 
   final List<TransaksiCartItem> items;
   final double orderDiscountAmount;
