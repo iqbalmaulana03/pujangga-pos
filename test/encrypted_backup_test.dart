@@ -1,3 +1,8 @@
+// Each export now authenticates the persisted file before publication as well
+// as performing the encryption; allow real PBKDF2 work on slower test hosts.
+@Timeout(Duration(minutes: 2))
+library;
+
 import 'dart:convert';
 import 'dart:io';
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:logging/logging.dart';
@@ -7,11 +8,14 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/business_logo_service.dart';
 import '../../domain/entities/app_backup_file.dart';
 import 'app_backup_payload_builder.dart';
 import 'backup_encryption.dart';
 import 'backup_input_limits.dart';
+import 'backup_inspector.dart';
+import 'backup_tables.dart' as registry;
 
 typedef BackupDirectoryProvider = Future<Directory> Function();
 
@@ -30,19 +34,7 @@ class AppBackupService {
   final BackupDirectoryProvider? backupDirectoryProvider;
   final BusinessLogoService? logoService;
 
-  static const List<String> backupTables = [
-    'business_profile',
-    'app_settings',
-    'categories',
-    'items',
-    'sales_transactions',
-    'sales_transaction_items',
-    'stock_movements',
-    'expenses',
-    'capital_history',
-    'employees',
-    'employee_compensation_periods',
-  ];
+  static const List<String> backupTables = registry.backupTables;
 
   // A null password is an explicit request for a legacy plaintext export.
   Future<AppBackupFile> createBackup({required String? password}) =>
@@ -60,6 +52,12 @@ class AppBackupService {
         snapshot[table] = rows
             .map((row) => Map<String, Object?>.from(row))
             .toList(growable: false);
+      }
+      if ((await txn.rawQuery('PRAGMA foreign_key_check')).isNotEmpty) {
+        throw const AppException(
+          'backup_invalid',
+          'Relasi data aktif tidak valid. Cadangan tidak dibuat.',
+        );
       }
       return snapshot;
     });
@@ -88,27 +86,39 @@ class AppBackupService {
       businessLogoBytes: logoBytes,
     );
 
+    final inspector = BackupInspector(
+      database: database,
+      logoService: logoService,
+    );
+    // Parse/normalize with the same contract as imports before touching disk.
+    final plaintext = await _encodePayload(payload);
+    await inspector.inspectPlaintext(plaintext);
+    final content = password == null
+        ? plaintext
+        : await BackupEncryption.encrypt(plaintext, password);
+    if (password != null) await _checkEncryptedContent(content);
+
     final targetDirectory =
         await (backupDirectoryProvider?.call() ??
             getApplicationDocumentsDirectory());
     await targetDirectory.create(recursive: true);
-
     final fileName =
         'pujangga_pos_backup_${_formatTimestamp(generatedAt)}_${DateTime.now().microsecondsSinceEpoch}${password == null ? '' : '_encrypted'}.json';
     final file = File(path.join(targetDirectory.path, fileName));
-
-    final plaintext = const JsonEncoder.withIndent('  ').convert(payload);
-    // Never write an intermediate plaintext file for encrypted exports.
-    final content = password == null
-        ? plaintext
-        : await BackupEncryption.encrypt(plaintext, password);
-    if (password != null &&
-        utf8.encode(content).length > BackupInputLimits.maxBytes) {
-      // Base64 overhead counts toward the same file budget as legacy imports.
-      // Do not report a successful export that this app cannot import.
-      BackupInputLimits.exceeded('ukuran 20 MiB');
+    // A private sibling directory reserves a unique name on the same filesystem.
+    final staging = await targetDirectory.createTemp('.pending-');
+    try {
+      final pending = File(path.join(staging.path, fileName));
+      // Encrypted exports write ciphertext only, including in staging.
+      await pending.writeAsString(content, flush: true);
+      await inspector.inspectBackupFile(pending.path, password: password);
+      if (await file.exists()) {
+        throw const FileSystemException('Backup destination already exists');
+      }
+      await pending.rename(file.path);
+    } finally {
+      if (await staging.exists()) await staging.delete(recursive: true);
     }
-    await file.writeAsString(content, flush: true);
 
     logger.info('Backup exported to ${file.path}');
 
@@ -133,3 +143,10 @@ class AppBackupService {
     return '$year$month$day$hour$minute$second';
   }
 }
+
+Future<String> _encodePayload(Map<String, Object?> payload) =>
+    Isolate.run(() => const JsonEncoder.withIndent('  ').convert(payload));
+
+Future<void> _checkEncryptedContent(String content) => Isolate.run(() {
+  BackupInputLimits.decode(content, allowEncryptedEnvelope: true);
+});
