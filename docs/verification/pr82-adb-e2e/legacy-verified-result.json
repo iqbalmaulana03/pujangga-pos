@@ -1,0 +1,37 @@
+{
+  "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
+  "status": "passed",
+  "tests": [
+    "three fractional sales exhaust stock and repeated void restores it once",
+    "restored legacy void rounds once and preserves its ledger (0.1995)",
+    "restored legacy void rounds once and preserves its ledger (0.1996)",
+    "restored legacy ledger stays continuous: (after: 0.2, delta: 0.0005, quantity: 0.2, type: catalog)",
+    "restored legacy ledger stays continuous: (after: 0.3, delta: 0.1005, quantity: 0.3, type: catalog)",
+    "restored legacy ledger stays continuous: (after: 0.1, delta: -0.0995, quantity: 0.1, type: sale)",
+    "restored legacy ledger stays continuous: (after: 0.3, delta: 0.1005, quantity: 0.1, type: manual_add)",
+    "restored legacy ledger stays continuous: (after: 0.1, delta: -0.0995, quantity: 0.1, type: manual_reduce)",
+    "restored legacy ledger stays continuous: (after: 0.2, delta: 0.0005, quantity: 0.2, type: set_balance)",
+    "legacy fractional stock cannot be rounded up to cover an overdraw",
+    "combined 0.1 increments sell all 0.3 stock",
+    "USD exact payment, retry, snapshots and insufficient payment",
+    "SGD exact payment, retry, snapshots and insufficient payment",
+    "manual stock changes preserve thousandths and reject overdraw",
+    "commission allocation rounds only final result and matches expense",
+    "invalid decimals, nonfinite and unsafe amounts leave no effects",
+    "catalog stock edit records a normalized delta",
+    "request snapshot overrides cannot change a new checkout total",
+    "mixed legacy and rounded rows survive backup restore unchanged"
+  ],
+  "verified_at_utc": "2026-11-20T16:12:10.042822Z",
+  "native_database_snapshots_verified": 38,
+  "independent_sqlite_and_decimal_reconciliation": "passed",
+  "source_files_verified": 138,
+  "apk_sha256": "c20a942a9787345c51f4d76988faa58b24790b65d308a39c1e7cf1f1d8abd302",
+  "harness_sha256": "39aeca0d2cfa914a169c7acff4c15741b4ae16e4a1404687db4c29d5d9c11be7",
+  "host_verified_at_utc": "2026-11-20T16:12:13.388090+00:00",
+  "package_removed": true,
+  "existing_packages_preserved": true,
+  "inventory_after": [
+    "package:com.pujanggapos.pujangga_pos.pr80e2e"
+  ]
+}

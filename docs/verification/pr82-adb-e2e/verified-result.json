@@ -1,5 +1,5 @@
 {
-  "revision": "24c9d9e06f24affca42945b5c4e2634b9ab70944",
+  "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
   "package": "com.pujanggapos.pujangga_pos.pr82e2e",
   "status": "passed",
   "events": [
@@ -50,9 +50,9 @@
       "exact_total": 0.3,
       "mixed_total": 0.55,
       "mixed_commission": 0.03,
-      "legacy_invoice": "INV-20261120-171248-000403",
+      "legacy_invoice": "INV-20261120-225735-000643",
       "legacy_line_total": 0.015,
-      "void_invoice": "INV-20261120-171237-000999",
+      "void_invoice": "INV-20261120-225723-000726",
       "active_expenses": 0,
       "reopen_integrity": "ok"
     },
@@ -68,9 +68,9 @@
       "exact_total": 0.3,
       "mixed_total": 0.55,
       "mixed_commission": 0.03,
-      "legacy_invoice": "INV-20261120-171421-000681",
+      "legacy_invoice": "INV-20261120-225907-000499",
       "legacy_line_total": 0.015,
-      "void_invoice": "INV-20261120-171410-000803",
+      "void_invoice": "INV-20261120-225856-000293",
       "active_expenses": 0,
       "reopen_integrity": "ok"
     },
@@ -86,17 +86,17 @@
       "exact_total": 30.0,
       "mixed_total": 55.0,
       "mixed_commission": 3.0,
-      "legacy_invoice": "INV-20261120-171549-000196",
+      "legacy_invoice": "INV-20261120-230035-000152",
       "legacy_line_total": 1.5,
-      "void_invoice": "INV-20261120-171539-000111",
+      "void_invoice": "INV-20261120-230025-000358",
       "active_expenses": 0,
       "reopen_integrity": "ok"
     }
   },
-  "verified_at_utc": "2026-11-20T10:16:19.762153+00:00",
+  "verified_at_utc": "2026-11-20T16:01:38.074987+00:00",
   "independent_crypto_and_sqlite_reconciliation": "passed",
-  "apk_sha256": "b1ba7887a22d8c8e74ba6c87bf6812e2502be50766347eed9611888b5b113e51",
-  "harness_sha256": "53f4399fc770096f95e3578c72f74e8095c528a6c914fd4c58208fefc3d1ca96",
+  "apk_sha256": "1f55c64cabc1c2310d97ca9a40653a3016777347254bbf067b889cc2c7dee9c0",
+  "harness_sha256": "5152ec2ab2a62ce1c5860d54f776277ad325f8c172e7e9daedbc75d46020e439",
   "source_files_verified": 138,
   "native_adb_payment_input": "0.30",
   "screenshots": [

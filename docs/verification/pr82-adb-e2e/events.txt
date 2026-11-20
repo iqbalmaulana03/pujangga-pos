@@ -1,4 +1,4 @@
-PR82_ISOLATION: USD /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-USD-EQSPQG
+PR82_ISOLATION: USD /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-USD-ILEAEJ
 PR82_PASS: USD ten UI decrements remove cart row
 PR82_CAPTURE: usd-fractional-receipt
 PR82_PASS: USD UI 0.1 + 0.1 + 0.1 sells stock 0.3 exactly
@@ -18,7 +18,7 @@ PR82_PASS: USD encrypted backup restores old and new snapshots unchanged
 PR82_CAPTURE: usd-reopened-history
 PR82_PASS: USD reopened app displays historical snapshots without rewriting rows
 PR82_CLEANUP: USD disposable databases removed
-PR82_ISOLATION: SGD /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-SGD-IEOASQ
+PR82_ISOLATION: SGD /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-SGD-QKPOAN
 PR82_PASS: SGD ten UI decrements remove cart row
 PR82_CAPTURE: sgd-fractional-receipt
 PR82_PASS: SGD UI 0.1 + 0.1 + 0.1 sells stock 0.3 exactly
@@ -37,7 +37,7 @@ PR82_PASS: SGD encrypted backup restores old and new snapshots unchanged
 PR82_CAPTURE: sgd-reopened-history
 PR82_PASS: SGD reopened app displays historical snapshots without rewriting rows
 PR82_CLEANUP: SGD disposable databases removed
-PR82_ISOLATION: IDR /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-IDR-OSHUPH
+PR82_ISOLATION: IDR /data/user/0/com.pujanggapos.pujangga_pos.pr82e2e/cache/pr82-IDR-KTWCHZ
 PR82_PASS: IDR ten UI decrements remove cart row
 PR82_CAPTURE: idr-fractional-receipt
 PR82_PASS: IDR UI 0.1 + 0.1 + 0.1 sells stock 0.3 exactly
@@ -57,4 +57,3 @@ PR82_CAPTURE: idr-reopened-history
 PR82_PASS: IDR reopened app displays historical snapshots without rewriting rows
 PR82_CLEANUP: IDR disposable databases removed
 PR82_COMPLETE: 33 verified scenarios
-04:41 +1: All tests passed!

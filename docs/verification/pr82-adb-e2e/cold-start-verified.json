@@ -1,14 +1,14 @@
 {
   "status": "passed",
-  "revision": "24c9d9e06f24affca42945b5c4e2634b9ab70944",
+  "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
   "package": "com.pujanggapos.pujangga_pos.pr82e2e",
   "boots": [
     {
       "status": "passed",
       "package": "com.pujanggapos.pujangga_pos.pr82e2e",
-      "revision": "24c9d9e06f24affca42945b5c4e2634b9ab70944",
-      "pid": 32209,
-      "invoice_rendered": "INV-20261120-171207-000482",
+      "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
+      "pid": 7680,
+      "invoice_rendered": "INV-20261120-225653-000579",
       "transaction_count": 7,
       "total": 0.3,
       "paid": 0.3,
@@ -16,14 +16,14 @@
       "legacy_line_total": 0.015,
       "rows_unchanged": true,
       "integrity": "ok",
-      "verified_at_utc": "2026-11-20T10:21:52.950447Z"
+      "verified_at_utc": "2026-11-20T16:03:16.138844Z"
     },
     {
       "status": "passed",
       "package": "com.pujanggapos.pujangga_pos.pr82e2e",
-      "revision": "24c9d9e06f24affca42945b5c4e2634b9ab70944",
-      "pid": 3659,
-      "invoice_rendered": "INV-20261120-171207-000482",
+      "revision": "6118359d1f4a7637ec8aa7286a9675ec7cb65428",
+      "pid": 9009,
+      "invoice_rendered": "INV-20261120-225653-000579",
       "transaction_count": 7,
       "total": 0.3,
       "paid": 0.3,
@@ -31,13 +31,13 @@
       "legacy_line_total": 0.015,
       "rows_unchanged": true,
       "integrity": "ok",
-      "verified_at_utc": "2026-11-20T10:22:00.599226Z"
+      "verified_at_utc": "2026-11-20T16:03:23.169984Z"
     }
   ],
   "distinct_android_processes": true,
   "all_rows_unchanged": true,
   "package_removed": true,
   "existing_packages_preserved": true,
-  "cold_apk_sha256": "21af0a908e5ce7d4de8d074880c959e59e86dedae9416e45c5dfce44cd1c1d13",
-  "verified_at_utc": "2026-11-20T10:22:05.148428+00:00"
+  "cold_apk_sha256": "704cde06afd17db83b4a2d11f56593fa189305c0a3f4ed7c8c5ca76f864ca168",
+  "verified_at_utc": "2026-11-20T16:03:27.328128+00:00"
 }

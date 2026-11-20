@@ -1,61 +1,68 @@
-# PR #82 — Pengujian E2E Android melalui ADB
+# PR #82 — Pengujian ulang E2E Android melalui ADB
 
-**Hasil: LULUS.** Revisi yang diuji: `24c9d9e06f24affca42945b5c4e2634b9ab70944`.
+**Hasil: LULUS.** Kode aplikasi yang diuji: `6118359d1f4a7637ec8aa7286a9675ec7cb65428`.
 
-- PR: https://github.com/iqbalmaulana03/pujangga-pos/pull/82
-- Perangkat nyata: Xiaomi model `2201116TG`, Android 13.
-- Flutter 3.47.9 / Dart 3.13.7; APK debug dengan paket khusus `com.pujanggapos.pujangga_pos.pr82e2e`.
-- Verifikasi UI dan rekonsiliasi host selesai: `2026-11-20T10:16:19.762153+00:00`.
-- Verifikasi restart proses selesai: `2026-11-20T10:22:05.148428+00:00`.
-- Seluruh 138 berkas sumber aplikasi dan pubspec dicocokkan dengan revisi PR. Kode bisnis tidak diubah; entrypoint pengujian dan suffix paket terpisah digunakan dalam worktree `test/82-scaled-arithmetic-e2e`.
+Perangkat fisik Xiaomi `2201116TG`, Android 13; Flutter 3.47.9 / Dart 3.13.7.
+Paket debug terisolasi: `com.pujanggapos.pujangga_pos.pr82e2e`.
+Rekonsiliasi UI selesai `2026-11-20T16:01:38Z`; regresi native selesai
+`2026-11-20T16:12:13Z`. Commit dokumentasi/runner setelah revisi ini tidak mengubah
+kode aplikasi yang diuji. Seluruh 138 sumber aplikasi/pubspec dicocokkan dengan Git.
 
-## Skenario pada perangkat
-
-Setiap kelompok berikut lulus untuk **USD, SGD, dan IDR**, total **33 skenario**. Fixture IDR memakai nominal 100 kali nominal USD/SGD, sehingga contoh pembayaran 0.30 menjadi Rp30.
-
-| Kelompok | Bukti perilaku |
+| Pemeriksaan | Hasil |
 |---|---|
-| Kuantitas dan penghapusan baris | UI menolak `0.1234`, menerima `0.001`; sepuluh pengurangan `0.1` dari `1` menghapus baris keranjang. |
-| Akumulasi dan stok | UI `0.1 + 0.1 + 0.1` menghasilkan `0.3`; penjualan menghabiskan stok `0.3` tepat menjadi nol. |
-| Pembayaran tepat | Harga `0.10 × 3`, bayar `0.30`, total `0.30`, kembalian nol. Pembayaran `0.29` mematikan CTA. Untuk USD, nominal `0.30` dimasukkan melalui perintah ADB ke IME Android. |
-| Penjualan bertahap | Tiga transaksi `0.1` meninggalkan stok berturut-turut `0.2`, `0.1`, lalu `0`. |
-| Overflow dan pemulihan | Draft `1e100` tetap aman saat tombol tambah/kurang dan penambahan item yang sama dijalankan; penyimpanan terblokir, data tidak berubah, dan input UI `1` memulihkannya. |
-| Transaksi campuran | Produk dan jasa masing-masing `0.30`; diskon item `0.01`, diskon transaksi `0.09`, pajak 10% menghasilkan `0.05`, total `0.55`, dan komisi jasa `0.03`. Header dan pengeluaran cocok. |
-| Void melalui UI | Konfirmasi void mengembalikan stok produk dan menghapus pengeluaran komisi; detail menampilkan status dibatalkan. |
-| Stok dan batas pembulatan pada Android | Tambah stok sepuluh kali `0.1`, lalu kurangi sepuluh kali `0.1`, menghasilkan nol. Nilai positif/negatif tepat setengah unit dan sedikit di atas/bawahnya mengikuti pembulatan menjauhi nol. |
-| Backup plaintext | Ekspor, inspeksi, restore ke database terpisah, dan seluruh baris cocok. |
-| Backup terenkripsi | Ekspor/restore pada Android lulus; host mendekripsi AES-GCM/PBKDF2 secara independen dan mencocokkan seluruh tabel. |
-| Pembukaan ulang SQLite dan aplikasi | Provider/aplikasi dibangun ulang setelah koneksi SQLite ditutup. Snapshot legacy `0.015` (IDR `1.5`) dibaca tanpa dihitung ulang; seluruh baris, integritas, dan foreign key tetap valid. |
+| UI USD, SGD, IDR | 33/33 skenario lulus; 18 screenshot |
+| Kuantitas dan stok | 0.1 + 0.1 + 0.1 tepat 0.3; tiga penjualan pecahan menghabiskan stok; sepuluh pengurangan menghapus baris |
+| Pembayaran tepat | USD 0.30 dimasukkan melalui ADB ke IME Android; kembalian nol; pembayaran kurang terblokir |
+| Validasi | Batas tiga desimal, overflow yang dapat dipulihkan, dan pembulatan setengah menjauhi nol lulus |
+| Transaksi campuran | Diskon item/order, pajak, komisi, pengeluaran, dan void cocok |
+| Backup/restore | Enam database dan enam backup cocok; AES-GCM/PBKDF2 didekripsi independen di host |
+| Restart proses | Dua PID berbeda, 7680 dan 9009; seluruh baris tetap sama |
+| Regresi persistensi pada Android | 19/19 lulus; 38 snapshot SQLite dibandingkan di host |
+| Stok legacy setelah restore | Edit katalog ke 0.200/0.300, penjualan, tambah/kurang/set stok menjaga saldo awal 0.1995 dan selisih aktual |
+| Void legacy | Dua batas pembulatan, idempotensi, dan ekspor/restore ulang lulus |
+| Penolakan stok kurang | Stok legacy 0.0005 tidak dapat menutup penjualan/pengurangan 0.001 |
+| Pembersihan | Paket pr82e2e dihapus; inventaris aplikasi awal tetap sama |
 
-UI, navigasi, checkout, struk, dan konfirmasi void memakai aplikasi asli. Pengaturan fixture, sebagian nominal diskon, penyesuaian stok tambahan, dan verifikasi angka memakai controller/data source asli pada Android. Pengujian ini tidak menggunakan database pengguna.
+UI, navigasi, checkout, struk, dan void memakai aplikasi asli. Fixture dan sebagian
+angka diskon memakai controller/data source asli. Regresi tambahan menjalankan suite
+persistensi yang sama dengan unit test pada SQLite Android; tidak seluruh kasus berupa
+klik UI. Setiap database dibuktikan berada di cache namespace uji, terpisah dari data
+pengguna. Host memeriksa seluruh tabel, integritas, foreign key, dan selisih Decimal.
 
-## Verifikasi independen dan restart proses
+Percobaan pertama suite tambahan berhenti saat instalasi dengan
+`INSTALL_FAILED_USER_RESTRICTED`; belum ada test aplikasi yang dijalankan. Setelah
+pengguna menyiapkan perangkat, pengulangan menjalankan seluruh 19 kasus hingga lulus.
 
-Host membaca kembali enam database SQLite (sumber dan hasil restore untuk tiga mata uang), enam backup, serta 18 screenshot perangkat. Tiap mata uang memiliki tujuh transaksi, 30 pergerakan stok, stok akhir barang berat/bagian nol, stok barang satuan 17, dan tidak ada pengeluaran komisi aktif setelah void. Pemeriksaan seluruh tabel, `integrity_check`, dan `foreign_key_check` lulus.
+## Bukti
 
-Tahap tambahan menggunakan entrypoint cold-start yang menjalankan `PujanggaPosApp` asli terhadap snapshot USD hasil pengujian perangkat. Snapshot dipindahkan kembali ke namespace uji dengan checksum SHA-256 yang sama. ADB menjalankan `am force-stop` dan `am start` dua kali. PID Android berbeda: `32209` dan `3659`. Pada kedua peluncuran, struk `0.30` ditampilkan, riwayat legacy tetap `0.015`, dan seluruh baris dibandingkan kembali secara independen dengan hasil transaksi awal.
-
-## Bukti dan reproduksi
-
-- [Ringkasan 33 skenario dan rekonsiliasi](pr82-adb-e2e/verified-result.json)
-- [Bukti dua proses Android](pr82-adb-e2e/cold-start-verified.json)
+- [33 skenario dan rekonsiliasi](pr82-adb-e2e/verified-result.json)
+- [Dua restart proses](pr82-adb-e2e/cold-start-verified.json)
+- [19 regresi dan 38 snapshot](pr82-adb-e2e/legacy-verified-result.json)
 - [Log hasil perangkat](pr82-adb-e2e/events.txt)
-- [Identitas Git dan manifest sumber PR](pr82-adb-e2e/source-provenance.json)
-- [Hash artefak lengkap](pr82-adb-e2e/artifacts-sha256.json)
-- [Struk pembayaran USD tepat](pr82-adb-e2e/usd-exact-payment.png)
-- [Struk pembayaran IDR](pr82-adb-e2e/idr-exact-payment.png)
-- [Void SGD](pr82-adb-e2e/sgd-void-detail.png)
-- [Struk setelah proses Android dimulai ulang](pr82-adb-e2e/cold-boot-2.png)
+- [Identitas sumber Git](pr82-adb-e2e/source-provenance.json)
+- [SHA-256 bukti yang disertakan](pr82-adb-e2e/artifacts-sha256.json) (teks dinormalisasi CRLF ke LF)
+- [Struk USD](pr82-adb-e2e/usd-exact-payment.png), [struk IDR](pr82-adb-e2e/idr-exact-payment.png), [void SGD](pr82-adb-e2e/sgd-void-detail.png)
+- [Struk setelah restart](pr82-adb-e2e/cold-boot-2.png)
 
-Ringkasan sumber mencantumkan Git tree/blob dan SHA-256 manifest lengkap; tautan commit bukti aslinya mempertahankan seluruh fingerprint per berkas. Artefak lengkap, database sintetis, dan backup tersedia lokal di `build/pr82-e2e-run3/`. Harness dapat dijalankan dari worktree ini dengan:
+APK, database sintetis, backup, log lengkap termasuk percobaan instalasi pertama, dan
+manifest SHA-256 seluruh 109 artefak tersedia lokal di `build/pr82-final-6118359/`.
+Identitas Git dan hash manifest lengkap dicatat dalam provenance. Artefak lama tetap
+tersedia dalam riwayat Git; bukti di direktori ini adalah hasil pengujian ulang terbaru.
+
+## Reproduksi
+
+Gunakan serial ADB dan path Flutter SDK sendiri, serta direktori hasil yang baru:
 
 ```powershell
-rtk proxy python tool/run_scaled_arithmetic_e2e.py --device <serial-adb> --flutter C:/tmp/puro/envs/security-patch/flutter/bin/flutter.bat --output build/pr82-e2e-baru
-rtk proxy python tool/run_scaled_cold_start.py --device <serial-adb> --flutter C:/tmp/puro/envs/security-patch/flutter/bin/flutter.bat --evidence build/pr82-e2e-baru
+rtk proxy python tool/run_scaled_arithmetic_e2e.py --device <serial> --flutter <flutter> --output build/pr82-ui-baru
+rtk proxy python tool/run_scaled_cold_start.py --device <serial> --flutter <flutter> --evidence build/pr82-ui-baru
+rtk proxy python tool/run_scaled_native_retest.py --device <serial> --flutter <flutter> --output build/pr82-native-baru
 ```
 
-## Pembersihan dan batas verifikasi
+Jalankan cold-start setelah suite UI karena runner memakai APK dan snapshot dari tahap
+tersebut. Runner native membangkitkan harness dari kasus persistensi yang sudah ada,
+menyimpan salinannya bersama hasil, dan menghapus berkas harness sementara setelah lulus.
+Jika gagal, harness dan paket uji dibiarkan untuk diagnosis; jangan menimpa data yang ada.
 
-Paket `pr82e2e` telah dihapus setelah kedua tahap. Inventaris paket Pujangga yang sudah ada tetap sama; aplikasi `pr80e2e` tidak diganti atau dihapus. Database sementara dihapus setelah skenario selesai. Semua profil, barang, dan karyawan pengujian bersifat sintetis.
-
-Pengujian dilakukan pada satu perangkat fisik Android 13. Pengujian ini tidak mencakup upgrade instalasi produksi, matriks perangkat Android lain, printer, kamera/barcode, atau integrasi aplikasi eksternal. PR tetap terbuka untuk merge oleh pemilik repository.
+Verifikasi terbatas pada satu perangkat Android 13 dan alur PR #82. Upgrade produksi,
+printer, kamera/barcode, serta integrasi aplikasi eksternal tidak dicakup.
