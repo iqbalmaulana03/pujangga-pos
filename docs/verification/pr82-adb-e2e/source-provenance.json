@@ -1,0 +1,16 @@
+{
+  "format": "git-source-provenance-v1",
+  "source_revision": "24c9d9e06f24affca42945b5c4e2634b9ab70944",
+  "source_files_verified": 138,
+  "lib_git_tree": "f4a41ee4e6edbdf009f0e65688b232b8074b6345",
+  "pubspec_git_blobs": {
+    "pubspec.yaml": "79b6dda05704d63442407b6509a95e98b917bf0b",
+    "pubspec.lock": "6f9e086b881a4c00aa5cc85518ac2cf922b5ecb3"
+  },
+  "normalization": "CRLF to LF before exact comparison and SHA-256",
+  "full_manifest_git_blob": "52be9364e9d68bc04953e3e4d96b85ead8f4d45f",
+  "full_manifest_sha256": "dffb39c2f4d37e123b9c39e199f23c93915e295dc8edbd3084ddb5fd8db0119a",
+  "full_manifest_url": "https://github.com/iqbalmaulana03/pujangga-pos/blob/162d91b37ceb7ec3abccc11e400f3d54cce43f71/docs/verification/pr82-adb-e2e/source-fingerprints.json",
+  "native_manifest_sha256": "3f5406babfcb6f7ca9fd81c1617ccc323c992126d189b3a25a920284673df0f4",
+  "native_manifest_line_endings": "CRLF"
+}

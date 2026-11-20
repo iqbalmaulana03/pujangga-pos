@@ -33,6 +33,13 @@ void main() {
     expect(() => ScaledArithmetic.units(1e20, 0), throwsFormatException);
   });
 
+  test('legacy quantities are added before the final rounding', () {
+    expect(ScaledArithmetic.addQuantity(0.1995, 0.1005), 0.3);
+    expect(ScaledArithmetic.addQuantity(0.3 - 0.1005, 0.1005), 0.3);
+    expect(ScaledArithmetic.addQuantity(0.1996, 0.1005), 0.3);
+    expect(ScaledArithmetic.addQuantity(-0.1995, -0.1005), -0.3);
+  });
+
   for (final currency in ['IDR', 'USD', 'SGD']) {
     final digits = ScaledArithmetic.moneyDigits(currency);
     final factor = currency == 'IDR' ? 1 : 100;

@@ -40,14 +40,14 @@ Tahap tambahan menggunakan entrypoint cold-start yang menjalankan `PujanggaPosAp
 - [Ringkasan 33 skenario dan rekonsiliasi](pr82-adb-e2e/verified-result.json)
 - [Bukti dua proses Android](pr82-adb-e2e/cold-start-verified.json)
 - [Log hasil perangkat](pr82-adb-e2e/events.txt)
-- [Fingerprint sumber PR](pr82-adb-e2e/source-fingerprints.json)
+- [Identitas Git dan manifest sumber PR](pr82-adb-e2e/source-provenance.json)
 - [Hash artefak lengkap](pr82-adb-e2e/artifacts-sha256.json)
 - [Struk pembayaran USD tepat](pr82-adb-e2e/usd-exact-payment.png)
 - [Struk pembayaran IDR](pr82-adb-e2e/idr-exact-payment.png)
 - [Void SGD](pr82-adb-e2e/sgd-void-detail.png)
 - [Struk setelah proses Android dimulai ulang](pr82-adb-e2e/cold-boot-2.png)
 
-Artefak lengkap, database sintetis, dan backup tersedia lokal di `build/pr82-e2e-run3/`. Harness dapat dijalankan dari worktree ini dengan:
+Ringkasan sumber mencantumkan Git tree/blob dan SHA-256 manifest lengkap; tautan commit bukti aslinya mempertahankan seluruh fingerprint per berkas. Artefak lengkap, database sintetis, dan backup tersedia lokal di `build/pr82-e2e-run3/`. Harness dapat dijalankan dari worktree ini dengan:
 
 ```powershell
 rtk proxy python tool/run_scaled_arithmetic_e2e.py --device <serial-adb> --flutter C:/tmp/puro/envs/security-patch/flutter/bin/flutter.bat --output build/pr82-e2e-baru

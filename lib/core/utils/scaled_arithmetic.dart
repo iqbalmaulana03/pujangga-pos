@@ -56,8 +56,32 @@ class ScaledArithmetic {
     return result;
   }
 
-  static double addQuantity(num left, num right) =>
-      valueOf(sum([quantityUnits(left), quantityUnits(right)]), 3);
+  /// Legacy operands can have finer precision. Round their sum only once.
+  static double addQuantity(num left, num right) {
+    final decimal = _quantitySum(left, right);
+    return valueOf(
+      checked(_divide(decimal.numerator * _ten(3), decimal.denominator)),
+      3,
+    );
+  }
+
+  /// A legacy ledger must record the actual change, including normalization.
+  static double quantityDelta(num before, num after) {
+    final decimal = _quantitySum(after, -before);
+    // Denominators are powers of ten. Parsing the decimal coefficient/exponent
+    // avoids overflowing an intermediate double for tiny legacy operands.
+    final result = double.parse(
+      '${decimal.numerator}e-${decimal.denominator.toString().length - 1}',
+    );
+    quantityUnits(result);
+    return result;
+  }
+
+  static _Decimal _quantitySum(num left, num right) {
+    quantityUnits(left);
+    quantityUnits(right);
+    return _Decimal(left).add(_Decimal(right));
+  }
 
   /// Round only after multiplying price by the normalized quantity.
   static int lineSubtotal(num price, num quantity, String currencyCode) {
@@ -124,6 +148,7 @@ class ScaledArithmetic {
 }
 
 class _Decimal {
+  _Decimal._(this.numerator, this.denominator);
   _Decimal(num value) {
     if (!value.isFinite) throw const FormatException('Angka harus terbatas.');
     final parts = value.toString().toLowerCase().split('e');
@@ -136,4 +161,9 @@ class _Decimal {
   }
   late BigInt numerator;
   late BigInt denominator;
+
+  _Decimal add(_Decimal other) => _Decimal._(
+    numerator * other.denominator + other.numerator * denominator,
+    denominator * other.denominator,
+  );
 }

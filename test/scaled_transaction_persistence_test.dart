@@ -124,6 +124,81 @@ void main() {
     },
   );
 
+  for (final legacy in [
+    (before: 0.3, remaining: 0.1995, quantity: 0.1005, delta: 0.1005),
+    (before: 0.3001, remaining: 0.1996, quantity: 0.1005, delta: 0.1004),
+  ]) {
+    test(
+      'restored legacy void rounds once and preserves its ledger (${legacy.remaining})',
+      () async {
+        final item = await line(price: 100);
+        final sale = await sales.saveTransaction(request([item]));
+        // A pre-fix sale could persist finer quantities than today's UI accepts.
+        final amount = 100 * legacy.quantity;
+        await db.update('items', {'stock_qty': legacy.remaining});
+        await db.update('sales_transaction_items', {
+          'qty': legacy.quantity,
+          'line_subtotal': amount,
+          'line_total': amount,
+        });
+        await db.update('sales_transactions', {
+          'subtotal_amount': amount,
+          'total_amount': amount,
+        });
+        await db.update('stock_movements', {
+          'qty_before': legacy.before,
+          'qty_change': -legacy.quantity,
+          'qty_after': legacy.remaining,
+        });
+        final details = await db.query('sales_transaction_items');
+        final export = await AppBackupService(
+          database: source,
+          logger: Logger('legacy-72'),
+          backupDirectoryProvider: () async => root,
+        ).createBackup(password: null);
+        final restore = AppRestoreService(
+          database: destination,
+          logger: Logger('legacy-72'),
+        );
+        await restore.restoreBackup(
+          await restore.inspectBackupFile(export.filePath),
+        );
+        final restored = await destination.database();
+        final history = RiwayatLocalDataSource(database: destination);
+        await history.voidTransaction(sale.invoiceNumber);
+        expect((await restored.query('items')).single['stock_qty'], 0.3);
+        expect(await restored.query('sales_transaction_items'), details);
+        final movements = await restored.query(
+          'stock_movements',
+          orderBy: 'id',
+        );
+        expect(movements.last['qty_before'], legacy.remaining);
+        expect(movements.last['qty_change'], legacy.delta);
+        expect(movements.last['qty_after'], 0.3);
+        await history.voidTransaction(sale.invoiceNumber);
+        expect(
+          await restored.query('stock_movements', orderBy: 'id'),
+          movements,
+        );
+        final secondExport = await AppBackupService(
+          database: destination,
+          logger: Logger('legacy-72'),
+          backupDirectoryProvider: () async => root,
+        ).createBackup(password: null);
+        final back = AppRestoreService(
+          database: source,
+          logger: Logger('legacy-72'),
+        );
+        await back.restoreBackup(
+          await back.inspectBackupFile(secondExport.filePath),
+        );
+        expect((await db.query('items')).single['stock_qty'], 0.3);
+        expect(await db.query('stock_movements', orderBy: 'id'), movements);
+        expect(await db.query('sales_transaction_items'), details);
+      },
+    );
+  }
+
   test('combined 0.1 increments sell all 0.3 stock', () async {
     final item = await line(price: 100, quantity: 0.1 + 0.1 + 0.1);
     await sales.saveTransaction(request([item]));

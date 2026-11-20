@@ -78,7 +78,7 @@ class RiwayatLocalDataSource {
       for (final item in items) {
         if (item['item_type_snapshot'] == 'product') {
           final itemId = (item['item_id'] as num).toInt();
-          final qty = ScaledArithmetic.quantity(item['qty'] as num);
+          final qty = (item['qty'] as num).toDouble();
 
           final itemRows = await txn.query(
             'items',
@@ -88,9 +88,8 @@ class RiwayatLocalDataSource {
             limit: 1,
           );
           if (itemRows.isNotEmpty) {
-            final currentStock = ScaledArithmetic.quantity(
-              itemRows.first['stock_qty'] as num,
-            );
+            final currentStock = (itemRows.first['stock_qty'] as num)
+                .toDouble();
             final updatedStock = ScaledArithmetic.addQuantity(
               currentStock,
               qty,
@@ -106,7 +105,10 @@ class RiwayatLocalDataSource {
             await txn.insert('stock_movements', {
               'item_id': itemId,
               'movement_type': 'void',
-              'qty_change': qty,
+              'qty_change': ScaledArithmetic.quantityDelta(
+                currentStock,
+                updatedStock,
+              ),
               'qty_before': currentStock,
               'qty_after': updatedStock,
               'reference_type': 'transaction',
