@@ -199,6 +199,115 @@ void main() {
     );
   }
 
+  for (final operation in [
+    (type: 'catalog', quantity: 0.2, after: 0.2, delta: 0.0005),
+    (type: 'catalog', quantity: 0.3, after: 0.3, delta: 0.1005),
+    (type: 'sale', quantity: 0.1, after: 0.1, delta: -0.0995),
+    (type: 'manual_add', quantity: 0.1, after: 0.3, delta: 0.1005),
+    (type: 'manual_reduce', quantity: 0.1, after: 0.1, delta: -0.0995),
+    (type: 'set_balance', quantity: 0.2, after: 0.2, delta: 0.0005),
+  ]) {
+    test('restored legacy ledger stays continuous: $operation', () async {
+      final item = await line(price: 100, stock: 0.1995);
+      final originalMovement = {
+        'item_id': int.parse(item.item.id),
+        'movement_type': 'stock_in',
+        'qty_before': 0,
+        'qty_change': 0.1995,
+        'qty_after': 0.1995,
+        'reference_type': 'initial_stock',
+        'created_at': DateTime.now().toIso8601String(),
+      };
+      await db.insert('stock_movements', originalMovement);
+      final backup = await AppBackupService(
+        database: source,
+        logger: Logger('legacy-ledger'),
+        backupDirectoryProvider: () async => root,
+      ).createBackup(password: null);
+      final restore = AppRestoreService(
+        database: destination,
+        logger: Logger('legacy-ledger'),
+      );
+      await restore.restoreBackup(
+        await restore.inspectBackupFile(backup.filePath),
+      );
+      final restored = await destination.database();
+      final before = await restored.query('stock_movements', orderBy: 'id');
+      if (operation.type == 'catalog') {
+        await CatalogLocalDataSource(database: destination).updateItem(
+          item.item.id,
+          CatalogItemDraft(
+            name: 'Synthetic',
+            category: 'Synthetic',
+            itemType: 'barang',
+            sellingPrice: 100,
+            isActive: true,
+            stockQuantity: operation.quantity,
+            unitLabel: 'kg',
+          ),
+        );
+      } else if (operation.type == 'sale') {
+        await TransactionLocalDataSource(database: destination).saveTransaction(
+          request([item.copyWith(quantity: operation.quantity)]),
+        );
+      } else {
+        await StockLocalDataSource(database: destination).adjustStock(
+          StockAdjustmentRequest(
+            itemId: item.item.id,
+            adjustmentType: operation.type,
+            quantity: operation.quantity,
+          ),
+        );
+      }
+      final movements = await restored.query('stock_movements', orderBy: 'id');
+      expect(movements, hasLength(2));
+      expect(movements.first, before.single);
+      expect(movements.last['qty_before'], 0.1995);
+      expect(movements.last['qty_change'], operation.delta);
+      expect(movements.last['qty_after'], operation.after);
+      expect(
+        (await restored.query('items')).single['stock_qty'],
+        operation.after,
+      );
+      final exported = await AppBackupService(
+        database: destination,
+        logger: Logger('legacy-ledger'),
+        backupDirectoryProvider: () async => root,
+      ).createBackup(password: null);
+      final back = AppRestoreService(
+        database: source,
+        logger: Logger('legacy-ledger'),
+      );
+      await back.restoreBackup(await back.inspectBackupFile(exported.filePath));
+      expect(await db.query('stock_movements', orderBy: 'id'), movements);
+      expect((await db.query('items')).single['stock_qty'], operation.after);
+    });
+  }
+
+  test(
+    'legacy fractional stock cannot be rounded up to cover an overdraw',
+    () async {
+      final item = await line(price: 100, stock: 0.0005, quantity: 0.001);
+      await expectLater(
+        sales.saveTransaction(request([item])),
+        throwsA(isA<AppException>()),
+      );
+      await expectLater(
+        StockLocalDataSource(database: source).adjustStock(
+          StockAdjustmentRequest(
+            itemId: item.item.id,
+            adjustmentType: 'manual_reduce',
+            quantity: 0.001,
+          ),
+        ),
+        throwsA(isA<AppException>()),
+      );
+      expect((await db.query('items')).single['stock_qty'], 0.0005);
+      expect(await db.query('stock_movements'), isEmpty);
+      expect(await db.query('sales_transactions'), isEmpty);
+    },
+  );
+
   test('combined 0.1 increments sell all 0.3 stock', () async {
     final item = await line(price: 100, quantity: 0.1 + 0.1 + 0.1);
     await sales.saveTransaction(request([item]));

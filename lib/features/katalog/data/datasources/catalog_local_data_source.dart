@@ -115,9 +115,7 @@ class CatalogLocalDataSource {
 
       final existing = existingItems.first;
       final previousType = existing['item_type'] as String;
-      final previousStock = ScaledArithmetic.quantity(
-        existing['stock_qty'] as num,
-      );
+      final previousStock = (existing['stock_qty'] as num).toDouble();
       if (previousType != dbItemType) {
         final hasMovements = await txn.query(
           'stock_movements',
@@ -180,9 +178,9 @@ class CatalogLocalDataSource {
         throw const AppException('not_found', 'Item katalog tidak ditemukan.');
       }
 
-      final stockDelta = ScaledArithmetic.addQuantity(
+      final stockDelta = ScaledArithmetic.quantityDelta(
+        previousStock,
         nextStock,
-        -previousStock,
       );
       if (stockDelta != 0) {
         await txn.insert('stock_movements', {

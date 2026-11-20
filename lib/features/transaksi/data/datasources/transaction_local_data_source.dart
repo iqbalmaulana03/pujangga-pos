@@ -241,12 +241,11 @@ class TransactionLocalDataSource {
             limit: 1,
           );
 
-          final currentStockUnits = ScaledArithmetic.quantityUnits(
-            (row.first['stock_qty'] as num?) ?? 0,
-          );
-          final currentStock = ScaledArithmetic.valueOf(currentStockUnits, 3);
+          final currentStock = ((row.first['stock_qty'] as num?) ?? 0)
+              .toDouble();
+          ScaledArithmetic.quantityUnits(currentStock);
           final quantity = cartItem.quantity.toDouble();
-          if (currentStockUnits < ScaledArithmetic.quantityUnits(quantity)) {
+          if (currentStock < quantity) {
             throw AppException(
               'insufficient_stock',
               'Stok ${cartItem.item.name} tidak cukup untuk transaksi ini.',
@@ -267,7 +266,10 @@ class TransactionLocalDataSource {
           final movementId = await txn.insert('stock_movements', {
             'item_id': itemId,
             'movement_type': 'sale',
-            'qty_change': -quantity,
+            'qty_change': ScaledArithmetic.quantityDelta(
+              currentStock,
+              updatedStock,
+            ),
             'qty_before': currentStock,
             'qty_after': updatedStock,
             'reference_type': 'transaction',

@@ -91,7 +91,8 @@ class StockLocalDataSource {
         );
       }
 
-      final currentQty = ScaledArithmetic.quantity(item['stock_qty'] as num);
+      final currentQty = (item['stock_qty'] as num).toDouble();
+      ScaledArithmetic.quantityUnits(currentQty);
       if (!request.quantity.isFinite || request.quantity < 0) {
         throw const AppException(
           'validation_error',
@@ -99,6 +100,12 @@ class StockLocalDataSource {
         );
       }
       final quantity = ScaledArithmetic.inputQuantity(request.quantity);
+      if (request.adjustmentType == 'manual_reduce' && quantity > currentQty) {
+        throw const AppException(
+          'validation_error',
+          'Stok akhir tidak boleh negatif.',
+        );
+      }
       final nextQty = switch (request.adjustmentType) {
         'manual_add' => ScaledArithmetic.addQuantity(currentQty, quantity),
         'manual_reduce' => ScaledArithmetic.addQuantity(currentQty, -quantity),
@@ -127,11 +134,7 @@ class StockLocalDataSource {
       await txn.insert('stock_movements', {
         'item_id': itemId,
         'movement_type': request.adjustmentType,
-        'qty_change': request.adjustmentType == 'set_balance'
-            ? ScaledArithmetic.addQuantity(nextQty, -currentQty)
-            : (request.adjustmentType == 'manual_reduce'
-                  ? -quantity
-                  : quantity),
+        'qty_change': ScaledArithmetic.quantityDelta(currentQty, nextQty),
         'qty_before': currentQty,
         'qty_after': nextQty,
         'reference_type': 'adjustment',
