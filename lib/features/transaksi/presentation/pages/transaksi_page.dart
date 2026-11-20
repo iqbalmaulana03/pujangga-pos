@@ -38,6 +38,22 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     super.dispose();
   }
 
+  String _formatAmount(num value) =>
+      value.isFinite ? CurrencyFormatter.format(value) : 'Nominal tidak valid';
+
+  void _applyDiscount(BuildContext context, String text) {
+    final value = double.tryParse(text.trim());
+    if (value == null || !value.isFinite || value < 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nominal diskon harus berupa angka yang valid.'),
+        ),
+      );
+      return;
+    }
+    Navigator.of(context).pop(value);
+  }
+
   Future<void> _scanAndAddItem() async {
     final barcode = await BarcodeScannerPage.scan(context);
     if (!mounted || barcode == null) return;
@@ -148,7 +164,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Maksimal ${CurrencyFormatter.format(cartItem.lineSubtotal)} untuk item ini.',
+                'Maksimal ${_formatAmount(cartItem.lineSubtotal)} untuk item ini.',
                 style: const TextStyle(
                   fontFamily: 'Inter',
                   fontSize: 14,
@@ -183,8 +199,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 height: 48,
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(context)
-                        .pop(double.tryParse(controller.text.trim()) ?? 0);
+                    _applyDiscount(context, controller.text);
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C56),
@@ -396,8 +411,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 height: 48,
                 child: FilledButton(
                   onPressed: () {
-                    Navigator.of(context)
-                        .pop(double.tryParse(controller.text.trim()) ?? 0);
+                    _applyDiscount(context, controller.text);
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0D5C56),
@@ -469,6 +483,14 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
   }
 
   void _setCashPaid(double amount) {
+    final current = ref.read(transaksiControllerProvider).asData?.value;
+    if (!amount.isFinite ||
+        amount < 0 ||
+        current == null ||
+        !current.totalAmount.isFinite ||
+        current.totalAmount < 0) {
+      return;
+    }
     setState(() {
       _cashController.text = amount.toStringAsFixed(0);
     });
@@ -842,7 +864,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                       children: [
                         Expanded(
                           child: Text(
-                            CurrencyFormatter.format(item.sellingPrice),
+                            _formatAmount(item.sellingPrice),
                             style: const TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 12,
@@ -1033,7 +1055,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                             const SizedBox(width: 4),
                             Text(
                               cartItem.itemDiscountAmount > 0
-                                  ? '-${CurrencyFormatter.format(cartItem.itemDiscountAmount)}'
+                                  ? '-${_formatAmount(cartItem.itemDiscountAmount)}'
                                   : 'Diskon Item',
                               style: TextStyle(
                                 fontFamily: 'Inter',
@@ -1049,13 +1071,18 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      CurrencyFormatter.format(cartItem.lineTotal),
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0D5C56),
+                    Flexible(
+                      child: Text(
+                        _formatAmount(cartItem.lineTotal),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0D5C56),
+                        ),
                       ),
                     ),
                   ],
@@ -1134,13 +1161,13 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
     final isCash = state.paymentMethod == 'tunai';
 
     // Calculate dynamic helper buttons
-    final pasAmount = state.totalAmount;
-    double nextFifty = ((state.totalAmount / 50000).ceil() * 50000).toDouble();
+    final validTotal = state.totalAmount.isFinite && state.totalAmount >= 0;
+    final pasAmount = validTotal ? state.totalAmount : 0.0;
+    double nextFifty = (pasAmount / 50000).ceilToDouble() * 50000;
     if (nextFifty == pasAmount) {
       nextFifty += 50000;
     }
-    double nextHundred = ((state.totalAmount / 100000).ceil() * 100000)
-        .toDouble();
+    double nextHundred = (pasAmount / 100000).ceilToDouble() * 100000;
     if (nextHundred == pasAmount || nextHundred == nextFifty) {
       nextHundred += 100000;
     }
@@ -1167,18 +1194,18 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           // Calculations rows
           _buildCalculationRow(
             'Subtotal (${state.cartItems.length} item)',
-            CurrencyFormatter.format(state.subtotalAmount),
+            _formatAmount(state.subtotalAmount),
           ),
           if (state.itemDiscountAmount > 0)
             _buildCalculationRow(
               'Diskon Item',
-              '-${CurrencyFormatter.format(state.itemDiscountAmount)}',
+              '-${_formatAmount(state.itemDiscountAmount)}',
               textColor: const Color(0xFFBA1A1A),
             ),
           _buildCalculationRow(
             'Diskon Transaksi',
             state.orderDiscountAmount > 0
-                ? '-${CurrencyFormatter.format(state.orderDiscountAmount)}'
+                ? '-${_formatAmount(state.orderDiscountAmount)}'
                 : 'Tambah Diskon',
             textColor: state.orderDiscountAmount > 0
                 ? const Color(0xFFBA1A1A)
@@ -1188,7 +1215,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
           ),
           _buildCalculationRow(
             'Pajak (${(ref.watch(appSettingsProvider).asData?.value.defaultTaxPercent ?? 0.0).toStringAsFixed(0)}%)',
-            CurrencyFormatter.format(state.taxAmount),
+            _formatAmount(state.taxAmount),
           ),
           const SizedBox(height: 12),
           Consumer(
@@ -1274,13 +1301,18 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                   color: Color(0xFF191C1C),
                 ),
               ),
-              Text(
-                CurrencyFormatter.format(state.totalAmount),
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0D5C56),
+              Flexible(
+                child: Text(
+                  _formatAmount(state.totalAmount),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0D5C56),
+                  ),
                 ),
               ),
             ],
@@ -1364,9 +1396,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     color: Color(0xFF3F4947),
                   ),
                 ),
-                if (state.changeAmount > 0)
+                if (state.canSubmit && state.changeAmount > 0)
                   Text(
-                    'Kembalian: ${CurrencyFormatter.format(state.changeAmount)}',
+                    'Kembalian: ${_formatAmount(state.changeAmount)}',
                     style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 12,
@@ -1425,12 +1457,18 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               ),
             ),
             const SizedBox(height: 8),
+            if (_cashController.text.isNotEmpty &&
+                state.validationError != null)
+              Text(
+                state.validationError!,
+                style: const TextStyle(color: Color(0xFFBA1A1A)),
+              ),
             // Quick Cash Options Row
             Row(
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _setCashPaid(pasAmount),
+                    onTap: validTotal ? () => _setCashPaid(pasAmount) : null,
                     child: Container(
                       height: 36,
                       alignment: Alignment.center,
@@ -1454,7 +1492,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _setCashPaid(nextFifty),
+                    onTap: validTotal && nextFifty.isFinite
+                        ? () => _setCashPaid(nextFifty)
+                        : null,
                     child: Container(
                       height: 36,
                       alignment: Alignment.center,
@@ -1476,7 +1516,9 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _setCashPaid(nextHundred),
+                    onTap: validTotal && nextHundred.isFinite
+                        ? () => _setCashPaid(nextHundred)
+                        : null,
                     child: Container(
                       height: 36,
                       alignment: Alignment.center,
@@ -1551,16 +1593,21 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
               color: Color(0xFF3F4947),
             ),
           ),
-          GestureDetector(
-            onTap: isAction ? onTap : null,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                fontWeight: isAction ? FontWeight.bold : FontWeight.normal,
-                color: textColor ?? const Color(0xFF191C1C),
-                decoration: isAction ? TextDecoration.underline : null,
+          Flexible(
+            child: GestureDetector(
+              onTap: isAction ? onTap : null,
+              child: Text(
+                value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  fontWeight: isAction ? FontWeight.bold : FontWeight.normal,
+                  color: textColor ?? const Color(0xFF191C1C),
+                  decoration: isAction ? TextDecoration.underline : null,
+                ),
               ),
             ),
           ),
@@ -1602,7 +1649,7 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        '${state.cartItems.length} item • ${CurrencyFormatter.format(state.totalAmount)}',
+                        '${state.cartItems.length} item • ${_formatAmount(state.totalAmount)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
