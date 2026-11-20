@@ -48,6 +48,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = if (
+                providers.environmentVariable("PUJANGGA_FINITE_E2E").orNull == "1"
+            ) ".pr80e2e" else if (
                 providers.environmentVariable("PUJANGGA_RECOVERY_E2E").orNull == "1"
             ) ".issue56e2e" else if (
                 providers.environmentVariable("PUJANGGA_RECEIPT_E2E").orNull == "1"
