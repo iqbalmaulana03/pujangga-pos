@@ -8,6 +8,7 @@ import '../../domain/services/transaction_calculator.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_receipt.dart';
 import '../../domain/entities/transaksi_submit_request.dart';
+import '../../domain/entities/transaction_validation.dart';
 import '../models/transaksi_item_db_model.dart';
 
 class TransactionLocalDataSource {
@@ -105,16 +106,29 @@ class TransactionLocalDataSource {
           }
           return normalized;
         }).toList();
+        final error = TransactionValidation.error(
+          items: items,
+          currencyCode: currency,
+          orderDiscount: request.orderDiscountAmount,
+          tax: request.taxAmount,
+          paymentMethod: request.paymentMethod,
+          cashPaid: request.cashPaidAmount,
+        );
+        if (error != null) throw AppException('validation_error', error);
         final calculation = TransactionCalculation(
           items: items,
           currencyCode: currency,
           orderDiscount: request.orderDiscountAmount,
           tax: request.taxAmount,
-          paid: request.cashPaidAmount,
+          paid: request.paymentMethod == 'tunai'
+              ? request.cashPaidAmount
+              : null,
         );
         if (request.orderDiscountAmount < 0 ||
             request.taxAmount < 0 ||
-            (request.cashPaidAmount != null && request.cashPaidAmount! < 0) ||
+            (request.paymentMethod == 'tunai' &&
+                request.cashPaidAmount != null &&
+                request.cashPaidAmount! < 0) ||
             calculation.net < 0 ||
             calculation.total < 0 ||
             (request.paymentMethod == 'tunai' && calculation.change < 0)) {
@@ -134,6 +148,82 @@ class TransactionLocalDataSource {
         final changeAmount = request.paymentMethod == 'tunai'
             ? calculation.amount(calculation.change)
             : 0.0;
+
+        Map<String, Object?>? employeeSnapshot;
+        double commission = 0;
+        if (request.employeeId != null) {
+          final employeeRows = await txn.query(
+            'employees',
+            where: 'id = ? AND is_active = 1',
+            whereArgs: [request.employeeId],
+            limit: 1,
+          );
+          if (employeeRows.isEmpty) {
+            throw const AppException(
+              'employee_unavailable',
+              'Karyawan terpilih sudah tidak aktif atau tidak tersedia. Pilih ulang karyawan sebelum menyimpan transaksi.',
+            );
+          }
+          final employee = employeeRows.single;
+          final type = employee['compensation_type'] as String;
+          final percent = (employee['commission_percent'] as num?)?.toDouble();
+          final salary = (employee['monthly_salary'] as num?)?.toDouble();
+          final scope = employee['commission_scope'] as String? ?? 'all';
+          TransactionValidation.requireFinite(percent);
+          TransactionValidation.requireFinite(salary);
+          final netSales = ScaledArithmetic.sum([
+            calculation.subtotal,
+            -calculation.itemDiscount,
+          ]);
+          final eligibleSales = ScaledArithmetic.sum(
+            items
+                .where(
+                  (line) =>
+                      scope == 'all' ||
+                      (scope == 'service' && line.item.isJasa) ||
+                      (scope == 'product' && line.item.isBarang),
+                )
+                .map((line) => line.totalUnits(currency)),
+          );
+          final rate = (percent ?? 0) < 0 ? 0 : (percent ?? 0);
+          // Allocate the order discount and apply percent, rounding only once.
+          commission = type == 'commission' && netSales > 0
+              ? calculation.amount(
+                  ScaledArithmetic.percentage(
+                    eligibleSales,
+                    rate,
+                    numerator: calculation.net,
+                    denominator: netSales,
+                  ),
+                )
+              : 0;
+          employeeSnapshot = {
+            'employee_id': request.employeeId,
+            'employee_name_snapshot': employee['name'],
+            'compensation_type_snapshot': type,
+            'commission_percent_snapshot': percent,
+            'commission_scope_snapshot': scope,
+            'monthly_salary_snapshot': salary,
+            'commission_amount': commission,
+          };
+        }
+        final costPrices = <double?>[];
+        for (final line in items) {
+          final rows = await txn.query(
+            'items',
+            columns: ['harga_modal', 'biaya_dasar'],
+            where: 'id = ?',
+            whereArgs: [int.parse(line.item.id)],
+            limit: 1,
+          );
+          final cost = rows.isEmpty
+              ? null
+              : (rows.single[line.item.isJasa ? 'biaya_dasar' : 'harga_modal']
+                        as num?)
+                    ?.toDouble();
+          TransactionValidation.requireFinite(cost);
+          costPrices.add(cost);
+        }
 
         final pendingStockMovementIds = <int>[];
 
@@ -211,95 +301,33 @@ class TransactionLocalDataSource {
           'updated_at': createdAtIso,
         });
 
-        if (request.employeeId != null) {
-          final employeeRows = await txn.query(
-            'employees',
-            where: 'id = ? AND is_active = 1',
-            whereArgs: [request.employeeId],
-            limit: 1,
+        if (employeeSnapshot != null) {
+          await txn.update(
+            'sales_transactions',
+            employeeSnapshot,
+            where: 'id = ?',
+            whereArgs: [transactionId],
           );
-          if (employeeRows.isEmpty) {
-            throw const AppException(
-              'employee_unavailable',
-              'Karyawan terpilih sudah tidak aktif atau tidak tersedia. Pilih ulang karyawan sebelum menyimpan transaksi.',
-            );
-          } else {
-            final employee = employeeRows.first;
-            final type = employee['compensation_type'] as String;
-            final percent = (employee['commission_percent'] as num?)
-                ?.toDouble();
-            final salary = (employee['monthly_salary'] as num?)?.toDouble();
-            final scope = employee['commission_scope'] as String? ?? 'all';
-            final netSales = ScaledArithmetic.sum([
-              calculation.subtotal,
-              -calculation.itemDiscount,
-            ]);
-            final eligibleSales = ScaledArithmetic.sum(
-              items
-                  .where(
-                    (line) =>
-                        scope == 'all' ||
-                        (scope == 'service' && line.item.isJasa) ||
-                        (scope == 'product' && line.item.isBarang),
-                  )
-                  .map((line) => line.totalUnits(currency)),
-            );
-            // Allocate discount and apply percent with a single final rounding.
-            final commission = type == 'commission' && netSales > 0
-                ? calculation.amount(
-                    ScaledArithmetic.percentage(
-                      eligibleSales,
-                      percent ?? 0,
-                      numerator: calculation.net,
-                      denominator: netSales,
-                    ),
-                  )
-                : 0.0;
-            await txn.update(
-              'sales_transactions',
-              {
-                'employee_id': request.employeeId,
-                'employee_name_snapshot': employee['name'],
-                'compensation_type_snapshot': type,
-                'commission_percent_snapshot': percent,
-                'commission_scope_snapshot': scope,
-                'monthly_salary_snapshot': salary,
-                'commission_amount': commission,
-              },
-              where: 'id = ?',
-              whereArgs: [transactionId],
-            );
-            if (commission > 0) {
-              await txn.insert('expenses', {
-                'amount': commission,
-                'category': 'Komisi Karyawan',
-                'notes': 'Komisi ${employee['name']} - $invoiceNumber',
-                'expense_date': createdAtIso,
-                'created_at': createdAtIso,
-                'updated_at': createdAtIso,
-                'source_type': 'commission',
-                'source_id': transactionId,
-                'employee_id': request.employeeId,
-                'period_key': null,
-              });
-            }
+          if (commission > 0) {
+            await txn.insert('expenses', {
+              'amount': commission,
+              'category': 'Komisi Karyawan',
+              'notes':
+                  'Komisi ${employeeSnapshot['employee_name_snapshot']} - $invoiceNumber',
+              'expense_date': createdAtIso,
+              'created_at': createdAtIso,
+              'updated_at': createdAtIso,
+              'source_type': 'commission',
+              'source_id': transactionId,
+              'employee_id': request.employeeId,
+              'period_key': null,
+            });
           }
         }
 
-        for (final cartItem in items) {
-          final itemRows = await txn.query(
-            'items',
-            columns: ['harga_modal', 'biaya_dasar'],
-            where: 'id = ?',
-            whereArgs: [int.parse(cartItem.item.id)],
-            limit: 1,
-          );
-          double? costPrice;
-          if (itemRows.isNotEmpty) {
-            costPrice = cartItem.item.isJasa
-                ? (itemRows.first['biaya_dasar'] as num?)?.toDouble()
-                : (itemRows.first['harga_modal'] as num?)?.toDouble();
-          }
+        for (var index = 0; index < items.length; index++) {
+          final cartItem = items[index];
+          final costPrice = costPrices[index];
 
           await txn.insert('sales_transaction_items', {
             'transaction_id': transactionId,
@@ -350,7 +378,7 @@ class TransactionLocalDataSource {
           taxAmount: taxAmount,
           totalAmount: totalAmount,
           changeAmount: changeAmount,
-          cashPaidAmount: request.cashPaidAmount == null ? null : paidAmount,
+          cashPaidAmount: request.paymentMethod == 'tunai' ? paidAmount : null,
           items: items,
         );
       });

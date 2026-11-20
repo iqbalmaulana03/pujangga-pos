@@ -1,7 +1,7 @@
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
 import '../../domain/services/transaction_calculator.dart';
-import '../../../../core/utils/scaled_arithmetic.dart';
+import '../../domain/entities/transaction_validation.dart';
 
 enum TaxMode { automatic, manual }
 
@@ -45,47 +45,35 @@ class TransaksiState {
     currencyCode: currencyCode,
     orderDiscount: orderDiscountAmount,
     tax: taxAmount,
-    paid: cashPaidAmount,
+    paid: paymentMethod == 'tunai' ? cashPaidAmount : null,
   );
-  double get subtotalAmount => calculation.amount(calculation.subtotal);
-  double get itemDiscountAmount => calculation.amount(calculation.itemDiscount);
-  double get totalAmount => calculation.amount(calculation.total);
-  double get changeAmount {
-    if (paymentMethod != 'tunai') {
-      return 0;
-    }
-
-    return calculation.amount(calculation.change);
-  }
-
-  bool get canSubmit {
-    if (isSubmitting || cartItems.isEmpty) {
-      return false;
-    }
+  double _amount(int Function(TransactionCalculation) select) {
     try {
       final value = calculation;
-      if (value.total < 0 ||
-          value.net < 0 ||
-          orderDiscountAmount < 0 ||
-          taxAmount < 0 ||
-          cartItems.any(
-            (line) =>
-                !line.quantity.isFinite ||
-                line.quantity <= 0 ||
-                ScaledArithmetic.inputQuantity(line.quantity) <= 0 ||
-                !line.unitPrice.isFinite ||
-                line.unitPrice < 0 ||
-                !line.itemDiscountAmount.isFinite ||
-                line.itemDiscountAmount < 0 ||
-                line.totalUnits(currencyCode) < 0,
-          )) {
-        return false;
-      }
-      return paymentMethod != 'tunai' || value.paidUnits >= value.total;
+      return value.amount(select(value));
     } on FormatException {
-      return false;
+      return double.nan;
     }
   }
+
+  double get subtotalAmount => _amount((value) => value.subtotal);
+  double get itemDiscountAmount => _amount((value) => value.itemDiscount);
+  double get totalAmount => _amount((value) => value.total);
+  double get changeAmount {
+    if (paymentMethod != 'tunai') return 0;
+    final change = _amount((value) => value.change);
+    return change.isFinite ? change : 0;
+  }
+
+  String? get validationError => TransactionValidation.error(
+    items: cartItems,
+    currencyCode: currencyCode,
+    orderDiscount: orderDiscountAmount,
+    tax: taxAmount,
+    paymentMethod: paymentMethod,
+    cashPaid: cashPaidAmount,
+  );
+  bool get canSubmit => !isSubmitting && validationError == null;
 
   TransaksiState copyWith({
     List<TransaksiItem>? catalogItems,

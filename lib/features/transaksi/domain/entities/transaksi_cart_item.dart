@@ -20,11 +20,15 @@ class TransaksiCartItem {
   final double? savedLineTotal;
 
   double get unitPrice {
-    if (item.wholesalePrice != null &&
-        item.wholesaleMinQuantity != null &&
-        ScaledArithmetic.quantityUnits(quantity) >=
-            ScaledArithmetic.quantityUnits(item.wholesaleMinQuantity!)) {
-      return item.wholesalePrice!;
+    try {
+      if (item.wholesalePrice != null &&
+          item.wholesaleMinQuantity != null &&
+          ScaledArithmetic.quantityUnits(quantity) >=
+              ScaledArithmetic.quantityUnits(item.wholesaleMinQuantity!)) {
+        return item.wholesalePrice!;
+      }
+    } on FormatException {
+      // Validation rejects this draft; its UI must remain renderable.
     }
     return item.sellingPrice;
   }
@@ -35,18 +39,21 @@ class TransaksiCartItem {
     subtotalUnits(currency),
     -ScaledArithmetic.moneyUnits(itemDiscountAmount, currency),
   ]);
+  double _amount(int Function() calculate) {
+    try {
+      return ScaledArithmetic.valueOf(
+        calculate(),
+        ScaledArithmetic.moneyDigits(currencyCode),
+      );
+    } on FormatException {
+      return double.nan;
+    }
+  }
+
   double get lineSubtotal =>
-      savedLineSubtotal ??
-      ScaledArithmetic.valueOf(
-        subtotalUnits(currencyCode),
-        ScaledArithmetic.moneyDigits(currencyCode),
-      );
+      savedLineSubtotal ?? _amount(() => subtotalUnits(currencyCode));
   double get lineTotal =>
-      savedLineTotal ??
-      ScaledArithmetic.valueOf(
-        totalUnits(currencyCode),
-        ScaledArithmetic.moneyDigits(currencyCode),
-      );
+      savedLineTotal ?? _amount(() => totalUnits(currencyCode));
 
   TransaksiCartItem copyWith({
     TransaksiItem? item,

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:pujangga_pos/core/database/app_database.dart';
+import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_recovery_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_reset_service.dart';
@@ -135,7 +136,15 @@ void main() {
     await expectLater(
       service(directory: () async => Directory(blocked.path))
           .restoreWithSnapshot(candidate, password: password),
-      throwsA(isA<FileSystemException>()),
+      throwsA(
+        isA<AppException>()
+            .having((e) => e.code, 'code', 'recovery_invalid')
+            .having(
+              (e) => e.message,
+              'message',
+              contains('Data aktif belum diganti'),
+            ),
+      ),
     );
     expect(await (await database.database()).query('expenses'), hasLength(1));
   });
@@ -154,6 +163,45 @@ void main() {
     expect((await db.query('app_settings')).single['default_tax_percent'], -1);
     expect(await service().snapshots(), isEmpty);
   });
+
+  test(
+    'oversized snapshot cancels restore and preserves earlier recovery point',
+    () async {
+      final old = await backup.createBackup(password: null);
+      final candidate = await restore.inspectBackupFile(old.filePath);
+      await service().restoreWithSnapshot(candidate, password: password);
+      final earlier = (await service().snapshots()).single;
+      final savedBytes = await earlier.readAsBytes();
+      final db = await database.database();
+      await db.update('app_settings', {'receipt_footer': 'a' * 65537});
+      final before = <String, Object?>{
+        for (final table in AppBackupService.backupTables)
+          table: await db.query(table),
+        'sequence': await db.query('sqlite_sequence'),
+      };
+      await expectLater(
+        service().restoreWithSnapshot(candidate, password: password),
+        throwsA(
+          isA<AppException>()
+              .having((e) => e.code, 'code', 'recovery_invalid')
+              .having(
+                (e) => e.message,
+                'message',
+                allOf(
+                  contains('panjang nilai'),
+                  contains('Data aktif belum diganti'),
+                ),
+              ),
+        ),
+      );
+      for (final table in AppBackupService.backupTables) {
+        expect(await db.query(table), before[table], reason: table);
+      }
+      expect(await db.query('sqlite_sequence'), before['sequence']);
+      expect(await earlier.readAsBytes(), savedBytes);
+      expect(await recovery.list().length, 1);
+    },
+  );
 
   test(
     'reset deletes local snapshots and exports, preserves external copy',
