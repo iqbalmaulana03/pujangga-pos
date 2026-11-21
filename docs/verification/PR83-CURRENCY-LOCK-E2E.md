@@ -1,5 +1,30 @@
 # Verifikasi E2E PR #83 — Penguncian mata uang
 
+## Verifikasi setelah commit dan push
+
+Setelah commit tambahan E2E
+[`296967a`](https://github.com/iqbalmaulana03/pujangga-pos/commit/296967ad5dc451d0fb425113272bdb8a0734d698)
+di-push ke PR #83, **10/10 skenario E2E kembali lulus** di Redmi Android 13
+pada 21 November 2026, pukul 22:21–22:27 WIB. Kedua suite membangun APK baru
+dan merekam revisi committed tersebut sebagai `source_revision`.
+
+- Penguncian mata uang: 7/7 lulus, 1 menit 32 detik; termasuk native Android
+  Sharesheet yang dibuka dan dibatalkan, tanpa mengirim struk.
+- Regresi USD/SGD/IDR: 3/3 lulus, 2 menit 57 detik; sembilan checkout,
+  pembulatan pajak, stok, laporan, serta pembukaan ulang SQLite terverifikasi.
+- Kedua runner selesai dengan exit code 0 dan memverifikasi pelestarian paket
+  yang sebelumnya terpasang. Direktori database sementara telah dibersihkan;
+  pemeriksaan ADB terpisah juga tidak menemukan sisa direktori kasus uji.
+- [CI Analyze and test untuk 296967a](https://github.com/iqbalmaulana03/pujangga-pos/actions/runs/44918587048/job/136889443406)
+  lulus; Agent review terakhir untuk commit tersebut juga SUCCESS.
+
+Bukti revisi committed: [hasil penguncian](pr83-currency-lock-e2e/post-296967a/result.json)
+dan [hasil regresi presisi](pr83-currency-lock-e2e/post-296967a/precision-summary.json).
+Log dan screenshot mentah tetap lokal di `build/currency-lock-e2e-post-296967a/`
+serta `build/currency-e2e/`. Pembaruan laporan/JSON ini tidak mengubah kode
+aplikasi, konfigurasi build, tes, runner, atau dependensi dari `296967a`.
+PR belum di-merge dan tidak ada deployment produksi dalam pengujian ini.
+
 ## Publikasi harness dan bukti
 
 Harness, runner, konfigurasi paket debug khusus, dan bukti terpilih disertakan
