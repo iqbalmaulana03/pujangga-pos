@@ -61,7 +61,6 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       await ref
           .read(pengaturanSettingsControllerProvider.notifier)
           .save(settings);
-      ref.invalidate(appSettingsProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -73,7 +72,11 @@ class _PengaturanPageState extends ConsumerState<PengaturanPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal memperbarui preferensi: ${e.toString()}'),
+            content: Text(
+              e is AppException
+                  ? e.message
+                  : 'Preferensi belum tersimpan. Coba lagi.',
+            ),
           ),
         );
       }

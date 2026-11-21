@@ -48,6 +48,8 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = if (
+                providers.environmentVariable("PUJANGGA_CURRENCY_LOCK_E2E").orNull == "1"
+            ) ".pr83e2e" else if (
                 providers.environmentVariable("PUJANGGA_SCALED_E2E").orNull == "1"
             ) ".pr82e2e" else if (
                 providers.environmentVariable("PUJANGGA_BACKUP_CONTRACT_E2E").orNull == "1"

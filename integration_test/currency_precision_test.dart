@@ -11,6 +11,9 @@ import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
 import 'package:pujangga_pos/core/utils/app_date_formatting.dart';
 import 'package:pujangga_pos/core/utils/currency_formatter.dart';
+import 'package:pujangga_pos/features/pengaturan/data/datasources/app_settings_local_data_source.dart';
+import 'package:pujangga_pos/features/pengaturan/data/models/app_settings_db_model.dart';
+import 'package:pujangga_pos/features/pengaturan/domain/entities/app_settings.dart';
 import 'package:pujangga_pos/features/katalog/presentation/pages/item_form_page.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/pages/pengaturan_page.dart';
@@ -51,6 +54,22 @@ void main() {
       );
       debugPrint('E2E_ISOLATION: $currency $file');
       final db = await database.database();
+      // Choose the dataset currency before recording any financial data (#73).
+      // The later settings dialog verifies a same-currency save remains allowed.
+      await AppSettingsLocalDataSource(database: database).saveSettings(
+        AppSettingsDbModel.fromEntity(
+          AppSettings(
+            currencyCode: currency,
+            currencySymbol: switch (currency) {
+              'USD' => r'$',
+              'SGD' => r'S$',
+              _ => 'Rp',
+            },
+            defaultTaxPercent: 0,
+            stockAllowNegative: false,
+          ),
+        ),
+      );
       final stamp = DateTime.now().toIso8601String();
       await db.insert('business_profile', {
         'business_name': 'PR63 Synthetic $currency',
