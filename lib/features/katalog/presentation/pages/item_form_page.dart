@@ -40,6 +40,7 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   bool _enableWholesale = false;
   bool _isSubmitting = false;
   bool _didHydrate = false;
+  double? _initialStockQuantity;
 
   bool get _isEditMode => widget.itemId != null;
 
@@ -63,6 +64,12 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       return;
     }
 
+    final stockQuantity = _itemType == 'barang'
+        ? QuantityFormatter.parse(
+            _stockController.text,
+            allowNegative: _isEditMode,
+          )
+        : null;
     final draft = CatalogItemDraft(
       name: _nameController.text.trim(),
       category: _categoryController.text.trim(),
@@ -72,9 +79,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
       sku: _skuController.text.trim(),
       barcode: _itemType == 'barang' ? _barcodeController.text.trim() : null,
       unitLabel: _unitController.text.trim(),
-      stockQuantity: _itemType == 'barang'
-          ? QuantityFormatter.parse(_stockController.text)!
-          : null,
+      stockQuantity: stockQuantity,
+      preserveStock:
+          stockQuantity != null && stockQuantity == _initialStockQuantity,
       costPrice: _itemType == 'jasa' && _serviceHasNoBaseCost
           ? 0
           : double.tryParse(_costController.text.trim()),
@@ -90,28 +97,26 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
     });
 
     try {
+      final repository = ref.read(catalogRepositoryProvider);
       if (_itemType == 'barang') {
         final costPrice = draft.costPrice ?? 0;
-        final stockQty = draft.stockQuantity ?? 0;
-        if (costPrice > 0 && stockQty > 0) {
-          final metrics = await ref.read(capitalMetricsProvider.future);
-
-          double oldStockValue = 0;
-          if (_isEditMode) {
-            final oldItem = await ref.read(
-              catalogItemProvider(widget.itemId!).future,
-            );
-            if (oldItem != null &&
-                oldItem.costPrice != null &&
-                oldItem.stockQuantity != null) {
-              oldStockValue = oldItem.costPrice! * oldItem.stockQuantity!;
-            }
-          }
-
-          final newStockValue = costPrice * stockQty;
+        if (costPrice > 0 &&
+            (draft.preserveStock || (stockQuantity ?? 0) > 0)) {
+          final oldItem = _isEditMode
+              ? await repository.getItemById(widget.itemId!)
+              : null;
+          final oldStock = oldItem?.stockQuantity ?? 0;
+          final nextStock = draft.preserveStock ? oldStock : stockQuantity ?? 0;
+          final oldStockValue = oldStock > 0
+              ? (oldItem?.costPrice ?? 0) * oldStock
+              : 0.0;
+          final newStockValue = nextStock > 0 ? costPrice * nextStock : 0.0;
           final addedStockValue = newStockValue - oldStockValue;
+          final metrics = addedStockValue > 0
+              ? await ref.read(capitalMetricsProvider.future)
+              : null;
 
-          if (addedStockValue > metrics.currentCash) {
+          if (metrics != null && addedStockValue > metrics.currentCash) {
             if (mounted) {
               final formatter = CurrencyFormatter.format(metrics.currentCash);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -130,7 +135,6 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
         }
       }
 
-      final repository = ref.read(catalogRepositoryProvider);
       if (_isEditMode) {
         await repository.updateItem(widget.itemId!, draft);
       } else {
@@ -212,6 +216,12 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
           _stockController.text = QuantityFormatter.format(
             item.stockQuantity ?? 0,
           );
+          if (item.isBarang) {
+            _initialStockQuantity = QuantityFormatter.parse(
+              _stockController.text,
+              allowNegative: true,
+            );
+          }
           _costController.text = item.costPrice != null
               ? CurrencyFormatter.formatForInput(item.costPrice!)
               : '';
@@ -252,8 +262,13 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
   }
 
   void _adjustStock(int amount) {
-    final current = QuantityFormatter.parse(_stockController.text) ?? 0;
-    final next = (current + amount).clamp(0, 999999);
+    final current =
+        QuantityFormatter.parse(
+          _stockController.text,
+          allowNegative: _isEditMode,
+        ) ??
+        0;
+    final next = (current + amount).clamp(_isEditMode ? -999999 : 0, 999999);
     setState(() {
       _stockController.text = QuantityFormatter.format(next);
     });
@@ -1196,8 +1211,9 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                       child: TextFormField(
                                         controller: _stockController,
                                         keyboardType:
-                                            const TextInputType.numberWithOptions(
+                                            TextInputType.numberWithOptions(
                                               decimal: true,
+                                              signed: _isEditMode,
                                             ),
                                         textAlign: TextAlign.center,
                                         style: const TextStyle(
@@ -1213,9 +1229,14 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
                                         validator: (value) {
                                           if (!isProduct) return null;
                                           final parsed =
-                                              QuantityFormatter.parse(value);
-                                          if (parsed == null || parsed < 0) {
-                                            return 'Harus >= 0.';
+                                              QuantityFormatter.parse(
+                                                value,
+                                                allowNegative: _isEditMode,
+                                              );
+                                          if (parsed == null) {
+                                            return _isEditMode
+                                                ? 'Masukkan angka yang valid.'
+                                                : 'Harus >= 0.';
                                           }
                                           return null;
                                         },

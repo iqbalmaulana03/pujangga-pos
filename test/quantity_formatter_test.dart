@@ -16,4 +16,13 @@ void main() {
     expect(QuantityFormatter.parse('1,2345'), isNull);
     expect(QuantityFormatter.parse('teks'), isNull);
   });
+
+  test('menerima tanda minus hanya bila diizinkan', () {
+    expect(QuantityFormatter.parse('-0,125'), isNull);
+    expect(QuantityFormatter.parse('-0,125', allowNegative: true), -0.125);
+    expect(QuantityFormatter.parse('-.5', allowNegative: true), -0.5);
+    expect(QuantityFormatter.parse('-0,1234', allowNegative: true), isNull);
+    expect(QuantityFormatter.parse('--1', allowNegative: true), isNull);
+    expect(QuantityFormatter.format(-0.125), '-0,125');
+  });
 }

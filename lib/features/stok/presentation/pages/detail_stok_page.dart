@@ -420,8 +420,9 @@ class _AdjustmentSheetState extends ConsumerState<_AdjustmentSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _quantityController,
-                keyboardType: const TextInputType.numberWithOptions(
+                keyboardType: TextInputType.numberWithOptions(
                   decimal: true,
+                  signed: _adjustmentType == 'set_balance',
                 ),
                 decoration: InputDecoration(
                   labelText: _adjustmentType == 'set_balance'
@@ -429,12 +430,12 @@ class _AdjustmentSheetState extends ConsumerState<_AdjustmentSheet> {
                       : 'Jumlah penyesuaian',
                 ),
                 validator: (value) {
-                  final quantity = QuantityFormatter.parse(value);
+                  final quantity = QuantityFormatter.parse(
+                    value,
+                    allowNegative: _adjustmentType == 'set_balance',
+                  );
                   if (quantity == null) {
                     return 'Masukkan angka yang valid.';
-                  }
-                  if (quantity < 0) {
-                    return 'Jumlah tidak boleh negatif.';
                   }
                   if (_adjustmentType != 'set_balance' && quantity == 0) {
                     return 'Jumlah harus lebih dari 0.';
@@ -482,7 +483,10 @@ class _AdjustmentSheetState extends ConsumerState<_AdjustmentSheet> {
             StockAdjustmentRequest(
               itemId: widget.item.id,
               adjustmentType: _adjustmentType,
-              quantity: QuantityFormatter.parse(_quantityController.text)!,
+              quantity: QuantityFormatter.parse(
+                _quantityController.text,
+                allowNegative: _adjustmentType == 'set_balance',
+              )!,
               notes: _notesController.text.trim().isEmpty
                   ? null
                   : _notesController.text.trim(),

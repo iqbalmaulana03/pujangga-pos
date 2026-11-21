@@ -8,6 +8,7 @@ class CatalogItemDraft {
     this.sku,
     this.barcode,
     this.stockQuantity,
+    this.preserveStock = false,
     this.unitLabel,
     this.costPrice,
     this.wholesalePrice,
@@ -22,6 +23,7 @@ class CatalogItemDraft {
   final String? sku;
   final String? barcode;
   final double? stockQuantity;
+  final bool preserveStock;
   final String? unitLabel;
   final double? costPrice;
   final double? wholesalePrice;
