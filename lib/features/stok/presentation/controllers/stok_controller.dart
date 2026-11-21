@@ -85,10 +85,16 @@ class StokController extends AsyncNotifier<StokState> {
   }
 
   Future<void> submitAdjustment(StockAdjustmentRequest request) async {
-    await ref.read(stockRepositoryProvider).adjustStock(request);
-    await refresh();
-    ref.invalidate(stockItemDetailProvider(request.itemId));
-    ref.invalidate(stockMovementDetailProvider(request.itemId));
+    // The detail route can submit an adjustment without mounting the stock list.
+    final keepAlive = ref.keepAlive();
+    try {
+      await ref.read(stockRepositoryProvider).adjustStock(request);
+      await refresh();
+      ref.invalidate(stockItemDetailProvider(request.itemId));
+      ref.invalidate(stockMovementDetailProvider(request.itemId));
+    } finally {
+      keepAlive.close();
+    }
   }
 
   StokState? get _currentState {
