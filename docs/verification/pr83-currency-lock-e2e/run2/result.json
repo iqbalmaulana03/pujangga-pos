@@ -1,0 +1,42 @@
+{
+  "exit_code": 0,
+  "source_revision": "ee62e8b979790542a5c3189b9b5c9349fcc26dc6",
+  "package": "com.pujanggapos.pujangga_pos.pr83e2e",
+  "native_chooser_verified": true,
+  "existing_packages_preserved": true,
+  "packages_before": [
+    "package:com.pujangga.pujangga_household_finance",
+    "package:com.pujanggapos.pujangga_pos.pr63e2e",
+    "package:com.pujanggapos.pujangga_pos.pr83e2e"
+  ],
+  "packages_after": [
+    "package:com.pujangga.pujangga_household_finance",
+    "package:com.pujanggapos.pujangga_pos.pr63e2e",
+    "package:com.pujanggapos.pujangga_pos.pr83e2e"
+  ],
+  "passes": [
+    "empty dataset currency selection persisted across reopen; tax allowed",
+    "inactive-item independently locked; all tables unchanged on rejection; tax saved; lock survives reopen",
+    "sale-only independently locked; all tables unchanged on rejection; tax saved; lock survives reopen",
+    "expense-only independently locked; all tables unchanged on rejection; tax saved; lock survives reopen",
+    "capital-history independently locked; all tables unchanged on rejection; tax saved; lock survives reopen",
+    "initial-capital independently locked; all tables unchanged on rejection; tax saved; lock survives reopen",
+    "real IDR 100000 checkout; failed USD change; unchanged history/report/shared payload; native Sharesheet cancelled; reopen persistence and SQLite integrity verified"
+  ],
+  "screenshots": [
+    "01-empty-usd-success",
+    "02-inactive-item-locked",
+    "02-sale-only-locked",
+    "02-expense-only-locked",
+    "02-capital-history-locked",
+    "02-initial-capital-locked",
+    "03-checkout-idr100000",
+    "04-report-before",
+    "05-historical-currency-rejected",
+    "06-history-detail-idr",
+    "07-report-after",
+    "08-native-share-cancelled",
+    "09-reopened-report-idr"
+  ],
+  "apk_sha256": "c461bd78e1d808effa87dd712cbf6764e283a774d4022cef6f378617aed8cf87"
+}
