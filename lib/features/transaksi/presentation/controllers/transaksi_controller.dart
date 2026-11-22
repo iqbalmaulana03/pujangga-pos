@@ -101,7 +101,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         _quantityStep(existing.item),
       );
       if (quantity == null) return;
-      updatedCart[existingIndex] = existing.copyWith(quantity: quantity);
+      updatedCart[existingIndex] = _withQuantity(existing, quantity);
     }
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -129,14 +129,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         continue;
       }
       if (quantity > 0) {
-        final updatedItem = cartItem.copyWith(quantity: quantity);
-        updatedCart.add(
-          updatedItem.copyWith(
-            itemDiscountAmount: cartItem.itemDiscountAmount
-                .clamp(0, updatedItem.lineSubtotal)
-                .toDouble(),
-          ),
-        );
+        updatedCart.add(_withQuantity(cartItem, quantity));
       }
     }
 
@@ -159,12 +152,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         _quantityStep(cartItem.item),
       );
       if (quantity == null) return cartItem;
-      final updatedItem = cartItem.copyWith(quantity: quantity);
-      return updatedItem.copyWith(
-        itemDiscountAmount: cartItem.itemDiscountAmount
-            .clamp(0, updatedItem.lineSubtotal)
-            .toDouble(),
-      );
+      return _withQuantity(cartItem, quantity);
     }).toList();
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -214,12 +202,7 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         return cartItem;
       }
 
-      final updatedItem = cartItem.copyWith(quantity: quantity);
-      return updatedItem.copyWith(
-        itemDiscountAmount: cartItem.itemDiscountAmount
-            .clamp(0, updatedItem.lineSubtotal)
-            .toDouble(),
-      );
+      return _withQuantity(cartItem, quantity);
     }).toList();
 
     state = AsyncData(_buildState(current, cartItems: updatedCart));
@@ -468,6 +451,23 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
         ),
       );
     }
+  }
+
+  TransaksiCartItem _withQuantity(TransaksiCartItem line, double quantity) {
+    try {
+      quantity = ScaledArithmetic.quantity(quantity);
+    } on FormatException {
+      // Preserve overflowing drafts so validation can block checkout.
+    }
+    final currency =
+        ref.read(appSettingsProvider).asData?.value.currencyCode ??
+        line.currencyCode;
+    final updated = line.copyWith(quantity: quantity, currencyCode: currency);
+    final subtotal = updated.lineSubtotal;
+    if (!subtotal.isFinite || subtotal < 0) return updated;
+    return updated.copyWith(
+      itemDiscountAmount: line.itemDiscountAmount.clamp(0, subtotal).toDouble(),
+    );
   }
 
   double? _adjustQuantity(double quantity, double step) {
