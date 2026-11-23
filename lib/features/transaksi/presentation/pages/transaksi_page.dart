@@ -8,10 +8,7 @@ import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
 import '../../../../shared/widgets/business_logo.dart';
-import '../../../laporan/presentation/controllers/laporan_controller.dart';
 import '../../../pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
-import '../../../riwayat/presentation/controllers/riwayat_controller.dart';
-import '../../../stok/presentation/controllers/stok_controller.dart';
 import '../../../karyawan/presentation/controllers/employee_controller.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
 import '../../domain/entities/transaksi_item.dart';
@@ -105,10 +102,6 @@ class _TransaksiPageState extends ConsumerState<TransaksiPage> {
 
     _cashController.clear();
     _searchController.clear();
-    ref.invalidate(dashboardSummaryProvider);
-    ref.invalidate(salesReportSnapshotProvider);
-    ref.invalidate(stokControllerProvider);
-    ref.invalidate(riwayatControllerProvider);
 
     if (cartRoute != null) {
       // Clearing a committed cart may already have popped this sheet while

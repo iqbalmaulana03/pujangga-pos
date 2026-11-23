@@ -1,11 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/services/dataset_generation.dart';
-import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
-import '../../../laporan/presentation/controllers/laporan_controller.dart';
-import '../../../stok/presentation/controllers/stok_controller.dart';
+import '../../../../core/services/mutation_revision.dart';
 import '../../data/datasources/riwayat_local_data_source.dart';
 import '../../data/repositories/riwayat_repository_impl.dart';
 import '../../domain/entities/riwayat_transaksi_summary.dart';
@@ -28,13 +25,21 @@ final riwayatControllerProvider =
     );
 
 class RiwayatController extends AsyncNotifier<RiwayatState> {
+  int? _datasetGeneration;
+
   @override
   Future<RiwayatState> build() async {
-    ref.watch(datasetGenerationProvider);
+    final buildRef = ref;
+    final generation = buildRef.watch(datasetGenerationProvider);
+    ref.watch(mutationRevisionProvider.select((r) => r.financial));
+    final previous = _datasetGeneration == generation
+        ? state.value ?? const RiwayatState()
+        : const RiwayatState();
     final transactions = await ref
         .watch(riwayatRepositoryProvider)
         .getTransactions();
-    return _buildState(const RiwayatState(), allTransactions: transactions);
+    if (buildRef.mounted) _datasetGeneration = generation;
+    return _buildState(previous, allTransactions: transactions);
   }
 
   void updateSearch(String value) {
@@ -64,44 +69,22 @@ class RiwayatController extends AsyncNotifier<RiwayatState> {
     state = AsyncData(_buildState(current, dateFilter: value));
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final transactions = await ref
-          .read(riwayatRepositoryProvider)
-          .getTransactions();
-      return _buildState(const RiwayatState(), allTransactions: transactions);
-    });
-    ref.invalidate(transaksiControllerProvider);
-  }
+  Future<void> refresh() => ref
+      .refresh(riwayatControllerProvider.future)
+      .then<void>((_) {}, onError: (Object _, StackTrace _) {});
 
   Future<void> voidTransaction(String invoiceNumber) async {
-    final current = _currentState;
-    if (current == null) return;
-
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      await ref.read(riwayatRepositoryProvider).voidTransaction(invoiceNumber);
-      final transactions = await ref.read(riwayatRepositoryProvider).getTransactions();
-      return _buildState(
-        const RiwayatState(),
-        allTransactions: transactions,
-        searchQuery: current.searchQuery,
-        paymentFilter: current.paymentFilter,
-        dateFilter: current.dateFilter,
-      );
-    });
-
-    ref.invalidate(dashboardSummaryProvider);
-    ref.invalidate(salesReportSnapshotProvider);
-    ref.invalidate(salesReportSnapshotByPeriodProvider);
-    ref.invalidate(employeeReportProvider);
-    ref.invalidate(expenseEntriesProvider);
-    ref.invalidate(capitalMetricsProvider);
-    ref.invalidate(stokControllerProvider);
+    final keepAlive = ref.keepAlive();
+    try {
+      final repository = ref.read(riwayatRepositoryProvider);
+      await ref.read(mutationRevisionProvider.notifier).commit({
+        MutationDomain.financial,
+        MutationDomain.stock,
+      }, () => repository.voidTransaction(invoiceNumber));
+    } finally {
+      keepAlive.close();
+    }
   }
-
-
 
   RiwayatState? get _currentState {
     final current = state;

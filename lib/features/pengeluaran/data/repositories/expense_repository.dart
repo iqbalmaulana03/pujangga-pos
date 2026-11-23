@@ -3,6 +3,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/services/dataset_generation.dart';
+import '../../../../core/services/mutation_revision.dart';
 import '../services/employee_expense_service.dart';
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
@@ -127,6 +128,7 @@ class ExpenseRepository {
 final expenseEntriesProvider = FutureProvider.autoDispose
     .family<List<Map<String, Object?>>, (DateTime, DateTime)>((ref, range) {
       ref.watch(datasetGenerationProvider);
+      ref.watch(mutationRevisionProvider.select((r) => r.financial));
       return ref
           .watch(expenseRepositoryProvider)
           .getExpenses(range.$1, range.$2);
@@ -135,6 +137,7 @@ final expenseEntriesProvider = FutureProvider.autoDispose
 final employeeSalaryForMonthProvider = FutureProvider.autoDispose
     .family<double?, (int, DateTime)>((ref, selection) {
       ref.watch(datasetGenerationProvider);
+      ref.watch(mutationRevisionProvider.select((r) => r.financial));
       return ref
           .watch(expenseRepositoryProvider)
           .salaryForMonth(selection.$1, selection.$2);

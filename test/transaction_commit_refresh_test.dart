@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
+import 'package:pujangga_pos/core/services/dataset_generation.dart';
 import 'package:pujangga_pos/features/karyawan/presentation/controllers/employee_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/domain/entities/app_settings.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_settings_controller.dart';
@@ -41,9 +42,10 @@ class FaultRepository implements TransactionRepository {
   @override
   Future<List<TransaksiItem>> getCatalogItems() async {
     reads++;
+    final wasEmpty = emptyCatalog;
     if (reads > 1) await refreshGate?.future;
     if (reads > 1 && failRefresh) throw StateError('Injected catalog fault');
-    return emptyCatalog ? [] : [item];
+    return wasEmpty ? [] : [item];
   }
 
   @override
@@ -119,6 +121,45 @@ void main() {
     expect(state.catalogRefreshFailed, isFalse);
     expect(state.isRefreshingCatalog, isFalse);
     expect(repository.requests, isEmpty);
+  });
+
+  test('checkout restart retries a cached catalog error', () async {
+    final controller = container.read(transaksiControllerProvider.notifier);
+    await controller.refreshCatalog();
+    expect(
+      container
+          .read(transaksiControllerProvider)
+          .requireValue
+          .catalogRefreshFailed,
+      isTrue,
+    );
+    repository.failRefresh = false;
+    container.invalidate(transaksiControllerProvider);
+    final state = await container.read(transaksiControllerProvider.future);
+    expect(state.catalogItems, [item]);
+  });
+
+  test('a pending catalog read cannot restore data from the old dataset', () async {
+    final controller = checkout();
+    repository.failRefresh = false;
+    final oldReadGate = Completer<void>();
+    repository.refreshGate = oldReadGate;
+    final oldRefresh = controller.refreshCatalog();
+    expect(repository.reads, 2);
+
+    repository.refreshGate = null;
+    repository.emptyCatalog = true;
+    container.read(datasetGenerationProvider.notifier).advance();
+    final replacement = await container.read(transaksiControllerProvider.future);
+    expect(replacement.catalogItems, isEmpty);
+    expect(replacement.cartItems, isEmpty);
+
+    oldReadGate.complete();
+    await oldRefresh;
+    await container.pump();
+    final state = container.read(transaksiControllerProvider).requireValue;
+    expect(state.catalogItems, isEmpty);
+    expect(state.cartItems, isEmpty);
   });
 
   for (final wide in [false, true]) {

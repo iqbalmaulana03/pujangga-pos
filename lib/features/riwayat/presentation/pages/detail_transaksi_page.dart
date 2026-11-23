@@ -578,33 +578,37 @@ class DetailTransaksiPage extends ConsumerWidget {
                                           child: const Text('Tutup'),
                                         ),
                                         FilledButton(
-                                          onPressed: () {
+                                          onPressed: () async {
                                             Navigator.pop(ctx);
-                                            ref
-                                                .read(
-                                                  riwayatControllerProvider
-                                                      .notifier,
-                                                )
-                                                .voidTransaction(
-                                                  receipt.invoiceNumber,
-                                                )
-                                                .then((_) {
-                                                  if (!context.mounted) return;
-                                                  ref.invalidate(
-                                                    transaksiReceiptProvider(
-                                                      transactionId,
-                                                    ),
+                                            final messenger =
+                                                ScaffoldMessenger.of(context);
+                                            try {
+                                              await ref
+                                                  .read(
+                                                    riwayatControllerProvider
+                                                        .notifier,
+                                                  )
+                                                  .voidTransaction(
+                                                    receipt.invoiceNumber,
                                                   );
-                                                  ScaffoldMessenger.of(
-                                                    context,
-                                                  ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Transaksi berhasil dibatalkan.',
-                                                      ),
-                                                    ),
-                                                  );
-                                                });
+                                              if (!context.mounted) return;
+                                              messenger.showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Transaksi berhasil dibatalkan.',
+                                                  ),
+                                                ),
+                                              );
+                                            } catch (_) {
+                                              if (!context.mounted) return;
+                                              messenger.showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Transaksi gagal dibatalkan. Coba lagi.',
+                                                  ),
+                                                ),
+                                              );
+                                            }
                                           },
                                           style: FilledButton.styleFrom(
                                             backgroundColor: const Color(
