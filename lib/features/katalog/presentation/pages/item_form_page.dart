@@ -6,8 +6,6 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
 import '../../../laporan/presentation/controllers/laporan_controller.dart';
-import '../../../stok/presentation/controllers/stok_controller.dart';
-import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
 import '../../../../shared/widgets/barcode_scanner_page.dart';
 import '../../domain/entities/catalog_item_draft.dart';
 import '../controllers/katalog_controller.dart';
@@ -135,24 +133,10 @@ class _ItemFormPageState extends ConsumerState<ItemFormPage> {
         }
       }
 
-      if (_isEditMode) {
-        await repository.updateItem(widget.itemId!, draft);
-      } else {
-        await repository.createItem(draft);
-      }
-
-      ref.invalidate(katalogControllerProvider);
-      ref.invalidate(transaksiControllerProvider);
-      ref.invalidate(stokControllerProvider);
-      ref.invalidate(dashboardSummaryProvider);
-      ref.invalidate(salesReportSnapshotByPeriodProvider);
-      ref.invalidate(salesReportSnapshotProvider);
-      ref.invalidate(capitalMetricsProvider);
-      if (_isEditMode) {
-        ref.invalidate(stockItemProvider(widget.itemId!));
-        ref.invalidate(stockItemDetailProvider(widget.itemId!));
-        ref.invalidate(stockMovementDetailProvider(widget.itemId!));
-      }
+      if (!mounted) return;
+      await ref
+          .read(katalogControllerProvider.notifier)
+          .saveItem(draft, itemId: widget.itemId);
 
       if (!mounted) {
         return;

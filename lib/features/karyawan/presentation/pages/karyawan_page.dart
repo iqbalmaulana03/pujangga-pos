@@ -185,8 +185,6 @@ class KaryawanPage extends ConsumerWidget {
                   await Future<void>.delayed(const Duration(milliseconds: 100));
                   if (!context.mounted) return;
                   Navigator.pop(dialogContext);
-                  ref.invalidate(employeesProvider);
-                  ref.invalidate(activeEmployeesProvider);
                 }
               },
               child: const Text('Simpan'),

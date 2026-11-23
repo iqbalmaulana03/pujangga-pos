@@ -2,13 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utils/scaled_arithmetic.dart';
 
-import '../../../pengeluaran/data/repositories/expense_repository.dart';
-
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/services/dataset_generation.dart';
-import '../../../laporan/presentation/controllers/laporan_controller.dart';
-import '../../../stok/presentation/controllers/stok_controller.dart';
+import '../../../../core/services/mutation_revision.dart';
 import '../../data/datasources/transaction_local_data_source.dart';
 import '../../data/repositories/transaction_repository_impl.dart';
 import '../../domain/entities/transaksi_cart_item.dart';
@@ -40,25 +37,46 @@ final transaksiControllerProvider =
 final transaksiReceiptProvider = FutureProvider.autoDispose
     .family<TransaksiReceipt?, String>((ref, invoiceNumber) {
       ref.watch(datasetGenerationProvider);
+      ref.watch(mutationRevisionProvider.select((r) => r.financial));
       return ref
           .watch(transactionRepositoryProvider)
           .getReceiptByInvoice(invoiceNumber);
     });
 
+final _checkoutCatalogProvider =
+    FutureProvider.autoDispose<List<TransaksiItem>>(
+      (ref) {
+        ref.watch(datasetGenerationProvider);
+        ref.watch(mutationRevisionProvider.select((r) => (r.catalog, r.stock)));
+        return ref.watch(transactionRepositoryProvider).getCatalogItems();
+      },
+      // The checkout displays a read failure immediately and offers an explicit retry.
+      retry: (_, _) => null,
+    );
+
 class TransaksiController extends AsyncNotifier<TransaksiState> {
   bool _submitInProgress = false;
   TransaksiSubmitRequest? _pendingRequest;
+  late int _catalogRevision;
 
   @override
   Future<TransaksiState> build() async {
-    ref.watch(datasetGenerationProvider);
-    final items = await ref
-        .watch(transactionRepositoryProvider)
-        .getCatalogItems();
-    return _buildState(
-      const TransaksiState(catalogItems: []),
-      catalogItems: items,
-    );
+    final buildRef = ref;
+    final generation = buildRef.watch(datasetGenerationProvider);
+    _pendingRequest = null;
+    _catalogRevision = buildRef.read(mutationRevisionProvider).catalog;
+    final cachedCatalog = buildRef.read(_checkoutCatalogProvider);
+    if (cachedCatalog.hasError && !cachedCatalog.isLoading) {
+      buildRef.invalidate(_checkoutCatalogProvider);
+    }
+    buildRef.listen(_checkoutCatalogProvider, (_, catalog) {
+      if (_isCurrentDataset(buildRef, generation)) {
+        _applyCatalog(catalog);
+      }
+    });
+    final items = await buildRef.read(_checkoutCatalogProvider.future);
+    if (!_isCurrentDataset(buildRef, generation)) return const TransaksiState();
+    return _buildState(const TransaksiState(), catalogItems: items);
   }
 
   void updateSearch(String value) {
@@ -391,83 +409,102 @@ class TransaksiController extends AsyncNotifier<TransaksiState> {
                 : null,
             employeeId: current.employeeId,
           );
+    final operationRef = ref;
+    final generation = operationRef.read(datasetGenerationProvider);
+    final keepAlive = operationRef.keepAlive();
+    final repository = operationRef.read(transactionRepositoryProvider);
+    final revision = operationRef.read(mutationRevisionProvider.notifier);
     _pendingRequest = request;
     _submitInProgress = true;
     state = AsyncData(current.copyWith(isSubmitting: true));
 
-    final TransaksiReceipt receipt;
     try {
-      receipt = await ref
-          .read(transactionRepositoryProvider)
-          .saveTransaction(request);
-    } catch (_) {
-      if (ref.mounted) {
-        state = AsyncData(current.copyWith(isSubmitting: false));
-      }
-      _submitInProgress = false;
-      rethrow;
-    }
+      final receipt = await revision.commit({
+        MutationDomain.financial,
+        MutationDomain.stock,
+      }, () => repository.saveTransaction(request));
+      if (!_isCurrentDataset(operationRef, generation)) return receipt;
 
-    // The sale is committed. No subsequent read may restore this checkout.
-    _pendingRequest = null;
-    if (!ref.mounted) {
-      _submitInProgress = false;
+      // The sale is committed. No subsequent read may restore this checkout.
+      _pendingRequest = null;
+      state = AsyncData(
+        TransaksiState(isSubmitting: true, currencyCode: current.currencyCode),
+      );
+      await _waitForCatalog(
+        operationRef,
+        generation,
+        operationRef.read(_checkoutCatalogProvider.future),
+      );
       return receipt;
-    }
-    state = AsyncData(
-      TransaksiState(isSubmitting: true, currencyCode: current.currencyCode),
-    );
-    try {
-      ref.invalidate(transaksiReceiptProvider(receipt.invoiceNumber));
-      ref.invalidate(stokControllerProvider);
-      ref.invalidate(dashboardSummaryProvider);
-      ref.invalidate(salesReportSnapshotProvider);
-      ref.invalidate(salesReportSnapshotByPeriodProvider);
-      ref.invalidate(employeeReportProvider);
-      ref.invalidate(expenseEntriesProvider);
-      ref.invalidate(capitalMetricsProvider);
-      await refreshCatalog();
     } finally {
       _submitInProgress = false;
-      if (ref.mounted) {
+      keepAlive.close();
+      if (_isCurrentDataset(operationRef, generation)) {
         final latest = state.asData?.value;
         if (latest != null) {
           state = AsyncData(latest.copyWith(isSubmitting: false));
         }
+        if (_catalogRevision !=
+            operationRef.read(mutationRevisionProvider).catalog) {
+          _applyCatalog(operationRef.read(_checkoutCatalogProvider));
+        }
       }
     }
-    return receipt;
   }
 
   /// Retrying a catalog read never resubmits a committed sale.
   Future<void> refreshCatalog() async {
-    final before = state.asData?.value;
-    if (before == null || before.isRefreshingCatalog) return;
-    state = AsyncData(before.copyWith(isRefreshingCatalog: true));
+    final operationRef = ref;
+    final current = state.asData?.value;
+    if (current == null) return;
+    final generation = operationRef.read(datasetGenerationProvider);
+    final load = current.isRefreshingCatalog
+        ? operationRef.read(_checkoutCatalogProvider.future)
+        : operationRef.refresh(_checkoutCatalogProvider.future);
+    await _waitForCatalog(operationRef, generation, load);
+  }
+
+  Future<void> _waitForCatalog(
+    Ref operationRef,
+    int generation,
+    Future<List<TransaksiItem>> load,
+  ) async {
     try {
-      final items = await ref
-          .read(transactionRepositoryProvider)
-          .getCatalogItems();
-      if (!ref.mounted) return;
-      final current = state.asData?.value ?? const TransaksiState();
-      state = AsyncData(
-        _buildState(
-          current,
-          catalogItems: items,
-        ).copyWith(catalogRefreshFailed: false, isRefreshingCatalog: false),
-      );
+      await load;
     } catch (_) {
-      if (!ref.mounted) return;
-      final current = state.asData?.value ?? const TransaksiState();
-      state = AsyncData(
-        current.copyWith(
-          catalogItems: [],
-          filteredItems: [],
-          catalogRefreshFailed: true,
-          isRefreshingCatalog: false,
-        ),
-      );
+      // The query exposes the failure through the same state as other refreshes.
     }
+    if (_isCurrentDataset(operationRef, generation)) {
+      _applyCatalog(operationRef.read(_checkoutCatalogProvider));
+    }
+  }
+
+  bool _isCurrentDataset(Ref operationRef, int generation) =>
+      operationRef.mounted &&
+      operationRef.read(datasetGenerationProvider) == generation;
+
+  void _applyCatalog(AsyncValue<List<TransaksiItem>> catalog) {
+    final current = state.asData?.value;
+    if (current == null) return;
+    if (catalog.isLoading) {
+      state = AsyncData(current.copyWith(isRefreshingCatalog: true));
+      return;
+    }
+
+    final revision = ref.read(mutationRevisionProvider).catalog;
+    final resetDraft = !_submitInProgress && revision != _catalogRevision;
+    if (resetDraft) {
+      _catalogRevision = revision;
+      _pendingRequest = null;
+    }
+    final draft = resetDraft ? const TransaksiState() : current;
+    final items = catalog.asData?.value;
+    state = AsyncData(
+      _buildState(draft, catalogItems: items ?? const []).copyWith(
+        catalogRefreshFailed: items == null,
+        isRefreshingCatalog: false,
+      ),
+    );
   }
 
   double? _adjustQuantity(double quantity, double step) {

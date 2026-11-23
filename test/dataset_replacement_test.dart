@@ -10,6 +10,7 @@ import 'package:pujangga_pos/core/constants/app_constants.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
 import 'package:pujangga_pos/core/services/business_logo_service.dart';
+import 'package:pujangga_pos/core/services/mutation_revision.dart';
 import 'package:pujangga_pos/features/karyawan/data/repositories/employee_repository.dart';
 import 'package:pujangga_pos/features/karyawan/presentation/controllers/employee_controller.dart';
 import 'package:pujangga_pos/features/katalog/presentation/controllers/katalog_controller.dart';
@@ -98,6 +99,11 @@ void main() {
     container.listen(employeesProvider, (_, _) {});
     container.listen(transaksiControllerProvider, (_, _) {});
     container.listen(katalogControllerProvider, (_, _) {});
+    container.listen(catalogItemProvider('1'), (_, _) {});
+    expect(
+      (await container.read(catalogItemProvider('1').future))?.name,
+      'Layanan A',
+    );
     await container.read(employeesProvider.future);
     final ready = await container.read(transaksiControllerProvider.future);
     await container.read(katalogControllerProvider.future);
@@ -153,12 +159,18 @@ void main() {
     'restore replaces cached identity and commission, and clears old checkout',
     () async {
       final candidate = await replacement();
+      final revisions = container.read(mutationRevisionProvider);
       await container
           .read(pengaturanRestoreControllerProvider.notifier)
           .restoreBackup(candidate, recoveryPassword: 'synthetic password 56');
       expect(
         container.read(pengaturanRestoreControllerProvider).hasError,
         isFalse,
+      );
+      expect(container.read(mutationRevisionProvider), revisions);
+      expect(
+        (await container.read(catalogItemProvider('1').future))?.name,
+        'Layanan B',
       );
       final active = await container.read(activeEmployeesProvider.future);
       expect(active.single.id, 1);
@@ -244,6 +256,7 @@ void main() {
       expect(cart.employeeId, isNull);
       expect(cart.cartItems, isEmpty);
       expect(cart.catalogItems, isEmpty);
+      expect(await container.read(catalogItemProvider('1').future), isNull);
       expect(
         (await container.read(katalogControllerProvider.future)).allItems,
         isEmpty,

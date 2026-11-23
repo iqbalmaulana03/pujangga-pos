@@ -2,10 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/services/dataset_generation.dart';
-import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
+import '../../../../core/services/mutation_revision.dart';
 import '../../data/datasources/catalog_local_data_source.dart';
 import '../../data/repositories/catalog_repository_impl.dart';
 import '../../domain/entities/catalog_item.dart';
+import '../../domain/entities/catalog_item_draft.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../models/katalog_state.dart';
 
@@ -27,15 +28,24 @@ final katalogControllerProvider =
 final catalogItemProvider = FutureProvider.autoDispose
     .family<CatalogItem?, String>((ref, itemId) {
       ref.watch(datasetGenerationProvider);
+      ref.watch(mutationRevisionProvider.select((r) => (r.catalog, r.stock)));
       return ref.watch(catalogRepositoryProvider).getItemById(itemId);
     });
 
 class KatalogController extends AsyncNotifier<KatalogState> {
+  int? _datasetGeneration;
+
   @override
   Future<KatalogState> build() async {
-    ref.watch(datasetGenerationProvider);
+    final buildRef = ref;
+    final generation = buildRef.watch(datasetGenerationProvider);
+    ref.watch(mutationRevisionProvider.select((r) => (r.catalog, r.stock)));
+    final previous = _datasetGeneration == generation
+        ? state.value ?? const KatalogState()
+        : const KatalogState();
     final items = await ref.watch(catalogRepositoryProvider).getItems();
-    return _buildState(const KatalogState(), allItems: items);
+    if (buildRef.mounted) _datasetGeneration = generation;
+    return _buildState(previous, allItems: items);
   }
 
   void updateSearch(String value) {
@@ -65,21 +75,29 @@ class KatalogController extends AsyncNotifier<KatalogState> {
     state = AsyncData(_buildState(current, statusFilter: value));
   }
 
-  Future<void> refresh() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      final items = await ref.read(catalogRepositoryProvider).getItems();
-      return _buildState(const KatalogState(), allItems: items);
-    });
+  Future<void> refresh() => ref
+      .refresh(katalogControllerProvider.future)
+      .then<void>((_) {}, onError: (Object _, StackTrace _) {});
+
+  Future<void> saveItem(CatalogItemDraft draft, {String? itemId}) {
+    final repository = ref.read(catalogRepositoryProvider);
+    return ref.read(mutationRevisionProvider.notifier).commit(
+      {MutationDomain.catalog},
+      () => itemId == null
+          ? repository.createItem(draft)
+          : repository.updateItem(itemId, draft),
+    );
   }
 
   Future<void> toggleItemStatus(CatalogItem item) async {
-    await ref
-        .read(catalogRepositoryProvider)
-        .updateItemStatus(itemId: item.id, isActive: !item.isActive);
-
-    ref.invalidate(transaksiControllerProvider);
-    await refresh();
+    final repository = ref.read(catalogRepositoryProvider);
+    await ref.read(mutationRevisionProvider.notifier).commit(
+      {MutationDomain.catalog},
+      () => repository.updateItemStatus(
+        itemId: item.id,
+        isActive: !item.isActive,
+      ),
+    );
   }
 
   KatalogState? get _currentState {

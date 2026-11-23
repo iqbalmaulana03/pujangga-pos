@@ -1,17 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/dataset_generation.dart';
+import '../../../../core/services/mutation_revision.dart';
 import '../../data/repositories/employee_repository.dart';
 import '../../domain/entities/employee.dart';
-import '../../../laporan/presentation/controllers/laporan_controller.dart';
-import '../../../pengeluaran/data/repositories/expense_repository.dart';
 
 final employeesProvider = FutureProvider.autoDispose<List<Employee>>((ref) {
   ref.watch(datasetGenerationProvider);
+  ref.watch(mutationRevisionProvider.select((r) => r.financial));
   return ref.watch(employeeRepositoryProvider).getEmployees();
 });
 
 final activeEmployeesProvider = FutureProvider<List<Employee>>((ref) async {
   ref.watch(datasetGenerationProvider);
+  ref.watch(mutationRevisionProvider.select((r) => r.financial));
   final employees = await ref.watch(employeeRepositoryProvider).getEmployees();
   return employees.where((employee) => employee.isActive).toList();
 });
@@ -49,25 +50,21 @@ class EmployeeController extends AsyncNotifier<void> {
           (monthlySalary == null || monthlySalary <= 0)) {
         throw ArgumentError('Gaji bulanan harus lebih besar dari nol.');
       }
-      await ref
-          .read(employeeRepositoryProvider)
-          .save(
-            id: id,
-            name: name,
-            isActive: isActive,
-            compensationType: compensationType,
-            commissionPercent: commissionPercent,
-            commissionScope: commissionScope,
-            monthlySalary: monthlySalary,
-            effectiveFrom: effectiveFrom,
-            notes: notes,
-          );
-      ref.invalidate(dashboardSummaryProvider);
-      ref.invalidate(salesReportSnapshotByPeriodProvider);
-      ref.invalidate(salesReportSnapshotProvider);
-      ref.invalidate(employeeReportProvider);
-      ref.invalidate(expenseEntriesProvider);
-      ref.invalidate(capitalMetricsProvider);
+      final repository = ref.read(employeeRepositoryProvider);
+      await ref.read(mutationRevisionProvider.notifier).commit(
+        {MutationDomain.financial},
+        () => repository.save(
+          id: id,
+          name: name,
+          isActive: isActive,
+          compensationType: compensationType,
+          commissionPercent: commissionPercent,
+          commissionScope: commissionScope,
+          monthlySalary: monthlySalary,
+          effectiveFrom: effectiveFrom,
+          notes: notes,
+        ),
+      );
       state = const AsyncData(null);
     } catch (error, stack) {
       state = AsyncError(error, stack);
