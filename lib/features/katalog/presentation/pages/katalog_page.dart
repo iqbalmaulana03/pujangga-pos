@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/services/app_startup_service.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
@@ -736,9 +737,16 @@ class _KatalogPageState extends ConsumerState<KatalogPage> {
                             );
                             return;
                           }
-                          await ref
-                              .read(katalogControllerProvider.notifier)
-                              .toggleItemStatus(item);
+                          try {
+                            await ref
+                                .read(katalogControllerProvider.notifier)
+                                .toggleItemStatus(item);
+                          } on AppException catch (error) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error.message)),
+                            );
+                          }
                         },
                         itemBuilder: (context) => [
                           const PopupMenuItem<String>(

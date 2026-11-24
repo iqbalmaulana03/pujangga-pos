@@ -45,65 +45,69 @@ class CatalogLocalDataSource {
     return CatalogItemDbModel.fromMap(rows.first);
   }
 
-  Future<void> createItem(CatalogItemDraft draft) async {
-    final db = await database.database();
-    final timestamp = DateTime.now().toIso8601String();
-    final dbItemType = _mapUiItemTypeToDb(draft.itemType);
-    await db.transaction((txn) async {
-      final categoryId = await _ensureCategory(
-        txn,
-        categoryName: draft.category.trim(),
-        itemType: dbItemType,
-        timestamp: timestamp,
-      );
+  Future<void> createItem(CatalogItemDraft draft) =>
+      database.runWrite(() async {
+        final db = await database.database();
+        final timestamp = DateTime.now().toIso8601String();
+        final dbItemType = _mapUiItemTypeToDb(draft.itemType);
+        await db.transaction((txn) async {
+          final categoryId = await _ensureCategory(
+            txn,
+            categoryName: draft.category.trim(),
+            itemType: dbItemType,
+            timestamp: timestamp,
+          );
 
-      final stockQuantity = draft.isBarang
-          ? ScaledArithmetic.inputQuantity(draft.stockQuantity ?? 0)
-          : 0.0;
-      if (stockQuantity < 0) {
-        throw const AppException(
-          'validation_error',
-          'Stok awal tidak boleh negatif.',
-        );
-      }
-      final barcode = _normalizedBarcode(draft.barcode);
-      await _ensureBarcodeAvailable(txn, barcode);
-      final itemId = await txn.insert('items', {
-        'category_id': categoryId,
-        'name': draft.name.trim(),
-        'item_type': dbItemType,
-        'sale_price': draft.sellingPrice,
-        'sku': _normalizedText(draft.sku),
-        'barcode': barcode,
-        'stock_qty': stockQuantity,
-        'unit': _normalizedText(draft.unitLabel),
-        'harga_modal': draft.isBarang ? draft.costPrice : null,
-        'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
-        'is_active': draft.isActive ? 1 : 0,
-        'wholesale_price': draft.wholesalePrice,
-        'wholesale_min_quantity': draft.wholesaleMinQuantity,
-        'notes': null,
-        'created_at': timestamp,
-        'updated_at': timestamp,
+          final stockQuantity = draft.isBarang
+              ? ScaledArithmetic.inputQuantity(draft.stockQuantity ?? 0)
+              : 0.0;
+          if (stockQuantity < 0) {
+            throw const AppException(
+              'validation_error',
+              'Stok awal tidak boleh negatif.',
+            );
+          }
+          final barcode = _normalizedBarcode(draft.barcode);
+          await _ensureBarcodeAvailable(txn, barcode);
+          final itemId = await txn.insert('items', {
+            'category_id': categoryId,
+            'name': draft.name.trim(),
+            'item_type': dbItemType,
+            'sale_price': draft.sellingPrice,
+            'sku': _normalizedText(draft.sku),
+            'barcode': barcode,
+            'stock_qty': stockQuantity,
+            'unit': _normalizedText(draft.unitLabel),
+            'harga_modal': draft.isBarang ? draft.costPrice : null,
+            'biaya_dasar': !draft.isBarang ? draft.costPrice : null,
+            'is_active': draft.isActive ? 1 : 0,
+            'wholesale_price': draft.wholesalePrice,
+            'wholesale_min_quantity': draft.wholesaleMinQuantity,
+            'notes': null,
+            'created_at': timestamp,
+            'updated_at': timestamp,
+          });
+
+          if (stockQuantity > 0) {
+            await txn.insert('stock_movements', {
+              'item_id': itemId,
+              'movement_type': 'stock_in',
+              'qty_change': stockQuantity,
+              'qty_before': 0,
+              'qty_after': stockQuantity,
+              'reference_type': 'initial_stock',
+              'reference_id': null,
+              'notes': 'Stok awal dari katalog',
+              'created_at': timestamp,
+            });
+          }
+        });
       });
 
-      if (stockQuantity > 0) {
-        await txn.insert('stock_movements', {
-          'item_id': itemId,
-          'movement_type': 'stock_in',
-          'qty_change': stockQuantity,
-          'qty_before': 0,
-          'qty_after': stockQuantity,
-          'reference_type': 'initial_stock',
-          'reference_id': null,
-          'notes': 'Stok awal dari katalog',
-          'created_at': timestamp,
-        });
-      }
-    });
-  }
-
-  Future<void> updateItem(String itemId, CatalogItemDraft draft) async {
+  Future<void> updateItem(
+    String itemId,
+    CatalogItemDraft draft,
+  ) => database.runWrite(() async {
     final db = await database.database();
     final timestamp = DateTime.now().toIso8601String();
     final dbItemType = _mapUiItemTypeToDb(draft.itemType);
@@ -212,12 +216,12 @@ class CatalogLocalDataSource {
         });
       }
     });
-  }
+  });
 
   Future<void> updateItemStatus({
     required String itemId,
     required bool isActive,
-  }) async {
+  }) => database.runWrite(() async {
     final db = await database.database();
     final updatedRows = await db.update(
       'items',
@@ -232,7 +236,7 @@ class CatalogLocalDataSource {
     if (updatedRows == 0) {
       throw const AppException('not_found', 'Item katalog tidak ditemukan.');
     }
-  }
+  });
 
   Future<int> _ensureCategory(
     dynamic db, {

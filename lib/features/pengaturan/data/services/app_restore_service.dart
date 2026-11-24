@@ -28,12 +28,21 @@ class AppRestoreService {
     logoService: logoService,
   ).inspectBackupFile(filePath, password: password);
 
-  Future<void> restoreBackup(AppBackupRestoreCandidate candidate) =>
-      (logoService ?? BusinessLogoService()).synchronized(
-        () => _restoreBackup(candidate),
-      );
+  Future<void> restoreBackup(
+    AppBackupRestoreCandidate candidate, {
+    DatabaseWriteScope? scope,
+  }) => database.runScopedWrite(
+    (active) => (logoService ?? BusinessLogoService()).synchronized(
+      () => _restoreBackup(candidate, active),
+    ),
+    requireCurrentDataset: false,
+    scope: scope,
+  );
 
-  Future<void> _restoreBackup(AppBackupRestoreCandidate candidate) async {
+  Future<void> _restoreBackup(
+    AppBackupRestoreCandidate candidate,
+    DatabaseWriteScope scope,
+  ) async {
     logger.warning('Restoring backup from ${candidate.filePath}');
 
     final db = await database.database();
@@ -103,6 +112,7 @@ class AppRestoreService {
       await logos.deleteOwned(created);
       rethrow;
     }
+    database.markDatasetReplaced(scope);
     for (final profile in previous) {
       await logos.deleteOwned(profile['logo_path'] as String?);
     }

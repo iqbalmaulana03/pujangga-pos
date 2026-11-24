@@ -1,18 +1,57 @@
 @Timeout(Duration(minutes: 2))
 library;
 
+import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as p;
 import 'package:pujangga_pos/core/database/app_database.dart';
 import 'package:pujangga_pos/core/errors/app_exception.dart';
+import 'package:pujangga_pos/core/services/business_logo_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_recovery_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_reset_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_restore_service.dart';
+import 'package:pujangga_pos/features/pengaturan/domain/entities/app_backup_restore_candidate.dart';
+import 'package:pujangga_pos/features/pengeluaran/data/repositories/expense_repository.dart';
+import 'package:pujangga_pos/features/setup_usaha/data/datasources/business_profile_local_data_source.dart';
+import 'package:pujangga_pos/features/setup_usaha/data/repositories/business_profile_repository_impl.dart';
+import 'package:pujangga_pos/features/setup_usaha/domain/entities/business_profile.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+class _PausedRestore extends AppRestoreService {
+  _PausedRestore({required super.database, required super.logger});
+
+  final entered = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<void> restoreBackup(
+    AppBackupRestoreCandidate candidate, {
+    DatabaseWriteScope? scope,
+  }) async {
+    entered.complete();
+    await resume.future;
+    await super.restoreBackup(candidate, scope: scope);
+  }
+}
+
+class _PausedLogo extends BusinessLogoService {
+  _PausedLogo(Directory root) : super(supportDirectory: () async => root);
+
+  final entered = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<String> write(Uint8List png, {bool draft = false}) async {
+    entered.complete();
+    await resume.future;
+    return super.write(png, draft: draft);
+  }
+}
 
 class _Database extends AppDatabase {
   _Database(this.file);
@@ -22,6 +61,7 @@ class _Database extends AppDatabase {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late Directory root;
   late Directory exports;
   late Directory recovery;
@@ -29,6 +69,7 @@ void main() {
   late AppBackupService backup;
   late AppRestoreService restore;
   const password = 'synthetic password 56';
+  const barrierTimeout = Duration(seconds: 90);
 
   AppRecoveryService service({BackupDirectoryProvider? directory}) =>
       AppRecoveryService(
@@ -76,6 +117,163 @@ void main() {
       'updated_at': DateTime(2026, 11, 12).toIso8601String(),
     });
   }
+
+  Future<void> addExpenseWithCategory(String category) => ExpenseRepository(
+    database: database,
+  ).addExpense(amount: 12345, category: category, date: DateTime(2026, 11, 12));
+
+  Future<AppBackupRestoreCandidate> seedCandidateAndActive() async {
+    final db = await database.database();
+    await addExpenseWithCategory('Candidate C');
+    final old = await backup.createBackup(password: null);
+    final candidate = await restore.inspectBackupFile(old.filePath);
+    await db.delete('expenses');
+    await addExpenseWithCategory('Active A');
+    return candidate;
+  }
+
+  test(
+    'restore holds writes and rejects a request for the old dataset',
+    () async {
+      final candidate = await seedCandidateAndActive();
+      final db = await database.database();
+      final paused = _PausedRestore(database: database, logger: Logger('test'));
+      restore = paused;
+      final recoveryService = service();
+      final recoveryFuture = recoveryService.restoreWithSnapshot(
+        candidate,
+        password: password,
+      );
+      try {
+        await paused.entered.future.timeout(barrierTimeout);
+        var completed = false;
+        final write = addExpenseWithCategory('Concurrent B').whenComplete(() {
+          completed = true;
+        });
+        final rejected = expectLater(
+          write,
+          throwsA(
+            isA<AppException>().having(
+              (e) => e.code,
+              'code',
+              'dataset_changed',
+            ),
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        expect((await db.query('expenses')).single['category'], 'Active A');
+        expect(completed, isFalse);
+        paused.resume.complete();
+        await recoveryFuture;
+        await rejected;
+      } finally {
+        if (!paused.resume.isCompleted) paused.resume.complete();
+        await recoveryFuture;
+      }
+      expect((await db.query('expenses')).single['category'], 'Candidate C');
+      final files = await recoveryService.snapshots();
+      final snapshot = await restore.inspectBackupFile(
+        files.single.path,
+        password: password,
+      );
+      expect(snapshot.tables['expenses']!.single['category'], 'Active A');
+      await addExpenseWithCategory('Concurrent B');
+      expect(
+        (await db.query('expenses')).map((row) => row['category']),
+        unorderedEquals(['Candidate C', 'Concurrent B']),
+      );
+    },
+  );
+
+  test('failed replacement rolls back and allows the waiting write', () async {
+    final candidate = await seedCandidateAndActive();
+    final db = await database.database();
+    await db.execute("""
+      CREATE TRIGGER reject_candidate BEFORE INSERT ON expenses
+      WHEN NEW.category = 'Candidate C'
+      BEGIN SELECT RAISE(ABORT, 'synthetic restore failure'); END
+      """);
+    final paused = _PausedRestore(database: database, logger: Logger('test'));
+    restore = paused;
+    final recoveryService = service();
+    final failed = expectLater(
+      recoveryService.restoreWithSnapshot(candidate, password: password),
+      throwsA(isA<DatabaseException>()),
+    );
+    late Future<void> write;
+    try {
+      await paused.entered.future.timeout(barrierTimeout);
+      write = addExpenseWithCategory('Concurrent B');
+      await Future<void>.delayed(Duration.zero);
+      expect((await db.query('expenses')).single['category'], 'Active A');
+    } finally {
+      paused.resume.complete();
+      await failed;
+    }
+    await write;
+    expect(
+      (await db.query('expenses')).map((row) => row['category']),
+      unorderedEquals(['Active A', 'Concurrent B']),
+    );
+    expect(await db.rawQuery('PRAGMA foreign_key_check'), isEmpty);
+    final snapshot = await restore.inspectBackupFile(
+      (await recoveryService.snapshots()).single.path,
+      password: password,
+    );
+    expect(snapshot.tables['expenses']!.single['category'], 'Active A');
+  });
+
+  test(
+    'a profile logo write ahead of recovery is included in the snapshot',
+    () async {
+      final candidate = await seedCandidateAndActive();
+      final logo = _PausedLogo(root);
+      final repository = BusinessProfileRepositoryImpl(
+        localDataSource: BusinessProfileLocalDataSource(database: database),
+        logger: Logger('test'),
+        logoService: logo,
+      );
+      backup = AppBackupService(
+        database: database,
+        logger: Logger('test'),
+        logoService: logo,
+      );
+      restore = AppRestoreService(
+        database: database,
+        logger: Logger('test'),
+        logoService: logo,
+      );
+      final recoveryService = service();
+      final save = repository.saveProfile(
+        BusinessProfile(
+          businessName: 'Concurrent profile',
+          businessType: 'retail',
+          logoPath: p.absolute('test/fixtures/logo-jpeg.jpg'),
+        ),
+      );
+      late Future<void> replacement;
+      try {
+        await logo.entered.future.timeout(barrierTimeout);
+        replacement = recoveryService.restoreWithSnapshot(
+          candidate,
+          password: password,
+        );
+      } finally {
+        logo.resume.complete();
+        await save;
+      }
+      await replacement;
+      final snapshot = await restore.inspectBackupFile(
+        (await recoveryService.snapshots()).single.path,
+        password: password,
+      );
+      expect(
+        snapshot.tables['business_profile']!.single['business_name'],
+        'Concurrent profile',
+      );
+      expect(snapshot.businessLogoBytes, isNotEmpty);
+    },
+  );
 
   test(
     'encrypted snapshot survives restart and restores the pre-restore dataset',
@@ -227,7 +425,39 @@ void main() {
       );
       await service().restoreWithSnapshot(candidate, password: password);
       await addExpense();
-      await service().resetAndDeleteLocalBackups();
+      final resetEntered = Completer<void>();
+      final resumeReset = Completer<void>();
+      final resetting = service(
+        directory: () async {
+          resetEntered.complete();
+          await resumeReset.future;
+          return recovery;
+        },
+      ).resetAndDeleteLocalBackups();
+      try {
+        await resetEntered.future.timeout(barrierTimeout);
+        final rejected = expectLater(
+          addExpenseWithCategory('Concurrent reset write'),
+          throwsA(
+            isA<AppException>().having(
+              (e) => e.code,
+              'code',
+              'dataset_changed',
+            ),
+          ),
+        );
+        await Future<void>.delayed(Duration.zero);
+        final db = await database.database();
+        expect(
+          (await db.query('expenses')).single['category'],
+          'Biaya sintetis',
+        );
+        resumeReset.complete();
+        await rejected;
+      } finally {
+        if (!resumeReset.isCompleted) resumeReset.complete();
+        await resetting;
+      }
       expect(await service().snapshots(), isEmpty);
       expect(await File(old.filePath).exists(), isFalse);
       expect(await external.exists(), isTrue);

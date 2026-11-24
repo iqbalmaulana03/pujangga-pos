@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
+import '../../../../core/database/app_database.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/app_backup_restore_candidate.dart';
 import 'app_backup_service.dart';
@@ -19,7 +20,12 @@ class AppRecoveryService {
     this.directoryProvider,
     this.exportDirectoryProvider,
     this.temporaryDirectoryProvider,
-  });
+  }) {
+    if (!identical(backup.database, restore.database) ||
+        !identical(backup.database, reset.database)) {
+      throw ArgumentError('Recovery services must share the same database.');
+    }
+  }
 
   final AppBackupService backup;
   final AppRestoreService restore;
@@ -52,7 +58,9 @@ class AppRecoveryService {
     return files;
   }
 
-  Future<T> _exclusive<T>(Future<T> Function() operation) async {
+  Future<T> _exclusive<T>(
+    Future<T> Function(DatabaseWriteScope scope) operation,
+  ) async {
     if (_busy) {
       throw const AppException(
         'recovery_busy',
@@ -61,7 +69,10 @@ class AppRecoveryService {
     }
     _busy = true;
     try {
-      return await operation();
+      return await backup.database.runScopedWrite(
+        operation,
+        requireCurrentDataset: false,
+      );
     } finally {
       _busy = false;
     }
@@ -70,7 +81,7 @@ class AppRecoveryService {
   Future<void> restoreWithSnapshot(
     AppBackupRestoreCandidate candidate, {
     required String password,
-  }) => _exclusive(() async {
+  }) => _exclusive((scope) async {
     try {
       final directory = await _directory();
       await directory.create(recursive: true);
@@ -115,12 +126,12 @@ class AppRecoveryService {
       );
     }
     // Keep this file even if replacement fails: it is a verified recovery point.
-    await restore.restoreBackup(candidate);
+    await restore.restoreBackup(candidate, scope: scope);
   });
 
   /// Reset deliberately retains no hidden recovery data. An export must be
   /// saved outside app storage by the user before invoking this operation.
-  Future<void> resetAndDeleteLocalBackups() => _exclusive(() async {
+  Future<void> resetAndDeleteLocalBackups() => _exclusive((scope) async {
     final recovery = await _directory();
     if (await recovery.exists()) {
       // Only this dedicated app-owned directory is recursively removed.
@@ -148,6 +159,6 @@ class AppRecoveryService {
       final cache = Directory(path.join(temporary.path, name));
       if (await cache.exists()) await cache.delete(recursive: true);
     }
-    await reset.resetAppData();
+    await reset.resetAppData(scope: scope);
   });
 }

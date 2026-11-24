@@ -68,7 +68,9 @@ class StockLocalDataSource {
     return rows.map(StockMovementDbModel.fromMap).toList();
   }
 
-  Future<void> adjustStock(StockAdjustmentRequest request) async {
+  Future<void> adjustStock(
+    StockAdjustmentRequest request,
+  ) => database.runWrite(() async {
     final db = await database.database();
     await db.transaction((txn) async {
       final itemId = int.parse(request.itemId);
@@ -148,5 +150,5 @@ class StockLocalDataSource {
         'created_at': timestamp,
       });
     });
-  }
+  });
 }

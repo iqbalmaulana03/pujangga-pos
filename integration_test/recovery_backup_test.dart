@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -9,14 +10,19 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pujangga_pos/app/app.dart';
 import 'package:pujangga_pos/core/database/app_database.dart';
+import 'package:pujangga_pos/core/errors/app_exception.dart';
 import 'package:pujangga_pos/core/services/app_startup_service.dart';
 import 'package:pujangga_pos/core/utils/app_date_formatting.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/app_backup_service.dart';
+import 'package:pujangga_pos/features/pengaturan/data/services/app_restore_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_file_picker_service.dart';
 import 'package:pujangga_pos/features/pengaturan/data/services/backup_input_limits.dart';
+import 'package:pujangga_pos/features/pengaturan/domain/entities/app_backup_restore_candidate.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/app_recovery_provider.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/controllers/pengaturan_restore_controller.dart';
 import 'package:pujangga_pos/features/pengaturan/presentation/pages/pengaturan_page.dart';
+import 'package:pujangga_pos/features/pengeluaran/data/repositories/expense_repository.dart';
+import 'package:pujangga_pos/features/pengeluaran/presentation/pages/tambah_pengeluaran_page.dart';
 import 'package:pujangga_pos/features/setup_usaha/presentation/pages/setup_usaha_page.dart';
 import 'package:pujangga_pos/features/transaksi/data/datasources/transaction_local_data_source.dart';
 import 'package:pujangga_pos/features/transaksi/domain/entities/transaksi_cart_item.dart';
@@ -37,6 +43,58 @@ class _Picker extends BackupFilePickerService {
   final String file;
   @override
   Future<String?> pickBackupFile() async => file;
+}
+
+class _PausedRestore extends AppRestoreService {
+  _PausedRestore({required super.database, required super.logger});
+
+  final entered = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<void> restoreBackup(
+    AppBackupRestoreCandidate candidate, {
+    DatabaseWriteScope? scope,
+  }) async {
+    if (!entered.isCompleted) {
+      entered.complete();
+      await resume.future;
+    }
+    await super.restoreBackup(candidate, scope: scope);
+  }
+}
+
+class _PausedExpense extends ExpenseRepository {
+  _PausedExpense({required super.database});
+
+  final submitted = Completer<void>();
+  final resume = Completer<void>();
+  final finished = Completer<Object?>();
+
+  @override
+  Future<void> addExpense({
+    required double amount,
+    required String category,
+    required DateTime date,
+    String? notes,
+    int? employeeId,
+  }) async {
+    submitted.complete();
+    await resume.future;
+    try {
+      await super.addExpense(
+        amount: amount,
+        category: category,
+        date: date,
+        notes: notes,
+        employeeId: employeeId,
+      );
+      finished.complete(null);
+    } catch (error) {
+      finished.complete(error);
+      rethrow;
+    }
+  }
 }
 
 void main() {
@@ -113,9 +171,16 @@ void main() {
           cashPaidAmount: 10000,
         ),
       );
+      final pausedRestore = _PausedRestore(
+        database: database,
+        logger: Logger('e2e'),
+      );
+      final pausedExpense = _PausedExpense(database: database);
       final container = ProviderContainer(
         overrides: [
           appDatabaseProvider.overrideWithValue(database),
+          appRestoreServiceProvider.overrideWithValue(pausedRestore),
+          expenseRepositoryProvider.overrideWithValue(pausedExpense),
           backupFilePickerServiceProvider.overrideWithValue(
             _Picker(old.filePath),
           ),
@@ -134,13 +199,13 @@ void main() {
             .writeAsBytes(await binding.takeScreenshot(name));
       }
 
-      Future<void> waitFor(bool Function() ready) async {
+      Future<void> waitFor(bool Function() ready, {bool settle = true}) async {
         final until = DateTime.now().add(const Duration(seconds: 90));
         while (!ready() && DateTime.now().isBefore(until)) {
           await tester.pump(const Duration(milliseconds: 100));
         }
         expect(ready(), isTrue);
-        await tester.pumpAndSettle();
+        if (settle) await tester.pumpAndSettle();
       }
 
       Future<void> settings() async {
@@ -217,10 +282,81 @@ void main() {
       debugPrint(
         'ISSUE71_E2E_PASS: failed oversized snapshot preserves active dataset',
       );
+      // Start a write through the form, then leave it before the repository
+      // reaches SQLite. The controlled delay models an in-flight UI request.
+      await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_back));
+      await waitFor(() => find.byTooltip('Pengaturan').evaluate().isNotEmpty);
+      final expensesAction = find.text('Pengeluaran').first;
+      await Scrollable.ensureVisible(
+        tester.element(expensesAction),
+        alignment: 0.35,
+      );
+      await tester.pumpAndSettle();
+      expect(expensesAction.hitTestable(), findsOneWidget);
+      await tester.tap(expensesAction);
+      await waitFor(
+        () => find.text('Tambah Pengeluaran').evaluate().isNotEmpty,
+      );
+      await tester.tap(find.text('Tambah Pengeluaran'));
+      await waitFor(
+        () => find.byType(TambahPengeluaranPage).evaluate().isNotEmpty,
+      );
+      final amount = find.byType(TextFormField).first;
+      await tester.ensureVisible(amount);
+      await tester.enterText(amount, '12000');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Simpan Pengeluaran'));
+      await waitFor(() => pausedExpense.submitted.isCompleted, settle: false);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.pageBack();
+      await waitFor(() => find.byTooltip('Pengaturan').evaluate().isNotEmpty);
+      await settings();
       await scrollTo('Pulihkan Data');
       await tester.tap(find.text('Pulihkan Data').first);
       await waitFor(() => find.text('Pulihkan Data?').evaluate().isNotEmpty);
-      await confirmRestore();
+      await tester.tap(find.widgetWithText(FilledButton, 'Pulihkan Data'));
+      await confirmRecoverySnapshot(tester);
+      try {
+        await waitFor(() => pausedRestore.entered.isCompleted, settle: false);
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        expect(find.byType(PengaturanPage), findsOneWidget);
+        await tester.tap(
+          find.widgetWithIcon(IconButton, Icons.arrow_back),
+          warnIfMissed: false,
+        );
+        await tester.pump();
+        expect(find.byType(PengaturanPage), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(PengaturanPage),
+            matching: find.byWidgetPredicate(
+              (widget) => widget is AbsorbPointer && widget.absorbing,
+            ),
+          ),
+          findsWidgets,
+        );
+        pausedExpense.resume.complete();
+        await tester.pump();
+        expect(await db.query('expenses'), isEmpty);
+        expect(pausedExpense.finished.isCompleted, isFalse);
+      } finally {
+        if (!pausedExpense.resume.isCompleted) pausedExpense.resume.complete();
+        pausedRestore.resume.complete();
+      }
+      await waitFor(() => pausedExpense.finished.isCompleted);
+      expect(
+        await pausedExpense.finished.future,
+        isA<AppException>().having(
+          (error) => error.code,
+          'code',
+          'dataset_changed',
+        ),
+      );
+      await waitFor(() => find.byType(PengaturanPage).evaluate().isEmpty);
+      expect(await db.query('expenses'), isEmpty);
       expect(await db.query('sales_transactions'), isEmpty);
       expect((await db.query('items')).single['stock_qty'], 10);
 
