@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/utils/quantity_formatter.dart';
 import '../../../transaksi/presentation/controllers/transaksi_controller.dart';
@@ -590,6 +591,19 @@ class DetailTransaksiPage extends ConsumerWidget {
                                                 )
                                                 .then((_) {
                                                   if (!context.mounted) return;
+                                                  final result = ref.read(
+                                                    riwayatControllerProvider,
+                                                  );
+                                                  final error = result.error;
+                                                  final message =
+                                                      switch (error) {
+                                                        AppException(
+                                                          :final message,
+                                                        ) =>
+                                                          message,
+                                                        null => 'Transaksi berhasil dibatalkan.',
+                                                        _ => 'Transaksi gagal dibatalkan. Coba lagi.',
+                                                      };
                                                   ref.invalidate(
                                                     transaksiReceiptProvider(
                                                       transactionId,
@@ -598,10 +612,8 @@ class DetailTransaksiPage extends ConsumerWidget {
                                                   ScaffoldMessenger.of(
                                                     context,
                                                   ).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text(
-                                                        'Transaksi berhasil dibatalkan.',
-                                                      ),
+                                                    SnackBar(
+                                                      content: Text(message),
                                                     ),
                                                   );
                                                 });

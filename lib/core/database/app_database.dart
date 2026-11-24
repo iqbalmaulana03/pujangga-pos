@@ -1,9 +1,17 @@
+import 'dart:async';
+
 import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 
 import '../constants/app_constants.dart';
+import '../errors/app_exception.dart';
 import 'employee_compensation_history.dart';
+
+/// Identifies the active write for nested steps of the same operation.
+final class DatabaseWriteScope {
+  DatabaseWriteScope._();
+}
 
 class AppDatabase {
   AppDatabase({Logger? logger}) : _logger = logger ?? Logger('AppDatabase');
@@ -13,6 +21,63 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase();
 
   Database? _database;
+  Future<void>? _writeTail;
+  DatabaseWriteScope? _activeWrite;
+  int _datasetRevision = 0;
+
+  Future<T> runWrite<T>(
+    Future<T> Function() operation, {
+    bool requireCurrentDataset = true,
+    DatabaseWriteScope? scope,
+  }) => runScopedWrite(
+    (_) => operation(),
+    requireCurrentDataset: requireCurrentDataset,
+    scope: scope,
+  );
+
+  /// Acquires the write turn before taking any business-logo lock or opening a
+  /// SQLite transaction. Await all work that uses the scope inside the callback.
+  Future<T> runScopedWrite<T>(
+    Future<T> Function(DatabaseWriteScope scope) operation, {
+    bool requireCurrentDataset = true,
+    DatabaseWriteScope? scope,
+  }) async {
+    if (scope != null) {
+      _requireActiveWrite(scope);
+      return operation(scope);
+    }
+    final revision = _datasetRevision;
+    final previous = _writeTail;
+    final finished = Completer<void>.sync();
+    _writeTail = finished.future;
+    if (previous != null) await previous;
+    final active = DatabaseWriteScope._();
+    _activeWrite = active;
+    try {
+      if (requireCurrentDataset && revision != _datasetRevision) {
+        throw const AppException(
+          'dataset_changed',
+          'Data aplikasi telah berubah. Muat ulang data lalu coba lagi.',
+        );
+      }
+      return await operation(active);
+    } finally {
+      _activeWrite = null;
+      if (identical(_writeTail, finished.future)) _writeTail = null;
+      finished.complete();
+    }
+  }
+
+  void markDatasetReplaced(DatabaseWriteScope scope) {
+    _requireActiveWrite(scope);
+    _datasetRevision++;
+  }
+
+  void _requireActiveWrite(DatabaseWriteScope scope) {
+    if (!identical(scope, _activeWrite)) {
+      throw StateError('The database write scope is no longer active.');
+    }
+  }
 
   Future<String> databasePath() async {
     final dbPath = await getDatabasesPath();
@@ -39,18 +104,23 @@ class AppDatabase {
     return _database!;
   }
 
-  Future<void> reset() async {
-    final existingDatabase = _database;
-    final fullPath = await databasePath();
+  Future<void> reset({DatabaseWriteScope? scope}) => runScopedWrite(
+    (active) async {
+      final existingDatabase = _database;
+      final fullPath = await databasePath();
 
-    if (existingDatabase != null && existingDatabase.isOpen) {
-      await existingDatabase.close();
-    }
+      if (existingDatabase != null && existingDatabase.isOpen) {
+        await existingDatabase.close();
+      }
 
-    _database = null;
-    _logger.info('Deleting database at $fullPath');
-    await deleteDatabase(fullPath);
-  }
+      _database = null;
+      _logger.info('Deleting database at $fullPath');
+      await deleteDatabase(fullPath);
+      markDatasetReplaced(active);
+    },
+    requireCurrentDataset: false,
+    scope: scope,
+  );
 
   Future<void> _onCreate(Database db, int version) async {
     await _createBusinessProfileTable(db);

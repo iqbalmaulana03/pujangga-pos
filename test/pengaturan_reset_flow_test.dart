@@ -171,5 +171,5 @@ class _FakeAppResetService extends AppResetService {
   final Future<void> Function() _onReset;
 
   @override
-  Future<void> resetAppData() => _onReset();
+  Future<void> resetAppData({DatabaseWriteScope? scope}) => _onReset();
 }

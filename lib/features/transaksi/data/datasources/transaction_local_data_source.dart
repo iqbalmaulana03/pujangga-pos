@@ -35,7 +35,7 @@ class TransactionLocalDataSource {
 
   Future<TransaksiReceipt> saveTransaction(
     TransaksiSubmitRequest request,
-  ) async {
+  ) => database.runWrite(() async {
     final db = await database.database();
 
     try {
@@ -392,7 +392,7 @@ class TransactionLocalDataSource {
         'Angka tidak valid atau melampaui batas presisi yang aman.',
       );
     }
-  }
+  });
 
   Future<TransaksiReceipt?> getReceiptByInvoice(String invoiceNumber) async {
     final db = await database.database();

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/services/app_startup_service.dart';
@@ -15,18 +16,19 @@ class ExpenseRepository {
   final AppDatabase database;
   final DateTime Function() now;
 
-  Future<double?> salaryForMonth(int employeeId, DateTime month) async {
-    final db = await database.database();
-    return db.transaction((txn) async {
-      await EmployeeCompensationHistory.seedMissing(txn);
-      final period = await EmployeeCompensationHistory.salaryForMonth(
-        txn,
-        employeeId,
-        month,
-      );
-      return (period?['monthly_salary'] as num?)?.toDouble();
-    });
-  }
+  Future<double?> salaryForMonth(int employeeId, DateTime month) =>
+      database.runWrite(() async {
+        final db = await database.database();
+        return db.transaction((txn) async {
+          await EmployeeCompensationHistory.seedMissing(txn);
+          final period = await EmployeeCompensationHistory.salaryForMonth(
+            txn,
+            employeeId,
+            month,
+          );
+          return (period?['monthly_salary'] as num?)?.toDouble();
+        });
+      });
 
   Future<void> addExpense({
     required double amount,
@@ -34,7 +36,7 @@ class ExpenseRepository {
     required DateTime date,
     String? notes,
     int? employeeId,
-  }) async {
+  }) => database.runWrite(() async {
     final db = await database.database();
     final timestamp = DateTime.now().toIso8601String();
     if (category == 'Gaji Karyawan') {
@@ -104,7 +106,7 @@ class ExpenseRepository {
       'created_at': timestamp,
       'updated_at': timestamp,
     });
-  }
+  });
 
   Future<List<Map<String, Object?>>> getExpenses(
     DateTime start,

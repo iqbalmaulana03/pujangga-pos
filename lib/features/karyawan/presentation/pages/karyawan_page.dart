@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../core/errors/app_exception.dart';
 import '../controllers/employee_controller.dart';
 import '../../domain/entities/employee.dart';
 
@@ -168,12 +170,14 @@ class KaryawanPage extends ConsumerWidget {
                       monthlySalary: type == 'monthly_salary' ? n : null,
                       effectiveFrom: employee?.effectiveFrom ?? DateTime.now(),
                     );
-                if (ref.read(employeeControllerProvider).hasError) {
+                final saveState = ref.read(employeeControllerProvider);
+                if (saveState.hasError) {
                   if (context.mounted) {
+                    final error = saveState.error;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
+                      SnackBar(
                         content: Text(
-                          'Karyawan gagal disimpan. Periksa data lalu coba lagi.',
+                          error is AppException ? error.message : 'Karyawan gagal disimpan. Periksa data lalu coba lagi.',
                         ),
                       ),
                     );

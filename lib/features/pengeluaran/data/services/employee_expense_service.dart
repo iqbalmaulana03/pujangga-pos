@@ -15,7 +15,7 @@ class EmployeeExpenseService {
 
   /// Reconcile all liabilities due now, regardless of the requested report.
   /// Seed legacy history and accrue every effective month in one transaction.
-  Future<void> reconcile() async {
+  Future<void> reconcile() => database.runWrite(() async {
     final reference = now();
     final db = await database.database();
     await db.transaction((txn) async {
@@ -34,7 +34,7 @@ class EmployeeExpenseService {
         reference,
       );
     });
-  }
+  }, requireCurrentDataset: false);
 
   Future<void> _ensureMonthlySalaries(
     DatabaseExecutor db,

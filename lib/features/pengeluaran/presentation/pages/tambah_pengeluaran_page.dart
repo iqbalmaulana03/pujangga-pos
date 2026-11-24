@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../data/repositories/expense_repository.dart';
 import '../controllers/tambah_pengeluaran_controller.dart';
@@ -61,11 +62,11 @@ class _TambahPengeluaranPageState extends ConsumerState<TambahPengeluaranPage> {
       final error = ref.read(tambahPengeluaranControllerProvider).error;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            error is StateError
-                ? error.message.toString()
-                : 'Pengeluaran gagal disimpan. Silakan coba lagi.',
-          ),
+          content: Text(switch (error) {
+            AppException(:final message) => message,
+            StateError(:final message) => message.toString(),
+            _ => 'Pengeluaran gagal disimpan. Silakan coba lagi.',
+          }),
         ),
       );
     }

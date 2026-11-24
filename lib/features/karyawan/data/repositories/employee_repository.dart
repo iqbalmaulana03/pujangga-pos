@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/employee_compensation_history.dart';
 import '../../../../core/services/app_startup_service.dart';
@@ -44,7 +45,7 @@ class EmployeeRepository {
     double? monthlySalary,
     required DateTime effectiveFrom,
     String? notes,
-  }) async {
+  }) => database.runWrite(() async {
     if (!['all', 'service', 'product'].contains(commissionScope)) {
       throw ArgumentError('Cakupan komisi tidak valid.');
     }
@@ -119,7 +120,7 @@ class EmployeeRepository {
         await txn.update('employees', values, where: 'id = ?', whereArgs: [id]);
       }
     });
-  }
+  });
 
   Employee _fromRow(Map<String, Object?> row) => Employee(
     id: (row['id'] as num).toInt(),

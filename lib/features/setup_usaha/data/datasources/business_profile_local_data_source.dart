@@ -16,10 +16,13 @@ class BusinessProfileLocalDataSource {
     return rows.isNotEmpty;
   }
 
-  Future<void> saveProfile(BusinessProfileDbModel profile) async {
+  Future<void> saveProfile(
+    BusinessProfileDbModel profile, {
+    DatabaseWriteScope? scope,
+  }) => database.runWrite(() async {
     final db = await database.database();
     await db.transaction((txn) => _saveProfile(txn, profile));
-  }
+  }, scope: scope);
 
   Future<void> _saveProfile(
     DatabaseExecutor db,
