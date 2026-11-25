@@ -17,25 +17,32 @@ class ReportLocalDataSource {
     required DateTime end,
   }) async {
     final db = await database.database();
-    final rows = await db.rawQuery(
-      '''
+    final rangeArgs = [start.toIso8601String(), end.toIso8601String()];
+    final rows = await db.rawQuery('''
       SELECT employee_id, MAX(COALESCE(employee_name_snapshot, '')) AS employee_name,
         COALESCE(SUM(subtotal_amount - discount_amount), 0) AS revenue,
-        COUNT(*) AS transaction_count, COALESCE(SUM(commission_amount), 0) AS compensation
+        COUNT(*) AS transaction_count
       FROM sales_transactions
       WHERE transaction_date >= ? AND transaction_date < ? AND status = 'completed' AND employee_id IS NOT NULL
       GROUP BY employee_id
-    ''',
-      [start.toIso8601String(), end.toIso8601String()],
-    );
+      ORDER BY employee_id
+    ''', rangeArgs);
+    final expenseRows = await db.rawQuery('''
+      SELECT employee_id, COALESCE(SUM(amount), 0) AS total
+      FROM expenses
+      WHERE expense_date >= ? AND expense_date < ? AND employee_id IS NOT NULL
+      GROUP BY employee_id
+      ''', rangeArgs);
+    final expensesByEmployee = {
+      for (final row in expenseRows)
+        (row['employee_id'] as num).toInt(): (row['total'] as num).toDouble(),
+    };
     final result = <EmployeeReportSummary>[];
+    final employeesWithSales = <int>{};
     for (final row in rows) {
       final id = (row['employee_id'] as num).toInt();
-      final expenses = await db.rawQuery(
-        'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE employee_id = ? AND expense_date >= ? AND expense_date < ?',
-        [id, start.toIso8601String(), end.toIso8601String()],
-      );
-      final expense = (expenses.first['total'] as num?)?.toDouble() ?? 0;
+      employeesWithSales.add(id);
+      final expense = expensesByEmployee[id] ?? 0.0;
       result.add(
         EmployeeReportSummary(
           employeeId: id,
@@ -47,23 +54,19 @@ class ReportLocalDataSource {
         ),
       );
     }
-    final employees = await db.query('employees');
+    final employees = await db.query('employees', orderBy: 'id');
     for (final employee in employees) {
       final id = (employee['id'] as num).toInt();
-      if (result.any((item) => item.employeeId == id)) continue;
-      final expenses = await db.rawQuery(
-        'SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE employee_id = ? AND expense_date >= ? AND expense_date < ?',
-        [id, start.toIso8601String(), end.toIso8601String()],
-      );
-      final amount = (expenses.first['total'] as num).toDouble();
+      if (employeesWithSales.contains(id)) continue;
+      final expense = expensesByEmployee[id] ?? 0.0;
       result.add(
         EmployeeReportSummary(
           employeeId: id,
           employeeName: employee['name'] as String,
           revenue: 0,
           transactionCount: 0,
-          compensation: amount,
-          expense: amount,
+          compensation: expense,
+          expense: expense,
         ),
       );
     }
@@ -346,17 +349,30 @@ class ReportLocalDataSource {
       intervalStarts.length,
       (_) => <double>[],
     );
-    var bucketCursor = 0;
+    // Revenue follows SQLite's text comparisons. Candles compare parsed
+    // instants, which can place restored timestamps with offsets differently.
+    final intervalStartsIso = intervalStarts
+        .map((start) => start.toIso8601String())
+        .toList();
+    final revenueByBucket = List.filled(intervalStarts.length, 0.0);
+    var revenueBucket = 0;
+    var candleBucket = 0;
     for (final row in transactionRows) {
-      final transactionDate = DateTime.parse(row['transaction_date'] as String);
-      while (bucketCursor + 1 < intervalStarts.length &&
-          !transactionDate.isBefore(intervalStarts[bucketCursor + 1])) {
-        bucketCursor++;
+      final date = row['transaction_date'] as String;
+      final amount = (row['total_amount'] as num).toDouble();
+      while (revenueBucket + 1 < intervalStartsIso.length &&
+          date.compareTo(intervalStartsIso[revenueBucket + 1]) >= 0) {
+        revenueBucket++;
       }
-      if (!transactionDate.isBefore(intervalStarts[bucketCursor])) {
-        transactionValuesByBucket[bucketCursor].add(
-          (row['total_amount'] as num).toDouble(),
-        );
+      revenueByBucket[revenueBucket] += amount;
+
+      final transactionDate = DateTime.parse(date);
+      while (candleBucket + 1 < intervalStarts.length &&
+          !transactionDate.isBefore(intervalStarts[candleBucket + 1])) {
+        candleBucket++;
+      }
+      if (!transactionDate.isBefore(intervalStarts[candleBucket])) {
+        transactionValuesByBucket[candleBucket].add(amount);
       }
     }
 
@@ -364,14 +380,6 @@ class ReportLocalDataSource {
     final List<SalesCandlePoint> salesCandles = [];
     for (var i = 0; i < intervalStarts.length; i++) {
       final intervalStart = intervalStarts[i];
-      final proposedEnd = i + 1 < intervalStarts.length
-          ? intervalStarts[i + 1]
-          : range.endExclusive;
-      final intervalEnd = proposedEnd.isAfter(range.endExclusive)
-          ? range.endExclusive
-          : proposedEnd;
-      final value = await getRevenueForRange(intervalStart, intervalEnd);
-
       String label;
       if (period == ReportPeriod.harian) {
         label = '${intervalStart.hour.toString().padLeft(2, '0')}:00';
@@ -405,7 +413,7 @@ class ReportLocalDataSource {
         label = '${intervalStart.day}/${intervalStart.month}';
       }
 
-      trend.add(SalesTrendPoint(label: label, value: value));
+      trend.add(SalesTrendPoint(label: label, value: revenueByBucket[i]));
 
       final bucketTransactions = transactionValuesByBucket[i];
       if (bucketTransactions.isNotEmpty) {
